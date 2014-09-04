@@ -1,0 +1,12 @@
+#*
+.#*
+*.pyc
+env/
+vagrant/.vagrant
+/lib/
+/frontend/build
+/frontend/dist
+/frontend/*.egg-info
+/tool/build
+/tool/dist
+/tool/*.egg-info

@@ -1,0 +1,29 @@
+{% extends 'layout.jinja2.html' %}
+{% from 'test_macro.jinja2.html' import test_table %}
+
+{% block title %}User Tests{% endblock %}
+
+{% block body %}
+<h1>Your tests</h1>
+
+{% if in_progress_tests|length > 0 %}
+<h3>In Progress</h3>
+{{test_table(in_progress_tests)}}
+{% endif %}
+
+{% if queued_tests|length > 0 %}
+<h3>Queued</h3>
+{{test_table(queued_tests)}}
+{% endif %}
+
+{% if completed_tests|length > 0 %}
+<h3>Complete</h3>
+{{test_table(completed_tests)}}
+{% endif %}
+
+{% if failed_tests|length > 0 %}
+<h3>Failed</h3>
+{{test_table(failed_tests)}}
+{% endif %}
+
+{% endblock %}

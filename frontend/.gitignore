@@ -1,0 +1,4 @@
+env
+cstar_perf_frontend/client_secrets.json
+cstar_perf_frontend.egg-info/*
+dist/*
