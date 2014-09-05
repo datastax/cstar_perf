@@ -1,11 +1,11 @@
-As described in the guide, there are several
-different parts of cstar_perf that can be used either as a whole, or
-as individual components. This guide will walk through the
-installation of cstar_perf.tool, which will be the core of what you
-need to start benchmarking Cassandra. The next chapter of this guide
-will focus on the :doc:`setup of cstar_perf.frontend` which sets up a full
-web-based interface for scheduling tests, archiving results, and
-monitoring multiple clusters.
+There are several different parts of cstar_perf that can be used
+either as a whole, or as individual components (See
+:doc:`architecture`.) This guide will walk through the installation of
+cstar_perf.tool, which will be the core of what you need to start
+benchmarking Cassandra. The next chapter of this guide will focus on
+the :doc:`setup of cstar_perf.frontend` which sets up a full web-based
+interface for scheduling tests, archiving results, and monitoring
+multiple clusters.
 
 *********************
 Setup cstar_perf.tool
@@ -190,4 +190,5 @@ This command will tell all of the cassandra nodes to download the latest Cassand
     [10.0.0.101] All nodes available!
     INFO:benchmark:Started cassandra on 3 nodes with git SHA: bd396ec8acb74436fd84a9cf48542c49e08a17a6
 
-
+Now that your cluster is automated, you can create some :doc:`test
+definitions <running_tests>`, or setup the :doc:`web frontend <setup_cstar_perf_frontend>`.

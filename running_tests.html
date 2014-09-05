@@ -1,0 +1,246 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Running Tests &mdash; cstar_perf 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="cstar_perf 1.0 documentation" href="index.html" />
+    <link rel="next" title="Architecture" href="architecture.html" />
+    <link rel="prev" title="Setup cstar_perf.frontend" href="setup_cstar_perf_frontend.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="architecture.html" title="Architecture"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="setup_cstar_perf_frontend.html" title="Setup cstar_perf.frontend"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Running Tests</a><ul>
+<li><a class="reference internal" href="#running-tests-with-cstar-perf-stress">Running tests with cstar_perf_stress</a><ul>
+<li><a class="reference internal" href="#log">Log</a></li>
+<li><a class="reference internal" href="#title">Title</a></li>
+<li><a class="reference internal" href="#revisions">Revisions</a></li>
+<li><a class="reference internal" href="#operations">Operations</a><ul>
+<li><a class="reference internal" href="#type-stress">type=&#8217;stress&#8217;</a></li>
+<li><a class="reference internal" href="#type-nodetool">type=&#8217;nodetool&#8217;</a></li>
+<li><a class="reference internal" href="#type-cqlsh">type=&#8217;cqlsh&#8217;</a></li>
+<li><a class="reference internal" href="#type-bash">type=&#8217;bash&#8217;</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#running-tests-from-the-web-frontend">Running tests from the web frontend</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="setup_cstar_perf_frontend.html"
+                        title="previous chapter">Setup cstar_perf.frontend</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="architecture.html"
+                        title="next chapter">Architecture</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/running_tests.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="running-tests">
+<h1>Running Tests<a class="headerlink" href="#running-tests" title="Permalink to this headline">¶</a></h1>
+<p>Test definitions describe the environment and workloads you want run
+on your cluster, including what versions of Cassandra to test, the
+configuration, and the stress tests or scripts to run on them.</p>
+<p>Test definitons can either be defined by hand, to be run on the
+command line, or they can be setup and scheduled in the web interface.
+This chapter will describe both scenarios.</p>
+<div class="section" id="running-tests-with-cstar-perf-stress">
+<h2>Running tests with cstar_perf_stress<a class="headerlink" href="#running-tests-with-cstar-perf-stress" title="Permalink to this headline">¶</a></h2>
+<p>The setup of <a class="reference internal" href="setup_cstar_perf_tool.html"><em>cstar_perf.tool</em></a> installs a
+command line utility called cstar_perf_stress (stress_compare.py)
+which is the main tool to run tests. This tool takes a JSON file as
+input, here&#8217;s a sample:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+ <span class="s">&quot;revisions&quot;</span><span class="p">:[</span>
+    <span class="p">{</span><span class="s">&quot;revision&quot;</span><span class="p">:</span><span class="s">&quot;apache/cassandra-2.1&quot;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s">&quot;revision&quot;</span><span class="p">:</span><span class="s">&quot;apache/cassandra-2.1&quot;</span><span class="p">,</span> <span class="s">&#39;memtable_allocation_type&#39;</span><span class="p">:</span><span class="s">&#39;offheap_objects&#39;</span><span class="p">},</span>
+ <span class="p">],</span>
+ <span class="s">&quot;title&quot;</span><span class="p">:</span><span class="s">&quot;Test offheap memtables&quot;</span><span class="p">,</span>
+ <span class="s">&quot;log&quot;</span><span class="p">:</span><span class="s">&quot;stats.cassandra-2.1.offheap_memtables.json&quot;</span><span class="p">,</span>
+ <span class="s">&quot;operations&quot;</span><span class="p">:</span> <span class="p">[</span>
+    <span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span><span class="s">&quot;stress&quot;</span><span class="p">,</span><span class="s">&quot;command&quot;</span><span class="p">:</span><span class="s">&quot;write n=65000000 -rate threads=40 -mode cql3 native prepared&quot;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span><span class="s">&quot;stress&quot;</span><span class="p">,</span><span class="s">&quot;command&quot;</span><span class="p">:</span><span class="s">&quot;read n=65000000 -rate threads=40 -mode cql3 native prepared&quot;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span><span class="s">&quot;stress&quot;</span><span class="p">,</span><span class="s">&quot;command&quot;</span><span class="p">:</span><span class="s">&quot;read n=65000000 -rate threads=40 -mode cql3 native prepared&quot;</span><span class="p">}]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This is a hypothetical test for comparing the difference in
+performance of two different memtable allocation types in Cassandra
+2.1.</p>
+<p>You run this scenario just by specfiying the JSON file:</p>
+<div class="highlight-python"><div class="highlight"><pre>cstar_perf_stress cassandra-2.1.offheap_memtables.json
+</pre></div>
+</div>
+<div class="section" id="log">
+<h3>Log<a class="headerlink" href="#log" title="Permalink to this headline">¶</a></h3>
+<p>The path where to save the test results</p>
+</div>
+<div class="section" id="title">
+<h3>Title<a class="headerlink" href="#title" title="Permalink to this headline">¶</a></h3>
+<p>A title to describe the test</p>
+</div>
+<div class="section" id="revisions">
+<h3>Revisions<a class="headerlink" href="#revisions" title="Permalink to this headline">¶</a></h3>
+<p>This is a list of every version of Cassandra you want to run in your
+test as well as any configuration parameters for it.</p>
+<p>Parameters:</p>
+<ul class="simple">
+<li>revision - the <a class="reference external" href="http://www.git-scm.com/book/ch9-5.html">git refspec</a> to version of Cassandra you want to test.</li>
+<li>any other <a class="reference external" href="https://github.com/apache/cassandra/blob/trunk/conf/cassandra.yaml">cassandra.yaml</a> setting. In our example above we are
+setting the memtable_allocation_type on the second revision, whereas
+the first revision sets no parameters so it uses the default setting.</li>
+</ul>
+</div>
+<div class="section" id="operations">
+<h3>Operations<a class="headerlink" href="#operations" title="Permalink to this headline">¶</a></h3>
+<p>Operations is the list of stress tests, commands, or other scripts you
+want to run on <em>each</em> revision specified.</p>
+<p>The parameters vary depending on the type of operation:</p>
+<div class="section" id="type-stress">
+<h4>type=&#8217;stress&#8217;<a class="headerlink" href="#type-stress" title="Permalink to this headline">¶</a></h4>
+<p>This runs a cassandra-stress workload against the cluster.</p>
+<ul class="simple">
+<li>command - the parameters to pass to cassandra-stress</li>
+<li>wait_for_compaction - boolean value specifying whether to wait for
+compactions to finish at the end of the opration, defaults to
+<tt class="docutils literal"><span class="pre">true</span></tt>.</li>
+</ul>
+<p>Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span><span class="s">&quot;stress&quot;</span><span class="p">,</span><span class="s">&quot;command&quot;</span><span class="p">:</span><span class="s">&quot;read n=65000000 -rate threads=40 -mode cql3 native prepared&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="type-nodetool">
+<h4>type=&#8217;nodetool&#8217;<a class="headerlink" href="#type-nodetool" title="Permalink to this headline">¶</a></h4>
+<p>Run a nodetool command</p>
+<ul class="simple">
+<li>nodes - the list of nodes to run the command on. If not specified,
+it will be run on all nodes.</li>
+<li>command - the command to run</li>
+</ul>
+<p>Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span><span class="s">&quot;nodetool&quot;</span><span class="p">,</span> <span class="s">&quot;command&quot;</span><span class="p">:</span><span class="s">&quot;setcompactionthroughput 0&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="type-cqlsh">
+<h4>type=&#8217;cqlsh&#8217;<a class="headerlink" href="#type-cqlsh" title="Permalink to this headline">¶</a></h4>
+<p>This runs a predefined CQL script</p>
+<ul class="simple">
+<li>node - the node to run the script on</li>
+<li>script - the script to run</li>
+</ul>
+<p>Example:</p>
+<div class="highlight-python"><div class="highlight"><pre>{&quot;type&quot;:&quot;cqlsh&quot;, &quot;node&quot;:&quot;cnode1&quot;, &quot;script&quot;:&quot;use my_ks; DELETE from users WHERE user_id=&#39;bill&#39;;&quot;
+</pre></div>
+</div>
+</div>
+<div class="section" id="type-bash">
+<h4>type=&#8217;bash&#8217;<a class="headerlink" href="#type-bash" title="Permalink to this headline">¶</a></h4>
+<p>This runs a bash script</p>
+<ul class="simple">
+<li>nodes - the list of nodes to run the command on. If not specified,
+it will be run on all nodes.</li>
+<li>script - the script to run</li>
+</ul>
+<p>Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span><span class="s">&quot;bash&quot;</span><span class="p">,</span> <span class="s">&quot;script&quot;</span><span class="p">:</span><span class="s">&quot;rm /path/to/some/file</span><span class="se">\n</span><span class="s">rm /path/to/some/other/file&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="running-tests-from-the-web-frontend">
+<h2>Running tests from the web frontend<a class="headerlink" href="#running-tests-from-the-web-frontend" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="architecture.html" title="Architecture"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="setup_cstar_perf_frontend.html" title="Setup cstar_perf.frontend"
+             >previous</a> |</li>
+        <li><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, DataStax.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

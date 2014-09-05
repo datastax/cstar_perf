@@ -93,14 +93,14 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <p>As described in the guide, there are several
-different parts of cstar_perf that can be used either as a whole, or
-as individual components. This guide will walk through the
-installation of cstar_perf.tool, which will be the core of what you
-need to start benchmarking Cassandra. The next chapter of this guide
-will focus on the <tt class="xref doc docutils literal"><span class="pre">setup</span> <span class="pre">of</span> <span class="pre">cstar_perf.frontend</span></tt> which sets up a full
-web-based interface for scheduling tests, archiving results, and
-monitoring multiple clusters.</p>
+  <p>There are several different parts of cstar_perf that can be used
+either as a whole, or as individual components (See
+<a class="reference internal" href="architecture.html"><em>Architecture</em></a>.) This guide will walk through the installation of
+cstar_perf.tool, which will be the core of what you need to start
+benchmarking Cassandra. The next chapter of this guide will focus on
+the <tt class="xref doc docutils literal"><span class="pre">setup</span> <span class="pre">of</span> <span class="pre">cstar_perf.frontend</span></tt> which sets up a full web-based
+interface for scheduling tests, archiving results, and monitoring
+multiple clusters.</p>
 <div class="section" id="setup-cstar-perf-tool">
 <h1>Setup cstar_perf.tool<a class="headerlink" href="#setup-cstar-perf-tool" title="Permalink to this headline">¶</a></h1>
 <p>cstar_perf.tool is the core module of cstar_perf. It is what
@@ -268,6 +268,8 @@ Here&#8217;s the config for our example cluster:</p>
 INFO:benchmark:Started cassandra on 3 nodes with git SHA: bd396ec8acb74436fd84a9cf48542c49e08a17a6
 </pre></div>
 </div>
+<p>Now that your cluster is automated, you can create some <a class="reference internal" href="running_tests.html"><em>test
+definitions</em></a>, or setup the <a class="reference internal" href="setup_cstar_perf_frontend.html"><em>web frontend</em></a>.</p>
 </div>
 </div>
 

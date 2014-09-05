@@ -81,15 +81,15 @@
   <div class="section" id="cstar-perf">
 <h1>cstar_perf<a class="headerlink" href="#cstar-perf" title="Permalink to this headline">¶</a></h1>
 <p>cstar_perf is a performance testing platform for Apache Cassandra.</p>
-<p>Some of it&#8217;s features:</p>
+<p>In a mostly automated fashion, it can do the following:</p>
 <ul class="simple">
-<li>Download Cassandra source code</li>
-<li>Configure and Build</li>
-<li>Bootstrap Nodes</li>
+<li>Download and build Cassandra source code</li>
+<li>Configure and bootstrap nodes</li>
 <li>Run stress workloads</li>
 <li>Capture performance metrics</li>
-<li>Create charts comparing different configs/workloads</li>
-<li>Webserver frontend for scheduling tests and archiving results</li>
+<li>Create reports and charts comparing different configs/workloads</li>
+<li>Webserver frontend for scheduling tests, viewing prior runs, and
+monitoring test clusters.</li>
 </ul>
 <div class="section" id="contents">
 <h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
@@ -102,7 +102,11 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="setup_cstar_perf_frontend.html">Setup cstar_perf.frontend</a></li>
-<li class="toctree-l1"><a class="reference internal" href="benchmarking.html">Benchmarking</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running_tests.html">Running Tests</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="running_tests.html#running-tests-with-cstar-perf-stress">Running tests with cstar_perf_stress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="running_tests.html#running-tests-from-the-web-frontend">Running tests from the web frontend</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#fab-cassandra-py">fab_cassandra.py</a></li>
 </ul>
