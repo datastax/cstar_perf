@@ -1,2 +1,0 @@
-recursive-include cstar_perf/frontend/server/templates *
-recursive-include cstar_perf/frontend/static *

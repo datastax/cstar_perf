@@ -1,0 +1,1 @@
+Search.setIndex({objects:{},terms:{search:0,index:0,modul:0,page:0,content:0},objtypes:{},titles:["Welcome to cstar_perf&#8217;s documentation!"],objnames:{},envversion:43,titleterms:{document:0,cstar_perf:0,indic:0,welcom:0,tabl:0},filenames:["index"]})
