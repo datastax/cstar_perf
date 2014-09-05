@@ -3,20 +3,30 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to cstar_perf's documentation!
-======================================
+cstar_perf
+==========
 
-Contents:
+cstar_perf is a performance testing platform for Apache Cassandra. 
+
+Some of it's features:
+
+* Download Cassandra source code
+* Configure and Build
+* Bootstrap Nodes
+* Run stress workloads
+* Capture performance metrics
+* Create charts comparing different configs/workloads
+* Webserver frontend for scheduling tests and archiving results
+
+
+Contents
+--------
 
 .. toctree::
-   :maxdepth: 2
+  :maxdepth: 2
 
+  setup_cstar_perf_tool
+  setup_cstar_perf_frontend
+  benchmarking
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+  architecture

@@ -1,0 +1,300 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Setup cstar_perf.tool &mdash; cstar_perf 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="cstar_perf 1.0 documentation" href="index.html" />
+    <link rel="next" title="Setup cstar_perf.frontend" href="setup_cstar_perf_frontend.html" />
+    <link rel="prev" title="cstar_perf" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="setup_cstar_perf_frontend.html" title="Setup cstar_perf.frontend"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="cstar_perf"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Setup cstar_perf.tool</a><ul>
+<li><a class="reference internal" href="#setting-up-your-cluster">Setting up your cluster</a><ul>
+<li><a class="reference internal" href="#key-based-ssh-access">Key based SSH access</a></li>
+<li><a class="reference internal" href="#software-requirements">Software requirements</a></li>
+<li><a class="reference internal" href="#cassandra-stress">Cassandra Stress</a></li>
+<li><a class="reference internal" href="#install-cstar-perf-tool">Install cstar_perf.tool</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#configuration">Configuration</a></li>
+<li><a class="reference internal" href="#test-cstar-perf-bootstrap">Test cstar_perf_bootstrap</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">cstar_perf</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="setup_cstar_perf_frontend.html"
+                        title="next chapter">Setup cstar_perf.frontend</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/setup_cstar_perf_tool.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <p>As described in the guide, there are several
+different parts of cstar_perf that can be used either as a whole, or
+as individual components. This guide will walk through the
+installation of cstar_perf.tool, which will be the core of what you
+need to start benchmarking Cassandra. The next chapter of this guide
+will focus on the <tt class="xref doc docutils literal"><span class="pre">setup</span> <span class="pre">of</span> <span class="pre">cstar_perf.frontend</span></tt> which sets up a full
+web-based interface for scheduling tests, archiving results, and
+monitoring multiple clusters.</p>
+<div class="section" id="setup-cstar-perf-tool">
+<h1>Setup cstar_perf.tool<a class="headerlink" href="#setup-cstar-perf-tool" title="Permalink to this headline">¶</a></h1>
+<p>cstar_perf.tool is the core module of cstar_perf. It is what
+bootstraps Cassandra and runs performance tests. You should install it
+on a machine within the same network as your Cassandra cluster. It&#8217;s
+best to dedicate a machine to it, as it will be what runs
+cassandra-stress and ideally should not have any resource contention
+on it. If you don&#8217;t have an extra machine, you can install it on the
+same machine as one of your Cassandra nodes, just be aware of any
+performance penalty you&#8217;re introducing by doing so.</p>
+<p>In this example, we have four computers:</p>
+<div class="highlight-python"><div class="highlight"><pre>             +------&gt; cnode1
+             |      10.0.0.101
+             |
+ stress1 +----------&gt; cnode2
+10.0.0.100   |      10.0.0.102
+             |
+             +------&gt; cnode3
+                    10.0.0.103
+</pre></div>
+</div>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">stress1</span></tt> is the node hosting cstar_perf.tool.</li>
+<li><tt class="docutils literal"><span class="pre">cnode1</span></tt>, <tt class="docutils literal"><span class="pre">cnode2</span></tt>, and <tt class="docutils literal"><span class="pre">cnode3</span></tt> are Cassandra nodes. These nodes have 4 SSDs for data storage, mounted at <tt class="docutils literal"><span class="pre">/mnt/d1</span></tt>, <tt class="docutils literal"><span class="pre">/mnt/d2</span></tt>, <tt class="docutils literal"><span class="pre">/mnt/d3</span></tt>, and <tt class="docutils literal"><span class="pre">/mnt/d4</span></tt></li>
+</ul>
+<div class="section" id="setting-up-your-cluster">
+<h2>Setting up your cluster<a class="headerlink" href="#setting-up-your-cluster" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="key-based-ssh-access">
+<h3>Key based SSH access<a class="headerlink" href="#key-based-ssh-access" title="Permalink to this headline">¶</a></h3>
+<p>The machine hosting cstar_perf.tool should have <a class="reference external" href="http://www.debian-administration.org/article/152/Password-less_logins_with_OpenSSH">key based SSH access</a> to the Cassandra cluster for both your regular user account as well as root.</p>
+<p>In terms of our example, from your user account on <tt class="docutils literal"><span class="pre">stress1</span></tt> you
+should be able to run <tt class="docutils literal"><span class="pre">ssh</span> <span class="pre">your_username&#64;cnode1</span></tt> as well as <tt class="docutils literal"><span class="pre">ssh</span>
+<span class="pre">root&#64;cnode1</span></tt> without any password prompts.</p>
+<p>When generating SSH keys, it works best if you don&#8217;t specify a
+password. You can use an SSH agent if you are uncomfortable doing
+this, but be aware things will stop working when that agent isn&#8217;t
+running (system reboots, not logged in, etc.)</p>
+</div>
+<div class="section" id="software-requirements">
+<h3>Software requirements<a class="headerlink" href="#software-requirements" title="Permalink to this headline">¶</a></h3>
+<p>The machine running cstar_perf.tool needs to have the following packages installed:</p>
+<ul class="simple">
+<li>Python 2.7</li>
+<li>Python 2.7 development packages - (python-dev on debian)</li>
+<li>pip - (python-pip on debian)</li>
+<li>git</li>
+</ul>
+<p>The Cassandra nodes also need to have the following:</p>
+<ul class="simple">
+<li>Python 2.7</li>
+<li>git</li>
+</ul>
+<p>In addition, you need to prepare a <tt class="docutils literal"><span class="pre">~/fab</span></tt> directory to install on
+each of your nodes. This will contain the JDK as well as a copy of
+ant. Prepare this directory on the controller node (<tt class="docutils literal"><span class="pre">stress1</span></tt> in our
+example) and then rsync it to the others. Here&#8217;s an example to set
+this up on 64-bit Linux with Java 7u67 and ant 1.9.4 (links may
+change, so modify accordingly.):</p>
+<div class="highlight-python"><div class="highlight"><pre>mkdir ~/fab
+cd ~/fab
+wget --no-cookies --header &quot;Cookie: oraclelicense=accept-securebackup-cookie;&quot; http://download.oracle.com/otn-pub/java/jdk/7u67-b01/jdk-7u67-linux-x64.tar.gz
+tar xfv jdk-7u67-linux-x64.tar.gz
+rm jdk-7u67-linux-x64.tar.gz
+ln -s jdk1.7.0_67 java
+wget http://archive.apache.org/dist/ant/binaries/apache-ant-1.9.4-bin.tar.bz2
+tar xfv apache-ant-1.9.4-bin.tar.bz2
+rm apache-ant-1.9.4-bin.tar.bz2
+</pre></div>
+</div>
+<p>The end result being that we can invoke java from <tt class="docutils literal"><span class="pre">~/fab/java/bin/java</span></tt> and ant from <tt class="docutils literal"><span class="pre">~/fab/ant/bin/ant</span></tt>.</p>
+<p>Copy this directory to each of your cassandra nodes:</p>
+<div class="highlight-python"><div class="highlight"><pre>rsync -av ~/fab cnode1:
+rsync -av ~/fab cnode2:
+rsync -av ~/fab cnode3:
+</pre></div>
+</div>
+<p>You&#8217;ll know you got your SSH keys sorted out if copying those files didn&#8217;t require you to enter any passwords.</p>
+</div>
+<div class="section" id="cassandra-stress">
+<h3>Cassandra Stress<a class="headerlink" href="#cassandra-stress" title="Permalink to this headline">¶</a></h3>
+<p>Additionally, on the node hosting cstar_perf.tool (<tt class="docutils literal"><span class="pre">stress1</span></tt> in our
+example) you need to download and build cassandra-stress. This is only
+needs to be on the controller node (<tt class="docutils literal"><span class="pre">stress1</span></tt>):</p>
+<div class="highlight-python"><div class="highlight"><pre>mkdir ~/fab/stress
+cd ~/fab/stress
+git clone http://git-wip-us.apache.org/repos/asf/cassandra.git
+cd cassandra
+git checkout cassandra-2.1
+~/fab/ant/bin/ant clean jar
+cd ..
+mv cassandra cassandra-2.1
+ln -s cassandra-2.1 default
+</pre></div>
+</div>
+<p>The end result being that we can invoke cassandra-stress from <tt class="docutils literal"><span class="pre">~/fab/stress/default/tools/bin/cassandra-stress</span></tt>. You&#8217;ll know you have java and ant installed correctly if this build was successful.</p>
+</div>
+<div class="section" id="install-cstar-perf-tool">
+<h3>Install cstar_perf.tool<a class="headerlink" href="#install-cstar-perf-tool" title="Permalink to this headline">¶</a></h3>
+<p>Finally, you should install cstar_perf.tool onto your designated machine (<tt class="docutils literal"><span class="pre">stress1</span></tt> in our example):</p>
+<div class="highlight-python"><div class="highlight"><pre>pip install cstar_perf.tool
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
+<p>cstar_perf.tool needs to know about your cluster. For this you need to
+create a JSON file located in <tt class="docutils literal"><span class="pre">~/.cstar_perf/cluster_config.json</span></tt>.
+Here&#8217;s the config for our example cluster:</p>
+<div class="highlight-python"><div class="highlight"><pre>{
+    &quot;commitlog_directory&quot;: &quot;/mnt/d1/commitlog&quot;
+    &quot;data_file_directories&quot;: [
+        &quot;/mnt/d2/data&quot;,
+        &quot;/mnt/d3/data&quot;,
+        &quot;/mnt/d4/data&quot;
+    ],
+    &quot;block_devices&quot;: [
+        &quot;/dev/sdb&quot;,
+        &quot;/dev/sdc&quot;,
+        &quot;/dev/sdd&quot;,
+        &quot;/dev/sde&quot;
+    ],
+    &quot;blockdev_readahead&quot;: &quot;256&quot;,
+    &quot;hosts&quot;: {
+        &quot;cnode1&quot;: {
+            &quot;internal_ip&quot;: &quot;10.0.0.101&quot;,
+            &quot;hostname&quot;: &quot;cnode1&quot;,
+            &quot;seed&quot;: true
+        },
+        &quot;cnode2&quot;: {
+            &quot;internal_ip&quot;: &quot;10.0.0.102&quot;,
+            &quot;hostname&quot;: &quot;cnode2&quot;,
+            &quot;seed&quot;: true
+        },
+        &quot;cnode3&quot;: {
+            &quot;internal_ip&quot;: &quot;10.0.0.103&quot;,
+            &quot;hostname&quot;: &quot;cnode3&quot;,
+            &quot;seed&quot;: true
+        },
+    },
+    &quot;user&quot;: &quot;your_username&quot;,
+    &quot;name&quot;: &quot;example1&quot;,
+    &quot;saved_caches_directory&quot;: &quot;/mnt/d2/saved_caches&quot;
+}
+</pre></div>
+</div>
+<p>The required settings :</p>
+<ul class="simple">
+<li><strong>hosts</strong> - all of your Cassandra nodes need to be listed here, including hostname and IP address.</li>
+<li><strong>name</strong> - the name you want to give to this cluster.</li>
+<li><strong>block_devices</strong> - The physical block devices that Cassandra is using to store data and commitlogs.</li>
+<li><strong>blockdev_readahead</strong> - The default block device readhead setting for your drives (get it from running <tt class="docutils literal"><span class="pre">blockdev</span> <span class="pre">--getra</span> <span class="pre">/dev/DEVICE</span></tt>)</li>
+<li><strong>user</strong> - The user account that you use on the Cassandra nodes.</li>
+</ul>
+<p>If you&#8217;re familiar with Cassandra&#8217;s <tt class="docutils literal"><span class="pre">cassandra.yaml</span></tt>, you&#8217;ll recognize the rest of these settings because they are from there. You can actually put more <tt class="docutils literal"><span class="pre">cassandra.yaml</span></tt> settings here if you know you&#8217;ll <em>always</em> need them, but it&#8217;s usually better to rely on the defaults and introduce different settings in your test scenarios, which you&#8217;ll define later.</p>
+</div>
+<div class="section" id="test-cstar-perf-bootstrap">
+<h2>Test cstar_perf_bootstrap<a class="headerlink" href="#test-cstar-perf-bootstrap" title="Permalink to this headline">¶</a></h2>
+<p>Now that cstar_perf.tool is installed and configured, you can bring up a test cluster to test that everything is working:</p>
+<div class="highlight-python"><div class="highlight"><pre>cstar_perf_bootstrap apache/cassandra-2.1
+</pre></div>
+</div>
+<p>This command will tell all of the cassandra nodes to download the latest Cassandra 2.1 from git, build it, and join a cluster together. You&#8217;ll see a lot of text output showing you what the script is doing, but at the end of it all you should see something like:</p>
+<div class="highlight-python"><div class="highlight"><pre>[10.0.0.101] All nodes available!
+INFO:benchmark:Started cassandra on 3 nodes with git SHA: bd396ec8acb74436fd84a9cf48542c49e08a17a6
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="setup_cstar_perf_frontend.html" title="Setup cstar_perf.frontend"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="cstar_perf"
+             >previous</a> |</li>
+        <li><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, DataStax.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
