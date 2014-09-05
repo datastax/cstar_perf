@@ -45,6 +45,14 @@
   <ul>
 <li><a class="reference internal" href="#">Architecture</a><ul>
 <li><a class="reference internal" href="#fab-cassandra-py">fab_cassandra.py</a></li>
+<li><a class="reference internal" href="#benchmark-py">benchmark.py</a></li>
+<li><a class="reference internal" href="#bootstrap-py">bootstrap.py</a></li>
+<li><a class="reference internal" href="#stress-compare-py">stress_compare.py</a></li>
+<li><a class="reference internal" href="#cstar-perf-frontend">cstar_perf_frontend</a><ul>
+<li><a class="reference internal" href="#cstar-perf-server">cstar_perf_server</a></li>
+<li><a class="reference internal" href="#cstar-perf-client">cstar_perf_client</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -84,36 +92,38 @@
 <p>Here&#8217;s a list of the major pieces that make up cstar_perf:</p>
 <div class="section" id="fab-cassandra-py">
 <h2>fab_cassandra.py<a class="headerlink" href="#fab-cassandra-py" title="Permalink to this headline">¶</a></h2>
-<p>This is a [fabric](<a class="reference external" href="http://www.fabfile.org">http://www.fabfile.org</a>) script that handles the
+<p>This is a <a class="reference external" href="http://www.fabfile.org">fabric</a> script that handles the
 details of setting up a Cassandra cluster on a cluster of machines. It
 can check out Cassandra source from git, build it, configure it, start
 it, run testing workloads, and monitor the cluster.</p>
-<p>## benchmark.py</p>
+</div>
+<div class="section" id="benchmark-py">
+<h2>benchmark.py<a class="headerlink" href="#benchmark-py" title="Permalink to this headline">¶</a></h2>
 <p>A higher abstraction above fab_cassandra.py that handles common
 cluster and benchmarking tasks.</p>
-<p>## bootstrap.py</p>
+</div>
+<div class="section" id="bootstrap-py">
+<h2>bootstrap.py<a class="headerlink" href="#bootstrap-py" title="Permalink to this headline">¶</a></h2>
 <p>Command line tool to configure and start a Cassandra cluster. Uses the benchmark.py API.</p>
-<p>## stress_compare.py</p>
+</div>
+<div class="section" id="stress-compare-py">
+<h2>stress_compare.py<a class="headerlink" href="#stress-compare-py" title="Permalink to this headline">¶</a></h2>
 <p>Command line tool to setup one or more test scenarios and compare performance. Uses the benchmark.py API.</p>
-<p>## cstar_perf_frontend</p>
+</div>
+<div class="section" id="cstar-perf-frontend">
+<h2>cstar_perf_frontend<a class="headerlink" href="#cstar-perf-frontend" title="Permalink to this headline">¶</a></h2>
 <p>cstar_perf_frontend uses the above tools to setup a web frontend to
 easily create test jobs and archive the results.</p>
-<blockquote>
-<div><ul>
-<li><p class="first">cstar_perf_server</p>
-<p>A web server that provides the user interface and backend API for</p>
-</li>
-</ul>
-</div></blockquote>
-<p>talking to a test clusters.</p>
-<blockquote>
-<div><ul>
-<li><p class="first">cstar_perf_client</p>
-<p>The daemon to run on the test cluster that accepts jobs from</p>
-</li>
-</ul>
-</div></blockquote>
-<p>cstar_perf_server. Wraps stress_compare.py.</p>
+<div class="section" id="cstar-perf-server">
+<h3>cstar_perf_server<a class="headerlink" href="#cstar-perf-server" title="Permalink to this headline">¶</a></h3>
+<p>A web server that provides the user interface and backend API for
+talking to a test clusters.</p>
+</div>
+<div class="section" id="cstar-perf-client">
+<h3>cstar_perf_client<a class="headerlink" href="#cstar-perf-client" title="Permalink to this headline">¶</a></h3>
+<p>The daemon to run on the test cluster that accepts jobs from
+cstar_perf_server. Wraps stress_compare.py.</p>
+</div>
 </div>
 </div>
 
