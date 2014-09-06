@@ -128,8 +128,11 @@ input, here&#8217;s a sample:</p>
 </div>
 <p>This is a hypothetical test for comparing the difference in
 performance of two different memtable allocation types in Cassandra
-2.1.</p>
-<p>You run this scenario just by specfiying the JSON file:</p>
+2.1. The first test is just using Cassandra&#8217;s default configuration,
+while the second introduces the <tt class="docutils literal"><span class="pre">memtable_allocation_type:</span>
+<span class="pre">offheap_objects</span></tt> setting. Both tests will run the same three stress
+commands listed.</p>
+<p>You run this scenario on the command line by specifying the JSON file:</p>
 <div class="highlight-python"><div class="highlight"><pre>cstar_perf_stress cassandra-2.1.offheap_memtables.json
 </pre></div>
 </div>
