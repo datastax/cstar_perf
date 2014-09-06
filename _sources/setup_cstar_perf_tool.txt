@@ -87,6 +87,7 @@ change, so modify accordingly.)::
     wget http://archive.apache.org/dist/ant/binaries/apache-ant-1.9.4-bin.tar.bz2
     tar xfv apache-ant-1.9.4-bin.tar.bz2
     rm apache-ant-1.9.4-bin.tar.bz2
+    ln -s apache-ant-1.9.4 ant
     
 The end result being that we can invoke java from ``~/fab/java/bin/java`` and ant from ``~/fab/ant/bin/ant``.
 
