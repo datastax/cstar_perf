@@ -130,7 +130,9 @@ performance penalty you&#8217;re introducing by doing so.</p>
 <h2>Setting up your cluster<a class="headerlink" href="#setting-up-your-cluster" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="key-based-ssh-access">
 <h3>Key based SSH access<a class="headerlink" href="#key-based-ssh-access" title="Permalink to this headline">¶</a></h3>
-<p>The machine hosting cstar_perf.tool should have <a class="reference external" href="http://www.debian-administration.org/article/152/Password-less_logins_with_OpenSSH">key based SSH access</a> to the Cassandra cluster for both your regular user account as well as root.</p>
+<p>The machine hosting cstar_perf.tool should have <a class="reference external" href="http://www.debian-administration.org/article/152/Password-less_logins_with_OpenSSH">key based SSH
+access</a> to the Cassandra cluster for both your regular user account
+as well as root.</p>
 <p>In terms of our example, from your user account on <tt class="docutils literal"><span class="pre">stress1</span></tt> you
 should be able to run <tt class="docutils literal"><span class="pre">ssh</span> <span class="pre">your_username&#64;cnode1</span></tt> as well as <tt class="docutils literal"><span class="pre">ssh</span>
 <span class="pre">root&#64;cnode1</span></tt> without any password prompts.</p>
@@ -141,7 +143,8 @@ running (system reboots, not logged in, etc.)</p>
 </div>
 <div class="section" id="software-requirements">
 <h3>Software requirements<a class="headerlink" href="#software-requirements" title="Permalink to this headline">¶</a></h3>
-<p>The machine running cstar_perf.tool needs to have the following packages installed:</p>
+<p>The machine running cstar_perf.tool needs to have the following
+packages installed:</p>
 <ul class="simple">
 <li>Python 2.7</li>
 <li>Python 2.7 development packages - (python-dev on debian)</li>
@@ -171,20 +174,22 @@ rm apache-ant-1.9.4-bin.tar.bz2
 ln -s apache-ant-1.9.4 ant
 </pre></div>
 </div>
-<p>The end result being that we can invoke java from <tt class="docutils literal"><span class="pre">~/fab/java/bin/java</span></tt> and ant from <tt class="docutils literal"><span class="pre">~/fab/ant/bin/ant</span></tt>.</p>
+<p>The end result being that we can invoke java from
+<tt class="docutils literal"><span class="pre">~/fab/java/bin/java</span></tt> and ant from <tt class="docutils literal"><span class="pre">~/fab/ant/bin/ant</span></tt>.</p>
 <p>Copy this directory to each of your cassandra nodes:</p>
 <div class="highlight-python"><div class="highlight"><pre>rsync -av ~/fab cnode1:
 rsync -av ~/fab cnode2:
 rsync -av ~/fab cnode3:
 </pre></div>
 </div>
-<p>You&#8217;ll know you got your SSH keys sorted out if copying those files didn&#8217;t require you to enter any passwords.</p>
+<p>You&#8217;ll know you got your SSH keys sorted out if copying those files
+didn&#8217;t require you to enter any passwords.</p>
 </div>
 <div class="section" id="cassandra-stress">
 <h3>Cassandra Stress<a class="headerlink" href="#cassandra-stress" title="Permalink to this headline">¶</a></h3>
 <p>Additionally, on the node hosting cstar_perf.tool (<tt class="docutils literal"><span class="pre">stress1</span></tt> in our
 example) you need to download and build cassandra-stress. This is only
-needs to be on the controller node (<tt class="docutils literal"><span class="pre">stress1</span></tt>):</p>
+needs to be run on the controller node (<tt class="docutils literal"><span class="pre">stress1</span></tt>):</p>
 <div class="highlight-python"><div class="highlight"><pre>mkdir ~/fab/stress
 cd ~/fab/stress
 git clone http://git-wip-us.apache.org/repos/asf/cassandra.git
@@ -196,14 +201,18 @@ mv cassandra cassandra-2.1
 ln -s cassandra-2.1 default
 </pre></div>
 </div>
-<p>The end result being that we can invoke cassandra-stress from <tt class="docutils literal"><span class="pre">~/fab/stress/default/tools/bin/cassandra-stress</span></tt>. You&#8217;ll know you have java and ant installed correctly if this build was successful.</p>
+<p>The end result being that you find cassandra-stress in
+<tt class="docutils literal"><span class="pre">~/fab/stress/default/tools/bin/cassandra-stress</span></tt>. You&#8217;ll know you
+have java and ant installed correctly if this build was successful.</p>
 </div>
 <div class="section" id="install-cstar-perf-tool">
 <h3>Install cstar_perf.tool<a class="headerlink" href="#install-cstar-perf-tool" title="Permalink to this headline">¶</a></h3>
-<p>Finally, you should install cstar_perf.tool onto your designated machine (<tt class="docutils literal"><span class="pre">stress1</span></tt> in our example):</p>
+<p>Finally, you should install cstar_perf.tool onto your designated
+machine (<tt class="docutils literal"><span class="pre">stress1</span></tt> in our example):</p>
 <div class="highlight-python"><div class="highlight"><pre>pip install cstar_perf.tool
 </pre></div>
 </div>
+<p>Depending on your environment, this may need to be run as root.</p>
 </div>
 </div>
 <div class="section" id="configuration">
@@ -256,21 +265,31 @@ Here&#8217;s the config for our example cluster:</p>
 <li><strong>blockdev_readahead</strong> - The default block device readhead setting for your drives (get it from running <tt class="docutils literal"><span class="pre">blockdev</span> <span class="pre">--getra</span> <span class="pre">/dev/DEVICE</span></tt>)</li>
 <li><strong>user</strong> - The user account that you use on the Cassandra nodes.</li>
 </ul>
-<p>If you&#8217;re familiar with Cassandra&#8217;s <tt class="docutils literal"><span class="pre">cassandra.yaml</span></tt>, you&#8217;ll recognize the rest of these settings because they are from there. You can actually put more <tt class="docutils literal"><span class="pre">cassandra.yaml</span></tt> settings here if you know you&#8217;ll <em>always</em> need them, but it&#8217;s usually better to rely on the defaults and introduce different settings in your test scenarios, which you&#8217;ll define later.</p>
+<p>If you&#8217;re familiar with Cassandra&#8217;s <tt class="docutils literal"><span class="pre">cassandra.yaml</span></tt>, you&#8217;ll
+recognize the rest of these settings because they are from there. You
+can actually put more <tt class="docutils literal"><span class="pre">cassandra.yaml</span></tt> settings here if you know
+you&#8217;ll <em>always</em> need them, but it&#8217;s usually better to rely on the
+defaults and introduce different settings in your test scenarios,
+which you&#8217;ll define later.</p>
 </div>
 <div class="section" id="test-cstar-perf-bootstrap">
 <h2>Test cstar_perf_bootstrap<a class="headerlink" href="#test-cstar-perf-bootstrap" title="Permalink to this headline">¶</a></h2>
-<p>Now that cstar_perf.tool is installed and configured, you can bring up a test cluster to test that everything is working:</p>
+<p>Now that cstar_perf.tool is installed and configured, you can bring up
+a test cluster to test that everything is working:</p>
 <div class="highlight-python"><div class="highlight"><pre>cstar_perf_bootstrap apache/cassandra-2.1
 </pre></div>
 </div>
-<p>This command will tell all of the cassandra nodes to download the latest Cassandra 2.1 from git, build it, and join a cluster together. You&#8217;ll see a lot of text output showing you what the script is doing, but at the end of it all you should see something like:</p>
+<p>This command will tell all of the cassandra nodes to download, from
+git, the latest development version of Cassandra 2.1, build it, and
+create a cluster. You&#8217;ll see a lot of text output showing you what the
+script is doing, but at the end of it all, you should see something
+like:</p>
 <div class="highlight-python"><div class="highlight"><pre>[10.0.0.101] All nodes available!
 INFO:benchmark:Started cassandra on 3 nodes with git SHA: bd396ec8acb74436fd84a9cf48542c49e08a17a6
 </pre></div>
 </div>
-<p>Now that your cluster is automated, you can create some <a class="reference internal" href="running_tests.html"><em>test
-definitions</em></a>, or setup the <a class="reference internal" href="setup_cstar_perf_frontend.html"><em>web frontend</em></a>.</p>
+<p>Assuming that worked, your cluster is now fully automated via
+cstar_perf. Next steps include creating some <a class="reference internal" href="running_tests.html"><em>test definitions</em></a>, or to setup the <a class="reference internal" href="setup_cstar_perf_frontend.html"><em>web frontend</em></a>.</p>
 </div>
 </div>
 

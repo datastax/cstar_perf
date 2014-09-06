@@ -43,7 +43,9 @@ Setting up your cluster
 Key based SSH access
 ^^^^^^^^^^^^^^^^^^^^
  
-The machine hosting cstar_perf.tool should have `key based SSH access`_ to the Cassandra cluster for both your regular user account as well as root. 
+The machine hosting cstar_perf.tool should have `key based SSH
+access`_ to the Cassandra cluster for both your regular user account
+as well as root.
 
 .. _key based SSH access: http://www.debian-administration.org/article/152/Password-less_logins_with_OpenSSH
 
@@ -59,7 +61,8 @@ running (system reboots, not logged in, etc.)
 Software requirements
 ^^^^^^^^^^^^^^^^^^^^^
 
-The machine running cstar_perf.tool needs to have the following packages installed:
+The machine running cstar_perf.tool needs to have the following
+packages installed:
 
 * Python 2.7
 * Python 2.7 development packages - (python-dev on debian)
@@ -89,7 +92,8 @@ change, so modify accordingly.)::
     rm apache-ant-1.9.4-bin.tar.bz2
     ln -s apache-ant-1.9.4 ant
     
-The end result being that we can invoke java from ``~/fab/java/bin/java`` and ant from ``~/fab/ant/bin/ant``.
+The end result being that we can invoke java from
+``~/fab/java/bin/java`` and ant from ``~/fab/ant/bin/ant``.
 
 Copy this directory to each of your cassandra nodes::
 
@@ -97,7 +101,8 @@ Copy this directory to each of your cassandra nodes::
     rsync -av ~/fab cnode2:
     rsync -av ~/fab cnode3:
 
-You'll know you got your SSH keys sorted out if copying those files didn't require you to enter any passwords. 
+You'll know you got your SSH keys sorted out if copying those files
+didn't require you to enter any passwords.
 
 
 Cassandra Stress
@@ -105,7 +110,7 @@ Cassandra Stress
 
 Additionally, on the node hosting cstar_perf.tool (``stress1`` in our
 example) you need to download and build cassandra-stress. This is only
-needs to be on the controller node (``stress1``)::
+needs to be run on the controller node (``stress1``)::
 
     mkdir ~/fab/stress
     cd ~/fab/stress
@@ -117,14 +122,19 @@ needs to be on the controller node (``stress1``)::
     mv cassandra cassandra-2.1
     ln -s cassandra-2.1 default
 
-The end result being that we can invoke cassandra-stress from ``~/fab/stress/default/tools/bin/cassandra-stress``. You'll know you have java and ant installed correctly if this build was successful.
+The end result being that you find cassandra-stress in
+``~/fab/stress/default/tools/bin/cassandra-stress``. You'll know you
+have java and ant installed correctly if this build was successful.
 
 Install cstar_perf.tool
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Finally, you should install cstar_perf.tool onto your designated machine (``stress1`` in our example)::
+Finally, you should install cstar_perf.tool onto your designated
+machine (``stress1`` in our example)::
 
     pip install cstar_perf.tool
+
+Depending on your environment, this may need to be run as root.
 
 Configuration
 -------------
@@ -177,19 +187,31 @@ The required settings :
 * **blockdev_readahead** - The default block device readhead setting for your drives (get it from running ``blockdev --getra /dev/DEVICE``)
 * **user** - The user account that you use on the Cassandra nodes.
 
-If you're familiar with Cassandra's ``cassandra.yaml``, you'll recognize the rest of these settings because they are from there. You can actually put more ``cassandra.yaml`` settings here if you know you'll *always* need them, but it's usually better to rely on the defaults and introduce different settings in your test scenarios, which you'll define later. 
+If you're familiar with Cassandra's ``cassandra.yaml``, you'll
+recognize the rest of these settings because they are from there. You
+can actually put more ``cassandra.yaml`` settings here if you know
+you'll *always* need them, but it's usually better to rely on the
+defaults and introduce different settings in your test scenarios,
+which you'll define later.
 
 Test cstar_perf_bootstrap
 -------------------------
 
-Now that cstar_perf.tool is installed and configured, you can bring up a test cluster to test that everything is working::
+Now that cstar_perf.tool is installed and configured, you can bring up
+a test cluster to test that everything is working::
 
     cstar_perf_bootstrap apache/cassandra-2.1
 
-This command will tell all of the cassandra nodes to download the latest Cassandra 2.1 from git, build it, and join a cluster together. You'll see a lot of text output showing you what the script is doing, but at the end of it all you should see something like::
+This command will tell all of the cassandra nodes to download, from
+git, the latest development version of Cassandra 2.1, build it, and
+create a cluster. You'll see a lot of text output showing you what the
+script is doing, but at the end of it all, you should see something
+like::
 
     [10.0.0.101] All nodes available!
     INFO:benchmark:Started cassandra on 3 nodes with git SHA: bd396ec8acb74436fd84a9cf48542c49e08a17a6
 
-Now that your cluster is automated, you can create some :doc:`test
-definitions <running_tests>`, or setup the :doc:`web frontend <setup_cstar_perf_frontend>`.
+Assuming that worked, your cluster is now fully automated via
+cstar_perf. Next steps include creating some :doc:`test definitions
+<running_tests>`, or to setup the :doc:`web frontend
+<setup_cstar_perf_frontend>`.

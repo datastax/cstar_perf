@@ -20,7 +20,7 @@ input, here's a sample::
     {
      "revisions":[
         {"revision":"apache/cassandra-2.1"},
-        {"revision":"apache/cassandra-2.1", 'memtable_allocation_type':'offheap_objects'},
+        {"revision":"apache/cassandra-2.1", "memtable_allocation_type":"offheap_objects"}
      ],
      "title":"Test offheap memtables",
      "log":"stats.cassandra-2.1.offheap_memtables.json",
