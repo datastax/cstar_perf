@@ -45,6 +45,18 @@
     </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Setup cstar_perf.frontend</a><ul>
+<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#google-authentication">Google Authentication</a></li>
+<li><a class="reference internal" href="#install-server">Install server</a></li>
+<li><a class="reference internal" href="#setup-user-accounts">Setup User Accounts</a></li>
+<li><a class="reference internal" href="#setup-clusters">Setup Clusters</a></li>
+</ul>
+</li>
+</ul>
+
   <h4>Previous topic</h4>
   <p class="topless"><a href="setup_cstar_perf_tool.html"
                         title="previous chapter">Setup cstar_perf.tool</a></p>
@@ -79,7 +91,220 @@
             
   <div class="section" id="setup-cstar-perf-frontend">
 <h1>Setup cstar_perf.frontend<a class="headerlink" href="#setup-cstar-perf-frontend" title="Permalink to this headline">¶</a></h1>
-<p>asdf</p>
+<p>These instructions assume you are installing the frontend on a fresh
+install of Ubuntu 14.04.</p>
+<div class="section" id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Python 2.7</li>
+<li>python-dev</li>
+<li>virtualenv</li>
+<li>nginx</li>
+<li>Cassandra 2.0+ running on localhost</li>
+</ul>
+<p>Install dependencies:</p>
+<div class="highlight-python"><div class="highlight"><pre>echo &quot;deb http://www.apache.org/dist/cassandra/debian 20x main&quot; | sudo tee -a /etc/apt/sources.list.d/cassandra.sources.list
+gpg --keyserver pgp.mit.edu --recv-keys 2B5C1B00
+gpg --export --armor 2B5C1B00 | sudo apt-key add -
+
+sudo add-apt-repository -y ppa:nginx/stable
+
+sudo apt-get update
+sudo apt-get install -y python2.7 python2.7-dev python-virtualenv libtool nginx cassandra
+</pre></div>
+</div>
+</div>
+<div class="section" id="google-authentication">
+<h2>Google Authentication<a class="headerlink" href="#google-authentication" title="Permalink to this headline">¶</a></h2>
+<p>The frontend uses Google authentication for user authentication. You
+will need to generate an API key and copy the resulting
+client_secrets.json file to <tt class="docutils literal"><span class="pre">~/.cstar_perf/client_secrets.json</span></tt></p>
+<ul class="simple">
+<li>Go to the <a class="reference external" href="https://console.developers.google.com/">Google developers console</a></li>
+<li>Click on Create Project and give your new project a descriptive name.</li>
+<li>On the project&#8217;s page, click &#8216;Enable API&#8217;. On the following page,
+find and turn on &#8216;Google+ API&#8217;. Although the API is called Google+,
+you and your users will not require a Google+ account, a regular
+Google account will be sufficient.</li>
+<li>On the left hand side, there&#8217;s a link for Credentials. Click that
+and then click &#8216;Create new Client ID&#8217;.</li>
+<li>In the popup it will have a box called &#8216;Authorized Javascript
+origins&#8217;, you need to put the full url to where you will host
+cstar_perf.frontend. The default &#8216;Authorized redirect uri&#8217;,
+&#8216;/oauth2callback&#8217; is correct.</li>
+<li>Download the client id and place it on the server at
+<tt class="docutils literal"><span class="pre">~/.cstar_perf/client_secrets.json</span></tt></li>
+<li>On the left hand side, click on &#8216;Consent screen&#8217;. Enter your email
+address, a name for the app, and whatever other details you wish to
+provide.</li>
+</ul>
+</div>
+<div class="section" id="install-server">
+<h2>Install server<a class="headerlink" href="#install-server" title="Permalink to this headline">¶</a></h2>
+<p>Create a user account for the purpose of running cstar_perf.frontend.
+All the commands listed here should be run from that account.</p>
+<p>Create a virtualenv to keep the installation tidy:</p>
+<div class="highlight-python"><div class="highlight"><pre>mkdir ~/app
+cd ~/app
+mkdir ~/logs
+virtualenv --python=python2.7 env
+source env/bin/activate
+</pre></div>
+</div>
+<p>Install the frontend:</p>
+<div class="highlight-python"><div class="highlight"><pre>pip install cstar_perf.frontend
+</pre></div>
+</div>
+<p>To start the server for local testing:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">cstar_perf_server</span>
+</pre></div>
+</div>
+<p>This server will only be available at <a class="reference external" href="http://localhost:8000">http://localhost:8000</a></p>
+<p>Press ctrl-c to quit the server, we will install it more permanently
+now.</p>
+<p>You will need a nginx configuration file to proxy the server. You can
+see the <a class="reference external" href="http://gunicorn-docs.readthedocs.org/en/19.1.1/deploy.html#nginx-configuration">gunicorn docs</a> for more information, or you can use the one
+below.</p>
+<p>Repalce <tt class="docutils literal"><span class="pre">automaton</span></tt> through this file with the name of the user
+account you are using:</p>
+<div class="highlight-python"><div class="highlight"><pre>worker_processes 1;
+user automaton automaton;
+pid /home/automaton/app/nginx.pid;
+error_log /home/automaton/app/logs/nginx.error.log;
+
+events {
+  worker_connections 1024; # increase if you have lots of clients
+  accept_mutex off; # &quot;on&quot; if nginx worker_processes &gt; 1
+}
+
+http {
+  include mime.types;
+  default_type application/octet-stream;
+  access_log /home/automaton/app/logs/nginx.access.log combined;
+  sendfile on;
+  tcp_nopush on; # off may be better for *some* Comet/long-poll stuff
+  tcp_nodelay off; # on may be better for some Comet/long-poll stuff
+
+  gzip on;
+  gzip_http_version 1.0;
+  gzip_proxied any;
+  gzip_min_length 500;
+  gzip_disable &quot;MSIE [1-6]\.&quot;;
+  gzip_types text/plain text/html text/xml text/css
+             text/comma-separated-values
+             text/javascript application/x-javascript
+             application/atom+xml;
+
+  upstream app_server {
+    server 127.0.0.1:8000 fail_timeout=0;
+  }
+
+  map $http_upgrade $connection_upgrade {
+      default upgrade;
+      &#39;&#39;      close;
+  }
+
+  server {
+    listen 80 default;
+
+    client_max_body_size 4G;
+    server_name _;
+
+    keepalive_timeout 99999999999999;
+
+    # path for static files
+    root /path/to/app/current/public;
+
+    location / {
+      try_files $uri @proxy_to_app;
+    }
+
+    location /api/cluster_comms {
+        proxy_pass http://localhost:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+    }
+
+    location @proxy_to_app {
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header Host $http_host;
+      proxy_redirect off;
+      proxy_pass http://app_server;
+    }
+  }
+}
+</pre></div>
+</div>
+<p>Start nginx:</p>
+<div class="highlight-python"><div class="highlight"><pre>sudo service nginx start
+</pre></div>
+</div>
+<p>cstar_perf.frontend should at this point be reachable publically on
+port 80.</p>
+</div>
+<div class="section" id="setup-user-accounts">
+<h2>Setup User Accounts<a class="headerlink" href="#setup-user-accounts" title="Permalink to this headline">¶</a></h2>
+<p>There is no administration interface for adding users yet. You need to
+insert accounts into the database directly. Here&#8217;s a snippet to do
+that from a python shell:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ source ~/app/env/bin/activate
+$ python
+Python 2.7.6 (default, Nov 26 2013, 12:52:49)
+[GCC 4.8.2] on linux2
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; from cstar_perf.frontend.server.model import Model
+&gt;&gt;&gt; db = Model()
+INFO:cstar_perf.model:Initializing Model...
+INFO:cstar_perf.model:Model initialized
+&gt;&gt;&gt; admin = db.create_user(&#39;admin_user@gmail.com&#39;, &#39;Admin Full Name&#39;, [&#39;user&#39;,&#39;admin&#39;])
+&gt;&gt;&gt; user = db.create_user(&#39;regular_user@gmail.com&#39;, &#39;User Full Name&#39;, [&#39;user&#39;])
+</pre></div>
+</div>
+</div>
+<div class="section" id="setup-clusters">
+<h2>Setup Clusters<a class="headerlink" href="#setup-clusters" title="Permalink to this headline">¶</a></h2>
+<p>After you have setup <a class="reference internal" href="setup_cstar_perf_tool.html"><em>cstar_perf.tool</em></a> on your cluster, you can add it
+the frontend.</p>
+<p>On the server, you need to get your communication credentials, run:</p>
+<div class="highlight-python"><div class="highlight"><pre>cstar_perf_server --get-credentials.
+</pre></div>
+</div>
+<p>This will output a public key, and a verify code. Make note of these.</p>
+<p>On the machine running cstar_perf.tool, install the frontend client:</p>
+<div class="highlight-python"><div class="highlight"><pre>pip install cstar_perf.frontend
+</pre></div>
+</div>
+<p>Get the client credentials:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">cstar_perf_client</span> <span class="o">--</span><span class="n">get</span><span class="o">-</span><span class="n">credentials</span>
+</pre></div>
+</div>
+<p>The first time you run this it will ask you to give your cluster a
+name, and ask for the server&#8217;s public key and verify code. Enter the
+same codes that the server output above. It will also output the
+client&#8217;s public key (text=&#8217;Your public key is: xxxx&#8217;). Make not of
+the client&#8217;s public key.</p>
+<p>There is no administration interface for adding clusters yet. You need
+to insert clusters into the database directly. Here&#8217;s a snippet to do
+that from a python shell:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ source ~/app/env/bin/activate
+$ python
+Python 2.7.6 (default, Nov 26 2013, 12:52:49)
+[GCC 4.8.2] on linux2
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; from cstar_perf.frontend.server.model import Model
+&gt;&gt;&gt; db = Model()
+INFO:cstar_perf.model:Initializing Model...
+INFO:cstar_perf.model:Model initialized
+&gt;&gt;&gt; db.add_cluster(&#39;YOUR_CLUSTER_NAME&#39;, NUMBER_OF_NODES, &#39;YOUR_CLUSTER_DESCRIPTION&#39;)
+&gt;&gt;&gt; db.add_pub_key(&#39;YOUR_CLUSTER_NAME&#39;, &#39;cluster&#39;, &#39;YOUR_CLIENT_PUBLIC_KEY&#39;)
+</pre></div>
+</div>
+<p>In the above example, <tt class="docutils literal"><span class="pre">YOUR_CLUSTER_NAME</span></tt> is the same name you chose
+during the client installation, <tt class="docutils literal"><span class="pre">NUMBER_OF_NODES</span></tt> is how many nodes your
+cluster has, and <tt class="docutils literal"><span class="pre">YOUR_CLIENT_PUBLIC_KEY</span></tt> is the client&#8217;s public key
+output from above.</p>
+</div>
 </div>
 
 

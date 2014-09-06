@@ -1,9 +1,9 @@
 Running Tests
 =============
 
-Test definitions describe the environment and workloads you want run
-on your cluster, including what versions of Cassandra to test, the
-configuration, and the stress tests or scripts to run on them.
+Test definitions describe the environment and workloads you want to
+run on your cluster, including what versions of Cassandra to test, the
+configuration, and the stress tests or scripts to run.
 
 Test definitons can either be defined by hand, to be run on the
 command line, or they can be setup and scheduled in the web interface.
