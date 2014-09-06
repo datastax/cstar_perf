@@ -105,7 +105,7 @@ Cassandra Stress
 
 Additionally, on the node hosting cstar_perf.tool (``stress1`` in our
 example) you need to download and build cassandra-stress. This is only
-needs to be on the controller node (``stress1``)::
+needs to be run on the controller node (``stress1``)::
 
     mkdir ~/fab/stress
     cd ~/fab/stress
@@ -117,7 +117,7 @@ needs to be on the controller node (``stress1``)::
     mv cassandra cassandra-2.1
     ln -s cassandra-2.1 default
 
-The end result being that we can invoke cassandra-stress from ``~/fab/stress/default/tools/bin/cassandra-stress``. You'll know you have java and ant installed correctly if this build was successful.
+The end result being that you find cassandra-stress in ``~/fab/stress/default/tools/bin/cassandra-stress``. You'll know you have java and ant installed correctly if this build was successful.
 
 Install cstar_perf.tool
 ^^^^^^^^^^^^^^^^^^^^^^^
