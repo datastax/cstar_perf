@@ -171,7 +171,7 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3, com
 
     def compactionstats(nodes, check_interval):
         """Check for compactions via nodetool compactionstats"""
-        pattern = re.compile("^pending tasks: 0$")
+        pattern = re.compile("^pending tasks: 0\n")
         nodes = set(nodes)
         while True:
             output = nodetool_multi(nodes, 'compactionstats')
