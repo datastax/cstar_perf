@@ -6,7 +6,7 @@ schedule = {
 var addRevisionDiv = function(animate){
     schedule.n_revisions++;
     var revision_id = 'revision-'+schedule.n_revisions;
-    var template = "<div id='{revision_id}' class='revision'><legend>Test Revision <a id='remove-{revision_id}' class='pull-right remove-revision'><span class='glyphicon" +
+    var template = "<div id='{revision_id}' class='revision'><legend>Test Revisions<a id='remove-{revision_id}' class='pull-right remove-revision'><span class='glyphicon" +
         "                  glyphicon-remove'></span></a></legend>" +
         "      <div class='form-group'>" +
         "        <label class='col-md-4 control-label' for='{revision_id}-refspec'>Revision</label>  " +
