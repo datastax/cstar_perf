@@ -264,8 +264,6 @@ def bootstrap(git_fetch=True):
         fab.run('mkdir ~/fab/cassandra')
         fab.run('git --git-dir=$HOME/fab/cassandra.git archive %s |'
                 ' tar x -C ~/fab/cassandra' % revision)
-        git_id = fab.run('git --git-dir=$HOME/fab/cassandra.git show %s '
-                         '--pretty=%%H | head -1' % revision).strip()
         fab.run('echo -e \'%s\\n%s\\n%s\' > ~/fab/cassandra/0.GIT_REVISION.txt' % 
                 (revision, git_id, config.get('log','')))
 
