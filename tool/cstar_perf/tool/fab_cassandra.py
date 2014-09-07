@@ -87,6 +87,20 @@ logback_template = """<configuration scan="true">
 </configuration>
 """
 
+log4j_template = """
+log4j.rootLogger=INFO,stdout,R
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%5p %d{HH:mm:ss,SSS} %m%n
+log4j.appender.R=org.apache.log4j.RollingFileAppender
+log4j.appender.R.maxFileSize=20MB
+log4j.appender.R.maxBackupIndex=50
+log4j.appender.R.layout=org.apache.log4j.PatternLayout
+log4j.appender.R.layout.ConversionPattern=%5p [%t] %d{ISO8601} %F (line %L) %m%n
+log4j.appender.R.File=${cassandra.logdir}/system.log
+log4j.logger.org.apache.thrift.server.TNonblockingServer=ERROR
+"""
+
 ################################################################################
 ### Setup Configuration:
 ################################################################################
@@ -364,6 +378,12 @@ def bootstrap(git_fetch=True):
     logback_conf.write(logback_template.replace("${cassandra.logdir}",log_dir))
     logback_conf.seek(0)
     fab.put(logback_conf, '~/fab/cassandra/conf/logback.xml')
+
+    # Configure log4j:
+    log4j_conf = StringIO()
+    log4j_conf.write(log4j_template.replace("${cassandra.logdir}",log_dir))
+    log4j_conf.seek(0)
+    fab.put(log4j_conf, '~/fab/cassandra/conf/log4j-server.properties')
 
     # Copy fincore utility:
     fincore_script = os.path.join(os.path.dirname(os.path.realpath(__file__)),'fincore_capture.py')
