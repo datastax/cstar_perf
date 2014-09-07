@@ -26,6 +26,7 @@ import yaml
 from cluster_config import config as cluster_config
 import re
 import uuid
+from util import random_token
 
 fab.env.use_ssh_config = True
 fab.env.connection_attempts = 10
@@ -110,7 +111,7 @@ def setup(my_config=None):
         # Override version, tell ant to build with a given version name:
         'override_version': None,
         # Cluster name
-        'cluster_name': 'Ryan Performance Cluster',
+        'cluster_name': 'cstar_perf {random_string}'.format(random_string=random_token()),
         # Ant tarball:
         'ant_tarball' : 'http://www.apache.org/dist/ant/binaries/apache-ant-1.8.4-bin.tar.bz2',
         # The user to install as

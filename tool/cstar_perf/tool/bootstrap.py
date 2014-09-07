@@ -1,6 +1,7 @@
 from benchmark import (bootstrap, stress, nodetool, teardown, 
                        log_stats, log_set_title, retrieve_logs, cstar, config)
 from fabric.tasks import execute
+import argparse
 
 import logging
 logging.basicConfig()
@@ -19,6 +20,17 @@ def bootstrap_cluster(revision, override_version=None):
     logger.info("Bringing up {revision} cluster...".format(revision=revision))
     bootstrap(config, destroy=True)
 
-if __name__ == "__main__":
 
-    bootstrap_cluster(revision='apache/cassandra-2.1')
+
+def main():
+    parser = argparse.ArgumentParser(description='bootstrap')
+    parser.add_argument('version', metavar="GIT_REFSPEC",
+                        help='The version of Cassandra to install, specified by git refspec (eg \'apache/cassandra-2.1\')')
+    args = parser.parse_args()
+
+    bootstrap_cluster(revision=args.version)
+        
+
+if __name__ == "__main__":
+    main()
+

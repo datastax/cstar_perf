@@ -21,6 +21,7 @@ var drawGraph = function() {
         'total_ops',
         'op_rate',
         'key_rate',
+        'row_rate',
         'mean',
         'med',
         '95th_latency',

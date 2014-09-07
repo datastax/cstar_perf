@@ -138,6 +138,12 @@ class JobRunner(object):
 
     def run(self):
         """Run a job, collect artifacts, send them to the server"""
+
+        try:
+            os.makedirs(os.path.join(os.path.expanduser("~"),'.cstar_perf','jobs'))
+        except OSError:
+            pass
+
         ws = self.connect()
 
         # Find old jobs, find their status, update the server
@@ -222,7 +228,7 @@ class JobRunner(object):
             # Run stress_compare with pexpect. subprocess.Popen didn't
             # work due to some kind of tty issue when invoking
             # nodetool.
-            stress_proc = pexpect.spawn('stress_compare {stress_json_path}'.format(stress_json_path=stress_json_path), timeout=None)
+            stress_proc = pexpect.spawn('cstar_perf_stress {stress_json_path}'.format(stress_json_path=stress_json_path), timeout=None)
             with open(stress_log_path, 'w') as stress_log:
                 while True:
                     try:
@@ -275,10 +281,10 @@ class JobRunner(object):
                 final_status = 'server_complete'
 
             # Spot check stats to ensure it has the data it should
-            # contain. Raises JobError if something's amiss.
+            # contain. Raises JobFailure if something's amiss.
             try:
                 self.__spot_check_stats(job, stats_path)
-            except JobError, e:
+            except JobFailure, e:
                 if final_status == 'server_complete':
                     final_status = 'server_fail'
                 else:
@@ -401,21 +407,23 @@ class JobRunner(object):
                         f.write('server_fail')
 
             if not self.__server_synced:
-                raise JobError("Server desynchronized while we were trying to send an old job. We'll try again later.")
+                raise JobFailure("Server desynchronized while we were trying to send an old job. We'll try again later.")
+
     def __spot_check_stats(self, job, stats_path):
         """Spot check stats to ensure it has the data it should contain"""
         try:
             with open(stats_path) as stats:
                 stats = json.loads(stats.read())
-                op_num = 0
                 for rev in job['revisions']:
-                    for op in job['operations']:
+                    for op_num, op in enumerate(job['operations']):
                         assert stats['stats'][op_num]['type'] == op['type']
-                        assert stats['stats'][op_num]['command'] == op['command']
+                        assert stats['stats'][op_num]['command'].startswith(op['command'])
                         if op['type'] == 'stress':
                             assert len(stats['stats'][op_num]['intervals']) > 0
-        except:
-            raise JobFailure("job stats is incomplete.")
+        except Exception, e:
+            message = e.message
+            stacktrace = traceback.format_exc(e)
+            raise JobFailure("job stats is incomplete. message={message}\n{stacktrace}".format(message=message, stacktrace=stacktrace))
 
 
     def __get_work(self):

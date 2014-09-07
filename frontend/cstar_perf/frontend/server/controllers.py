@@ -7,6 +7,7 @@ import time
 from functools import partial
 
 import zmq
+import json
 from flask import ( Flask, render_template, request, redirect, abort, Response,
                     jsonify, make_response, session)
 from apiclient.discovery import build
@@ -25,7 +26,9 @@ log = logging.getLogger('cstar_perf.controllers')
 
 ### Google+ API:
 gplus = build('plus', 'v1')
-
+google_client_secrets = os.path.join(os.path.expanduser("~"),'.cstar_perf','client_secrets.json')
+with open(google_client_secrets) as f:
+    google_client_id = json.load(f)['web']['client_id']
 
 ################################################################################
 #### Template functions:
@@ -71,7 +74,8 @@ def requires_auth(role):
 @app.context_processor
 def inject_template_variables():
     """Common variables available to all templates"""
-    return dict(clusters = db.get_cluster_names())
+    return dict(clusters = db.get_cluster_names(),
+                google_client_id=google_client_id)
 
 ################################################################################
 #### Page Controllers
@@ -88,7 +92,7 @@ def login():
 
     try:
         # Upgrade the authorization code into a credentials object
-        oauth_flow = flow_from_clientsecrets(os.path.join(os.path.pardir,'client_secrets.json'), scope='')
+        oauth_flow = flow_from_clientsecrets(google_client_secrets, scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
     except FlowExchangeError:

@@ -14,7 +14,7 @@ var consoleMessage = function(msg, classes) {
 }
 
 var newWebsocket = function() {
-    var wsUri = "ws://localhost:8000/api/console";
+    var wsUri = "ws://" + window.location.host + "/api/console";
     var conn = $("#console");
     conn.empty();
     var indicator = $("#status_indicator");

@@ -29,7 +29,7 @@ logger = logging.getLogger('benchmark')
 logger.setLevel(logging.INFO)
 
 
-CASSANDRA_STRESS   = os.path.expanduser("~/fab/stress/cassandra-2.1/tools/bin/cassandra-stress")
+CASSANDRA_STRESS   = os.path.expanduser("~/fab/stress/default/tools/bin/cassandra-stress")
 CASSANDRA_NODETOOL = os.path.expanduser("~/fab/cassandra/bin/nodetool")
 CASSANDRA_CQLSH   = os.path.expanduser("~/fab/cassandra/bin/cqlsh")
 
@@ -279,13 +279,16 @@ def stress(cmd, revision_tag, stats=None):
     log = open(temp_log)
     collecting_aggregates = False
     collecting_values = False
-
+    
+    # Regex that matches 2.0 or 2.1 stress intervals:
+    start_of_intervals_re = re.compile('(partitions|ops|total),.*(op/s|interval_op_rate),.*(pk/s|key/s|interval_key_rate)')
+    
     for line in log:
         if line.startswith("Results:"):
             collecting_aggregates = True
             continue
         if not collecting_aggregates:
-            if line.replace(" ","").startswith("ops,op/s,key/s"):
+            if start_of_intervals_re.match(line):
                 collecting_values = True
                 continue
             if collecting_values:
