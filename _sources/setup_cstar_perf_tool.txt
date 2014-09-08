@@ -117,7 +117,7 @@ needs to be run on the controller node (``stress1``)::
     git clone http://git-wip-us.apache.org/repos/asf/cassandra.git
     cd cassandra
     git checkout cassandra-2.1
-    ~/fab/ant/bin/ant clean jar
+    JAVA_HOME=~/fab/java ~/fab/ant/bin/ant clean jar
     cd ..
     mv cassandra cassandra-2.1
     ln -s cassandra-2.1 default
