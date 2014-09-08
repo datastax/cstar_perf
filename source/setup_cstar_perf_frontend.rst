@@ -89,7 +89,7 @@ You will need a nginx configuration file to proxy the server. You can
 see the `gunicorn docs`_ for more information, or you can use the one
 below.
 
-Repalce ``automaton`` through this file with the name of the user
+Replace ``automaton`` through this file with the name of the user
 account you are using::
 
     worker_processes 1;
@@ -150,6 +150,13 @@ account you are using::
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection $connection_upgrade;
         }
+
+        location /api/console {
+            proxy_pass http://localhost:8000;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $connection_upgrade;
+        }
     
         location @proxy_to_app {
           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -163,6 +170,13 @@ account you are using::
 
 .. _gunicorn docs: http://gunicorn-docs.readthedocs.org/en/19.1.1/deploy.html#nginx-configuration
 
+
+Start the cstar_perf notification server::
+
+    cstar_perf_notifications
+
+This is a message daemon that needs to be started each time the server
+boots, but otherwise can be run separately from the main appserver.
 
 Start nginx::
 
@@ -238,3 +252,94 @@ In the above example, ``YOUR_CLUSTER_NAME`` is the same name you chose
 during the client installation, ``NUMBER_OF_NODES`` is how many nodes your
 cluster has, and ``YOUR_CLIENT_PUBLIC_KEY`` is the client's public key
 output from above.
+
+Start the client
+^^^^^^^^^^^^^^^^
+
+On the client machine, start the cstar_perf_client, pointing it to
+your server's websocket URL::
+
+    cstar_perf_client -s ws://your_service.example.com/api/cluster_comms
+
+Substituting your_service.example.com for the domain you are hosting
+the server on.
+
+The client is designed to exit in the case that it has a problem, so
+you will want to wrap the process in a watchdog daemon. There are many
+to choose from, but `supervisord`_ seems to work well.
+
+.. _supervisord: http://supervisord.org/
+
+Here is an example supervisord config::
+
+    [unix_http_server]
+    file=/tmp/supervisor.sock   ; (the path to the socket file)
+
+    [supervisord]
+    logfile=/tmp/supervisord.log ; (main log file;default $CWD/supervisord.log)
+    logfile_maxbytes=50MB        ; (max main logfile bytes b4 rotation;default 50MB)
+    logfile_backups=10           ; (num of main logfile rotation backups;default 10)
+    loglevel=info                ; (log level;default info; others: debug,warn,trace)
+    pidfile=/tmp/supervisord.pid ; (supervisord pidfile;default supervisord.pid)
+    nodaemon=false               ; (start in foreground if true;default false)
+    minfds=1024                  ; (min. avail startup file descriptors;default 1024)
+    minprocs=200                 ; (min. avail process descriptors;default 200)
+
+    [rpcinterface:supervisor]
+    supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+    
+    [supervisorctl]
+    serverurl=unix:///tmp/supervisor.sock ; use a unix:// URL  for a unix socket
+
+    [program:cstar_perf_client]
+    command=cstar_perf_client -s ws://your_service.example.com/api/cluster_comms
+    autostart=false
+    autorestart=true
+    redirect_stderr=true
+
+Modify the websocket URL to point to your server. In the same
+directory as supervisord.conf, start supervisord::
+
+    supervisord
+
+Then start the client::
+
+    $ supervisorctl 
+    cstar_perf_client                STOPPED   Sep 07 05:28 AM
+    supervisor> start cstar_perf_client
+    cstar_perf_client: started
+    supervisor> 
+
+supervisord will now monitor and restart the client as necessary.
+
+
+Email notifications
+^^^^^^^^^^^^^^^^^^^
+
+If you want the server to email updates to users about the status of
+their tests, you must configure your SMTP settings in
+~/.cstar_perf/server.conf
+
+Example configuration for gmail SMTP servers::
+
+    [server]
+    url = http://cstar_perf.example.com
+    
+    [smtp]
+    from=notifications@cstar_perf.example.com
+    always_bcc=your_email@example.com
+    server=smtp.gmail.com
+    ssl=yes
+    user=YOUR_USER@gmail.com
+    pass=APP_SPECIFIC_PASSPHRASE
+
+If you have a local SMTP server, you might be able to use this minimal config:
+
+    [server]
+    url = http://cstar_perf.example.com
+    
+    [smtp]
+    from=notifications@cstar_perf.example.com
+    server=localhost
+
+If there is no config found, email notifications will be disabled.
