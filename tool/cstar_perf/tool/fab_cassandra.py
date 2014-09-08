@@ -36,6 +36,7 @@ git_repos = [
     ('apache',        'git://github.com/apache/cassandra.git'),
     ('enigmacurry',   'git://github.com/EnigmaCurry/cassandra.git'),
     ('knifewine',     'git://github.com/knifewine/cassandra.git'),
+    ('shawnkumar',    'git://github.com/shawnkumar/cassandra.git'),
     ('jbellis',       'git://github.com/jbellis/cassandra.git'),
     ('marcuse',       'git://github.com/krummas/cassandra.git'),
     ('pcmanus',       'git://github.com/pcmanus/cassandra.git'),
