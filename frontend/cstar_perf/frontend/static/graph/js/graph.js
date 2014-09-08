@@ -19,6 +19,7 @@ var drawGraph = function() {
     //Stress-ng (2.1) metrics:
     var stress_metrics = [
         'total_ops',
+        'adj_row_rate',
         'op_rate',
         'key_rate',
         'row_rate',
@@ -416,19 +417,15 @@ var drawGraph = function() {
             });
 
             renderLegendText(3, function(title) {
-                return padTextEnd('real op rate', 26) + " : " + data_by_title[title]['real op rate'];
+                return padTextEnd('op rate', 26) + " : " + data_by_title[title]['op rate'];
             });
 
             renderLegendText(4, function(title) {
-                return padTextEnd('adjusted op rate', 26) + " : " + data_by_title[title]['adjusted op rate'];
+                return padTextEnd('partition rate', 26) + " : " + data_by_title[title]['partition rate'];
             });
 
             renderLegendText(5, function(title) {
-                return padTextEnd('adjusted op rate stderr', 26) + ' : ' + data_by_title[title]['adjusted op rate stderr'];
-            });
-
-            renderLegendText(6, function(title) {
-                return padTextEnd('key rate', 26) + ' : ' + data_by_title[title]['key rate'];
+                return padTextEnd('row rate', 26) + ' : ' + data_by_title[title]['row rate'];
             });
 
             renderLegendText(7, function(title) {
@@ -456,7 +453,7 @@ var drawGraph = function() {
             });
 
             renderLegendText(13, function(title) {
-                return padTextEnd('Total time', 26) + ' : ' + data_by_title[title]['Total operation time'];
+                return padTextEnd('Total operation time', 26) + ' : ' + data_by_title[title]['Total operation time'];
             });
 
             renderLegendText(14, function(title) {

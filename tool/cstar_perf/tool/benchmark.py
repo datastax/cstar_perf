@@ -281,7 +281,7 @@ def stress(cmd, revision_tag, stats=None):
     collecting_values = False
     
     # Regex that matches 2.0 or 2.1 stress intervals:
-    start_of_intervals_re = re.compile('(partitions|ops|total),.*(op/s|interval_op_rate),.*(pk/s|key/s|interval_key_rate)')
+    start_of_intervals_re = re.compile('(partitions|ops|total|total ops).*,.*(op/s|interval_op_rate|adj row/s),.*(pk/s|key/s|interval_key_rate|op/s)')
     
     for line in log:
         if line.startswith("Results:"):
