@@ -3,9 +3,23 @@
 cstar_perf is a performance testing platform for Apache Cassandra
 which focuses on a high level of automation and test consistency.
 
+It handles the following:
+
+* Download and build Cassandra source code.
+* Configure and bootstrap nodes on a real cluster.
+* Run stress workloads.
+* Capture performance metrics.
+* Create reports and charts comparing different configs/workloads.
+* Webserver frontend for scheduling tests, viewing prior runs, and monitoring test clusters.
+
 ## Documentation
 
 The evolving documentation is [available online here](https://datastax.github.io/cstar_perf).
+
+[Setup cstar_perf.tool](http://datastax.github.io/cstar_perf/setup_cstar_perf_tool.html)
+[Setup cstar_perf.frontend](http://datastax.github.io/cstar_perf/setup_cstar_perf_frontend.html)
+[Running Tests](http://datastax.github.io/cstar_perf/running_tests.html)
+[Architecture](http://datastax.github.io/cstar_perf/architecture.html)
 
 The source for these docs are contained in the
 [gh-pages](https://github.com/datastax/cstar_perf/tree/gh-pages)
