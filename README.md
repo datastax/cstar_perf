@@ -12,6 +12,10 @@ It handles the following:
 * Create reports and charts comparing different configs/workloads.
 * Webserver frontend for scheduling tests, viewing prior runs, and monitoring test clusters.
 
+## 5 Minute Introduction
+
+[![IMAGE ALT TEXT HERE](http://img.youtube.com/vi/jSS96ooZwVw/0.jpg)](http://www.youtube.com/watch?v=jSS96ooZwVw)
+
 ## Documentation
 
 The evolving documentation is [available online here](https://datastax.github.io/cstar_perf).
