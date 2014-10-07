@@ -16,7 +16,8 @@ requires = (
     'pyyaml',
     'supervisor',
     'pexpect',
-    'blist'
+    'blist',
+    'superlance'
 )
 
 setup(
