@@ -183,7 +183,7 @@ var createJob = function() {
         revision = $(revision);
         job.revisions[i] = {
             revision: revision.find(".refspec").val(),
-            label: revision.find(".label").val() ? revision.find(".label").val() : null,
+            label: revision.find(".revision-label").val() ? revision.find(".revision-label").val() : null,
             yaml: revision.find(".yaml").val(),
             env: revision.find(".env-vars").val(),
             options: {'use_vnodes': revision.find(".options-vnodes").val() == "on" ? true:false }
