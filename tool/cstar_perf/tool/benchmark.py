@@ -104,11 +104,12 @@ def teardown(destroy=False, leave_data=False):
 
 def nodetool(cmd):
     """Run a nodetool command"""
-    cmd = shlex.split("JAVA_HOME={JAVA_HOME} {CASSANDRA_NODETOOL} {cmd}".format(
-        JAVA_HOME=JAVA_HOME, CASSANDRA_NODETOOL=CASSANDRA_NODETOOL, cmd=cmd))
+    cmd = "JAVA_HOME={JAVA_HOME} {CASSANDRA_NODETOOL} {cmd}".format(
+        JAVA_HOME=JAVA_HOME, CASSANDRA_NODETOOL=CASSANDRA_NODETOOL, cmd=cmd)
     proc = subprocess.Popen(cmd, 
                             stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
+                            stderr=subprocess.STDOUT,
+                            shell=True)
     output = proc.communicate()
     return output[0]
 
