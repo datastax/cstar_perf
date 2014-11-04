@@ -57,7 +57,7 @@ class CommandResponseBase(dict):
 
     def receive(self):
         """Await for further response from our peer"""
-        response = self.ws.receieve()
+        response = self.ws.receive()
         try:
             response = json.loads(response)
         except:
