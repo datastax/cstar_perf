@@ -57,7 +57,11 @@ class CommandResponseBase(dict):
 
     def receive(self):
         """Await for further response from our peer"""
-        response = json.loads(self.ws.receive())
+        response = self.ws.receieve()
+        try:
+            response = json.loads(response)
+        except:
+            log.debug("Response couldn't be decoded: {}".format(response))
         log.debug("Received response : {response}".format(response=response))
         if response.get('type') == 'response':
             if response.get('command_id') == self['command_id']:
