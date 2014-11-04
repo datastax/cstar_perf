@@ -31,7 +31,8 @@ logger.setLevel(logging.INFO)
 
 CASSANDRA_STRESS   = os.path.expanduser("~/fab/stress/default/tools/bin/cassandra-stress")
 CASSANDRA_NODETOOL = os.path.expanduser("~/fab/cassandra/bin/nodetool")
-CASSANDRA_CQLSH   = os.path.expanduser("~/fab/cassandra/bin/cqlsh")
+CASSANDRA_CQLSH    = os.path.expanduser("~/fab/cassandra/bin/cqlsh")
+JAVA_HOME          = os.path.expanduser("~/fab/java")
 
 def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     """Deploy and start cassandra on the cluster
@@ -103,7 +104,8 @@ def teardown(destroy=False, leave_data=False):
 
 def nodetool(cmd):
     """Run a nodetool command"""
-    cmd = shlex.split(CASSANDRA_NODETOOL + " " + cmd)
+    cmd = shlex.split("JAVA_HOME={JAVA_HOME} {CASSANDRA_NODETOOL} {cmd}".format(
+        JAVA_HOME=JAVA_HOME, CASSANDRA_NODETOOL=CASSANDRA_NODETOOL, cmd=cmd))
     proc = subprocess.Popen(cmd, 
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT)
@@ -272,8 +274,9 @@ def stress(cmd, revision_tag, stats=None):
     # Run stress:
     # Subprocess communicate() blocks, preventing us from seeing any
     # realtime output, so pipe the output to a file as a workaround:
-    proc = subprocess.Popen('{CASSANDRA_STRESS} {cmd} | tee {temp_log}'
-                            .format(CASSANDRA_STRESS=CASSANDRA_STRESS,
+    proc = subprocess.Popen('JAVA_HOME={JAVA_HOME} {CASSANDRA_STRESS} {cmd} | tee {temp_log}'
+                            .format(JAVA_HOME=JAVA_HOME,
+                                    CASSANDRA_STRESS=CASSANDRA_STRESS,
                                     cmd=cmd, temp_log=temp_log), shell=True)
     proc.wait()
     log = open(temp_log)
