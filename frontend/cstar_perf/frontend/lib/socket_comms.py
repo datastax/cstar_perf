@@ -61,7 +61,7 @@ class CommandResponseBase(dict):
         try:
             response = json.loads(response)
         except:
-            log.debug("Response couldn't be decoded: {}".format(response))
+            log.debug("Response couldn't be decoded: {}".format(repr(response)))
             raise
         log.debug("Received response : {response}".format(response=response))
         if response.get('type') == 'response':

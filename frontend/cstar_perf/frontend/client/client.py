@@ -325,8 +325,8 @@ class JobRunner(object):
                 missing.append(kind)
 
         for kind, pattern, binary in (
-                ('console', 'stress_compare.{job_id}.log', False),
-                ('stats', 'stats.{job_id}.json', False),
+                ('console', 'stress_compare.{job_id}.log', True),
+                ('stats', 'stats.{job_id}.json', True),
                 ('system_logs', 'cassandra_logs.{job_id}.tar.gz', True)):
             stream(kind, pattern, binary)
 
