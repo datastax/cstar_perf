@@ -220,6 +220,7 @@ def cluster_comms(ws):
         sha = hashlib.sha256()
         try:
             def frame_callback(frame):
+                frame = frame.encode("utf-8")
                 if command['kind'] == 'console':
                     console.write(frame)
                     console_publish(context['cluster'], {'job_id':command['test_id'], 'msg':frame})

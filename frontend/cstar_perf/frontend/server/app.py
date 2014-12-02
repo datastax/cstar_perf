@@ -13,7 +13,7 @@ from util import csrf_protect_app, load_app_config
 from cstar_perf.frontend.lib.util import random_token
 
 logging.basicConfig(level=logging.DEBUG)
-logging.getLogger('geventwebsocket').setLevel(logging.INFO)
+logging.getLogger('geventwebsocket').setLevel(logging.DEBUG)
 log = logging.getLogger('cstar_perf')
 
 

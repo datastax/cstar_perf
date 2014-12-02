@@ -151,9 +151,14 @@ def receive_stream(ws, command, frame_callback):
         data = ws.receive()
         if binary:
             data = base64.b64decode(data)
+            data = unicode(data, "utf-8","ignore")
         if data == command['eof']:
             break
         elif data == command['keepalive']:
             pass
         else:
-            frame_callback(data)
+            try:
+                frame_callback(data)
+            except:
+                log.debug("data = {}".format(repr(data)))
+                raise
