@@ -14,7 +14,6 @@ import subprocess
 import pexpect
 import tempfile
 import tarfile
-import base64
 import hashlib
 import shutil
 import traceback
@@ -238,11 +237,11 @@ class JobRunner(object):
                                 break
                             stress_log.write(line)
                             sys.stdout.write(line)
-                            self.send(line)
+                            self.send(base64.b64encode(line))
                     except TimeoutError:
-                        self.send(KEEPALIVE_MARKER)
+                        self.send(base64.b64encode(KEEPALIVE_MARKER))
         finally:
-            self.send(EOF_MARKER)
+            self.send(base64.b64encode(EOF_MARKER))
 
         response = self.receive(response, assertions={'message':'stream_received', 'done':True})
 
