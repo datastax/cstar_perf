@@ -149,8 +149,8 @@ def receive_stream(ws, command, frame_callback):
     binary = command.get('binary', False)
     while True:
         data = ws.receive()
-        if binary:
-            data = base64.b64decode(data)
+        data = base64.b64decode(data)
+        if not binary:
             data = unicode(data, "utf-8","ignore")
         if data == command['eof']:
             break
@@ -158,7 +158,7 @@ def receive_stream(ws, command, frame_callback):
             pass
         else:
             try:
-                frame_callback(data)
+                frame_callback(data, binary)
             except:
                 log.debug("data = {}".format(repr(data)))
                 raise

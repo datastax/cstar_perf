@@ -346,13 +346,9 @@ class JobRunner(object):
                 data = f.read(512)
                 if data == '':
                     break
-                if binary:
-                    data = base64.b64encode(data)
+                data = base64.b64encode(data)
                 self.send(data)
-        if binary:
-            self.send(base64.b64encode(EOF_MARKER))
-        else:
-            self.send(EOF_MARKER)
+        self.send(base64.b64encode(EOF_MARKER))
 
         response = self.receive(response, assertions={'message':'stream_received', 'done':True})
 
