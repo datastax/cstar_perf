@@ -397,7 +397,10 @@ def bootstrap(git_fetch=True):
 @fab.parallel
 def destroy(leave_data=False):
     """Uninstall Cassandra and clean up data and logs"""
-    fab.run('pkill -9 -f "java.*org.apache.*.CassandraDaemon"', quiet=True)
+    # We used to have a better pattern match for the Cassandra
+    # process, but it got fragile if you put too many JVM params. So
+    # now we just kill anything using our copy of the JVM:
+    fab.run('pkill -9 -f $HOME/fab/java/bin/java', quiet=True)
     fab.run('pkill -f "python.*fincore_capture"', quiet=True)
     fab.run('rm -rf fab/cassandra')
     fab.run('rm -rf fab/scripts')
