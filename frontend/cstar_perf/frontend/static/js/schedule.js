@@ -219,7 +219,7 @@ var cloneExistingJob = function(job_id) {
             $("#revision-"+rev+"-refspec").val(revision['revision']);
             $("#revision-"+rev+"-label").val(revision['label']);
             $("#revision-"+rev+"-yaml").val(revision['yaml']);
-            $("#revision-"+rev+"-env").val(revision['env']);
+            $("#revision-"+rev+"-env-vars").val(revision['env']);
             $("#revision-"+rev+"-options-vnodes").attr("checked", revision['options']['use_vnodes'])
         });
         //Operations:
