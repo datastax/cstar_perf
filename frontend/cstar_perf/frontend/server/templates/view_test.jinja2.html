@@ -7,6 +7,14 @@
 #artifacts_tbl pre {
      white-space: pre-wrap;
 }
+h3 {
+     float: left;
+}
+#clone {
+     float: right;
+     margin-right:10px;
+}
+
 
 {% endblock %}
 
@@ -14,6 +22,8 @@
 {% block body %}
 <h3>Test: {{test['test_id']}}</h3>
 <div class='hidden' id='test_id'>{{test['test_id']}}</div>
+<a id="clone" class='btn btn-primary' role='button'
+   href="/schedule?clone={{test['test_id']}}">Clone this test</a>
 <table class='table'>
 <tr><td class='col-md-2'>Title</td><td>{{test['test_definition']['title']}}</td></tr>
 <tr><td>User</td><td>{{test['user']}}</td></tr>
