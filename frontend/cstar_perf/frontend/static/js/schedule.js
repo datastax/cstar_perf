@@ -46,8 +46,8 @@ var addRevisionDiv = function(animate){
         "        for='{revision_id}-options'>Other Options</label>" +
         "        <div class='col-md-8'>" +
         "          <div class='checkbox'>" +
+        "            <input type='checkbox' class='options-vnodes' id='{revision_id}-options-vnodes' checked='checked'>" +
         "            <label for='{revision_id}-options'>" +
-        "              <input type='checkbox' class='options-vnodes' id='{revision_id}-options-vnodes' checked='checked'>" +
         "              Use Virtual Nodes" +
         "            </label>" +
         "	  </div>" +
@@ -186,7 +186,7 @@ var createJob = function() {
             label: revision.find(".revision-label").val() ? revision.find(".revision-label").val() : null,
             yaml: revision.find(".yaml").val(),
             env: revision.find(".env-vars").val(),
-            options: {'use_vnodes': revision.find(".options-vnodes").val() == "on" ? true:false }
+            options: {'use_vnodes': revision.find(".options-vnodes").is(":checked") }
         };
     });
 
