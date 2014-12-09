@@ -205,6 +205,29 @@ var createJob = function() {
     return JSON.stringify(job);
 }
 
+var cloneExistingJob = function(job_id) {
+    $.get("/api/tests/id/" + job_id, function(job) {
+        test = job['test_definition'];
+        $("input#testname").val(test['title']); 
+        $("textarea#description").val(test['description']);
+        $("select#cluster").val(test['cluster']);
+        $("select#numnodes").val(test['num_nodes']);
+        //Revisions:
+        $.each(test['revisions'], function(i, revision) {
+            addRevisionDiv(false);
+            var rev = i + 1;
+            $("#revision-"+rev+"-refspec").val(revision['revision']);
+            $("#revision-"+rev+"-label").val(revision['label']);
+            $("#revision-"+rev+"-yaml").val(revision['yaml']);
+            $("#revision-"+rev+"-env").val(revision['env']);
+            $("#revision-"+rev+"-options-vnodes").attr("checked", revision['options']['use_vnodes'])
+        });
+        //Operations:
+        $.each(test['operations'], function(i, operation) {
+            addOperationDiv(false, operation['operation'], operation['command']);            
+        });
+   });
+}
 
 $(document).ready(function() {
     //Add revision button callback:
@@ -212,15 +235,23 @@ $(document).ready(function() {
         addRevisionDiv(true);
         e.preventDefault();
     });
-    addRevisionDiv(false);
 
     //Add operation button callback:
     $('button#add-operation').click(function(e) {
         addOperationDiv(true, 'stress');
         e.preventDefault();
     });
-    addOperationDiv(false, 'stress', 'write n=19000000 -rate threads=50');
-    addOperationDiv(false, 'stress', 'read n=19000000 -rate threads=50');
+
+    query = parseUri(location).queryKey;
+    if (query.clone != undefined) {
+        //Clone an existing job specified in the query string:
+        cloneExistingJob(query.clone);
+    } else {
+        //Create a new job from scratch:
+        addRevisionDiv(false);
+        addOperationDiv(false, 'stress', 'write n=19000000 -rate threads=50');
+        addOperationDiv(false, 'stress', 'read n=19000000 -rate threads=50');
+    }
 
     //Validate form and submit:
     $("form#schedule-test").submit(function(e) {
