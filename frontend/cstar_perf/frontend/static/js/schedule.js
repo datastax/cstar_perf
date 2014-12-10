@@ -42,6 +42,15 @@ var addRevisionDiv = function(animate){
         "      </div>" +
         "" +
         "      <div class='form-group'>" +
+        "        <label class='col-md-4 control-label' for='{revision_id}-jvm'>JVM</label>" +
+        "        <div class='col-md-8'>" +
+        "          <select id='{revision_id}-jvm' " +
+        "                  class='jvm-select form-control'>" +
+        "          </select>" +
+        "        </div>" +
+        "      </div>" +
+        "" +
+        "      <div class='form-group'>" +
         "        <label class='col-md-4 control-label'" +
         "        for='{revision_id}-options'>Other Options</label>" +
         "        <div class='col-md-8'>" +
@@ -60,6 +69,14 @@ var addRevisionDiv = function(animate){
     $("#schedule-revisions").append(newDiv);
     if (animate)
         newDiv.slideDown();
+
+    //Populate JVMs per the previous revision:
+    if (schedule.n_revisions > 1) {
+        $("#revision-"+(schedule.n_revisions-1)+"-jvm option").clone().appendTo("#"+revision_id+"-jvm");
+        $("#"+revision_id+"-jvm").val($("#revision-"+(schedule.n_revisions-1)+"-jvm").val());
+    } else {
+        $("#cluster").change();
+    }
 
     //Remove revision handler:
     $("#remove-"+revision_id).click(function() {
@@ -81,7 +98,7 @@ var addOperationDiv = function(animate, operation, cmd){
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-type'>Operation</label>" +
         "        <div class='col-md-9'>" +
-        "          <select id='{operation_id}-type' class='type'" +
+        "          <select id='{operation_id}-type'" +
         "                  class='form-control'>" +
         "            <option value='stress'>stress</option>" +
         "            <option value='flush'>flush</option>" +
@@ -241,6 +258,38 @@ $(document).ready(function() {
         addOperationDiv(true, 'stress');
         e.preventDefault();
     });
+
+    //Refresh jvm list on cluster selection
+    $('#cluster').change(function(e) {
+        var cluster = $('#cluster').val();
+        $.get('/api/clusters/'+cluster, function(data) {
+            //Remember the current jvm selections:
+            var current_jvm_selections = [];
+            $(".jvm-select").each(function(i, e) {
+                current_jvm_selections[i] = $(e).val();
+            });
+            //Clear out the jvm lists and fetch new one:
+            $(".jvm-select").empty();
+            if(data.jvms==null) {
+                alert("Warning: cluster '"+ cluster+ "' has no JVMs defined.");
+                return;
+            }
+            $.each(data.jvms, function(jvm, path) {
+                $(".jvm-select").append($("<option value='"+path+"'>"+jvm+"</option>"));
+            });
+            //Try to set the one we had from before:
+            $(".jvm-select").each(function(i, e) {
+                if (current_jvm_selections[i] != null) {
+                    $(e).val(current_jvm_selections[i]);
+                }
+                if ($(e).val() == null) {
+                    alert("Warning - JVM selection changed due to cluster selection")
+                }
+            });
+
+        });
+    });
+    //$("#cluster").change();
 
     query = parseUri(location).queryKey;
     if (query.clone != undefined) {

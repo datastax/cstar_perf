@@ -223,14 +223,11 @@ def graph():
     return render_template('graph.jinja2.html')
 
 
-@app.route('/schedule', methods=['GET', 'POST'])
+@app.route('/schedule', methods=['GET'])
 @requires_auth('user')
 def schedule():
-    """Page to schedule a test - GET to view - POST test json to pre-populate page"""
-    job = None
-    if request.method == "POST":
-        job = request.get_json()
-    return render_template('schedule.jinja2.html', job=job)
+    """Page to schedule a test"""
+    return render_template('schedule.jinja2.html')
 
 @app.route('/cluster/<cluster_name>')
 @requires_auth('user')
@@ -286,8 +283,15 @@ def get_test(test_id):
 @app.route('/api/clusters')
 def get_clusters():
     """Retrieve information about available clusters"""
-    clusters = db.get_cluster_names()
+    clusters = db.get_clusters()
     return make_response(jsonify({'clusters':clusters}))
+
+@requires_auth('user')
+@app.route('/api/clusters/<cluster_name>')
+def get_clusters_by_name(cluster_name):
+    """Retrieve information about a cluster"""
+    clusters = db.get_clusters()
+    return make_response(jsonify(clusters[cluster_name]))
 
 
 ################################################################################

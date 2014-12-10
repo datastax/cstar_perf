@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 ## Fabric file to bootstrap Apache Cassandra on a set of nodes
 ## 
 ## Examples:
@@ -154,7 +154,8 @@ def setup(my_config=None):
         # Force loading JNA on <2.0 (2.1+ has it by default):
         'use_jna': True,
         # Extra environment settings to prepend to cassandra-env.sh:
-        'env': ''
+        'env': '',
+        'java_home': '~/fab/java'
     }
 
     public_ips = "node0, node1, node2, node3"
@@ -229,7 +230,7 @@ def get_cassandra_config_options():
 
     pythonpath = "$HOME/fab/cassandra/build/classes/main"
     classpath = ":".join([pythonpath, "$HOME/fab/cassandra/lib/*", "$HOME/fab/jython.jar"])
-    cmd = '~/fab/java/bin/java -cp "{classpath}" -Dpython.path="{pythonpath}" org.python.util.jython -c "import org.apache.cassandra.config.Config as Config; print dict(Config.__dict__).keys()"'.format(**locals())
+    cmd = '{java_home}/bin/java -cp "{classpath}" -Dpython.path="{pythonpath}" org.python.util.jython -c "import org.apache.cassandra.config.Config as Config; print dict(Config.__dict__).keys()"'.format(java_home=config['java_home'], **locals())
 
     out = fab.run(cmd, combine_stderr=False)
     if out.failed:
@@ -285,11 +286,11 @@ def bootstrap(git_fetch=True):
         fab.run('echo -e \'%s\\n%s\\n%s\' > ~/fab/cassandra/0.GIT_REVISION.txt' % 
                 (revision, git_id, config.get('log','')))
 
-        fab.run('JAVA_HOME=~/fab/java ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml clean')
+        fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml clean'.format(java_home=config['java_home']))
         if config['override_version'] is not None:
-            fab.run('JAVA_HOME=~/fab/java ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml -Dversion=%s' % config['override_version'])
+            fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml -Dversion={version}'.format(java_home=config['java_home'], version=config['override_version']))
         else:
-            fab.run('JAVA_HOME=~/fab/java ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml')
+            fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml'.format(java_home=config['java_home']))
 
         # Archive this build for future runs:
         fab.run('cp -a ~/fab/cassandra ~/fab/cassandra_builds/{git_id}'.format(git_id=git_id))
@@ -398,8 +399,7 @@ def bootstrap(git_fetch=True):
 def destroy(leave_data=False):
     """Uninstall Cassandra and clean up data and logs"""
     # We used to have a better pattern match for the Cassandra
-    # process, but it got fragile if you put too many JVM params. So
-    # now we just kill anything using our copy of the JVM:
+    # process, but it got fragile if you put too many JVM params. 
     fab.run('pkill -9 -f $HOME/fab/java/bin/java', quiet=True)
     fab.run('pkill -f "python.*fincore_capture"', quiet=True)
     fab.run('rm -rf fab/cassandra')
@@ -444,7 +444,7 @@ def start():
         fab.run('cp ~/fab/scripts/{env_script} ~/fab/cassandra/conf/cassandra-env.sh'.format(**locals()))
 
     fab.puts("Starting Cassandra..")
-    cmd = 'JAVA_HOME=~/fab/java nohup ~/fab/cassandra/bin/cassandra'
+    cmd = 'JAVA_HOME={java_home} nohup ~/fab/cassandra/bin/cassandra'.format(java_home=config['java_home'])
     fab.run(cmd)
 
 @fab.parallel
@@ -463,7 +463,7 @@ def ensure_running(retries=15, wait=10):
     """
     time.sleep(15)
     for attempt in range(retries):
-        ring = StringIO(fab.run('JAVA_HOME=~/fab/java ~/fab/cassandra/bin/nodetool ring'))
+        ring = StringIO(fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool ring'.format(java_home=config['java_home'])))
         private_ips = [x['internal_ip'] for x in config['hosts'].values()]
         nodes_up = dict((host,False) for host in private_ips)
         for line in ring:
@@ -515,32 +515,6 @@ def install_java(packages=None):
         raise RuntimeError('Unknown distribution: %s' % dist)
     for package in packages:
         fab.run(cmd.format(package=package))
-
-@fab.parallel
-def install_java_tarball():
-    fab.run('rm -rf fab/java')
-    fab.run('mkdir -p fab/java')
-    fab.run('tar --extract --file=fab/downloads/jdk-7u25-linux-x64.tar.gz --strip-components=1 '
-            '--directory=fab/java')
-    #fab.run('echo "PATH=~/fab/java/bin:$PATH" > ~/.bash_profile') 
-
-@fab.parallel
-def install_ant():
-    #Install apache ant binary
-    fab.run('wget --continue --no-check-certificate {distribution} '
-            '-O fab/ant.tar.gz --progress=dot'.format(
-            distribution=config['ant_tarball']))
-    fab.run('mkdir -p fab/ant')
-    fab.run('tar --extract --file=fab/ant.tar.gz --strip-components=1 '
-        '--directory=fab/ant')
-    fab.run('echo "PATH=~/fab/ant/bin:$PATH" >> ~/.bash_profile')
-
-@fab.parallel
-def configure_firewall():
-    """Allow all cluster nodes through the firewall"""
-    for node in config['hosts'].values():
-        ip = node['internal_ip']
-        fab.run('iptables -I INPUT -s {ip} -j ACCEPT'.format(ip=ip))
         
 @fab.parallel
 def configure_hostnames():
@@ -582,35 +556,6 @@ def copy_fincore_logs(local_directory):
 @fab.parallel
 def whoami():
     fab.run('whoami')
-
-@fab.parallel
-def bootstrap_all():
-    configure_hostnames()
-    configure_firewall()
-    install_java()
-    install_ant()
-    bootstrap()
-    start()
-    
-@fab.parallel
-def destroy_java():
-    fab.run('rm -rf fab/java')
-
-@fab.parallel
-def destroy_git_checkout():
-    fab.run('rm -rf ~/fab/cassandra.git')
-
-
-@fab.parallel
-def create_bdplab_dirs():
-    fab.run('mkdir -p /mnt/d1/cassandra && chown ryan:user /mnt/d1/cassandra')
-    fab.run('mkdir -p /mnt/d2/cassandra && chown ryan:user /mnt/d2/cassandra')
-    fab.run('mkdir -p /mnt/d3/cassandra && chown ryan:user /mnt/d3/cassandra')
-    fab.run('mkdir -p /mnt/d4/cassandra && chown ryan:user /mnt/d4/cassandra')
-    fab.run('mkdir -p /mnt/d5/cassandra && chown ryan:user /mnt/d5/cassandra')
-    fab.run('mkdir -p /mnt/d6/cassandra && chown ryan:user /mnt/d6/cassandra')
-    fab.run('mkdir -p /mnt/d7/cassandra && chown ryan:user /mnt/d7/cassandra')
-    fab
 
 @fab.parallel
 def add_git_remotes():

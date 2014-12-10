@@ -81,7 +81,9 @@ class Model(object):
         'select_test_status_all': "SELECT * FROM test_status WHERE status = ? LIMIT ?",
         'delete_test_status': "DELETE FROM test_status WHERE status= ? AND cluster = ? AND test_id = ?",
         'select_clusters_name': "SELECT name from clusters;",
+        'select_clusters': "SELECT name, description, jvms, num_nodes FROM clusters;",
         'insert_clusters': "INSERT INTO clusters (name, num_nodes, description) VALUES (?, ?, ?)",
+        'add_cluster_jvm': "UPDATE clusters SET jvms[?]=? WHERE name = ?",
         'insert_user': "INSERT INTO users (user_id, full_name, roles) VALUES (?, ?, ?);",
         'select_user': "SELECT * FROM users WHERE user_id = ?;",
         'select_user_roles': "SELECT roles FROM users WHERE user_id = ?;",
@@ -165,7 +167,7 @@ class Model(object):
         session.execute("CREATE TABLE test_artifacts (test_id timeuuid, artifact_type text, description text, artifact blob, PRIMARY KEY (test_id, artifact_type));")
 
         # Cluster information
-        session.execute("CREATE TABLE clusters (name text PRIMARY KEY, num_nodes int, description text)")
+        session.execute("CREATE TABLE clusters (name text PRIMARY KEY, num_nodes int, description text, jvms map<text, text>)")
         
         #Users
         session.execute("CREATE TABLE users (user_id text PRIMARY KEY, full_name text, roles set <text>);")
@@ -344,6 +346,21 @@ class Model(object):
         session = self.get_session()
         rows = session.execute(self.__prepared_statements['select_clusters_name'], [])
         return [c.name for c in rows]
+
+    def get_clusters(self):
+        session = self.get_session()
+        rows = session.execute(self.__prepared_statements['select_clusters'], [])
+        clusters = {}
+        for row in rows:
+            clusters[row[0]] = {'name': row[0],
+                                'description': row[1],
+                                'jvms': row[2],
+                                'num_nodes' : row[3]}
+        return clusters
+
+    def add_cluster_jvm(self, cluster, version, path):
+        session = self.get_session()
+        session.execute(self.__prepared_statements['add_cluster_jvm'], (version, path, cluster))
 
     ################################################################################
     #### API Keys:

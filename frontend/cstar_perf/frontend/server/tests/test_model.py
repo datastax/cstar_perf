@@ -148,3 +148,5 @@ class TestModel(unittest.TestCase):
         self.assertEqual(m.get_pub_key('new_cluster1')['pubkey'], 'base64 encoded pubkey 1')
         self.assertRaises(UnknownAPIKeyError, m.get_pub_key, 'new_cluster_never_seen')
 
+        m.add_cluster_jvm('new_cluster1', '1.7_65', '~/fab/java/1.7_65')
+        self.assertEqual(m.get_clusters()['new_cluster1']['jvms'], {'1.7_65':'~/fab/java/1.7_65'})
