@@ -45,7 +45,7 @@ var addRevisionDiv = function(animate){
         "        <label class='col-md-4 control-label' for='{revision_id}-jvm'>JVM</label>" +
         "        <div class='col-md-8'>" +
         "          <select id='{revision_id}-jvm' " +
-        "                  class='jvm-select form-control'>" +
+        "                  class='jvm-select form-control required'>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
@@ -99,7 +99,7 @@ var addOperationDiv = function(animate, operation, cmd){
         "        for='{operation_id}-type'>Operation</label>" +
         "        <div class='col-md-9'>" +
         "          <select id='{operation_id}-type'" +
-        "                  class='form-control'>" +
+        "                  class='form-control type'>" +
         "            <option value='stress'>stress</option>" +
         "            <option value='flush'>flush</option>" +
         "            <option value='compact'>compact</option>" +
@@ -203,6 +203,7 @@ var createJob = function() {
             label: revision.find(".revision-label").val() ? revision.find(".revision-label").val() : null,
             yaml: revision.find(".yaml").val(),
             env: revision.find(".env-vars").val(),
+            java_home: revision.find(".jvm-select").val(),
             options: {'use_vnodes': revision.find(".options-vnodes").is(":checked") }
         };
     });
@@ -283,7 +284,8 @@ $(document).ready(function() {
                     $(e).val(current_jvm_selections[i]);
                 }
                 if ($(e).val() == null) {
-                    alert("Warning - JVM selection changed due to cluster selection")
+                    $(e).find("option:first-child").attr("selected", "selected");
+                    alert("Warning - cluster JVM selection changed")
                 }
             });
 
