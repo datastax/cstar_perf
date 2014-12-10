@@ -239,12 +239,48 @@ var cloneExistingJob = function(job_id) {
             $("#revision-"+rev+"-yaml").val(revision['yaml']);
             $("#revision-"+rev+"-env-vars").val(revision['env']);
             $("#revision-"+rev+"-options-vnodes").attr("checked", revision['options']['use_vnodes'])
+            update_jvm_selections(function(){
+                $("#revision-"+rev+"-jvm").val(revision['java_home']);
+            });
+
         });
         //Operations:
         $.each(test['operations'], function(i, operation) {
             addOperationDiv(false, operation['operation'], operation['command']);            
         });
    });
+}
+
+var update_jvm_selections = function(callback) {
+    var cluster = $('#cluster').val();
+    $.get('/api/clusters/'+cluster, function(data) {
+        //Remember the current jvm selections:
+        var current_jvm_selections = [];
+        $(".jvm-select").each(function(i, e) {
+            current_jvm_selections[i] = $(e).val();
+        });
+        //Clear out the jvm lists and fetch new one:
+        $(".jvm-select").empty();
+        if(data.jvms==null) {
+            alert("Warning: cluster '"+ cluster+ "' has no JVMs defined.");
+            return;
+        }
+        $.each(data.jvms, function(jvm, path) {
+            $(".jvm-select").append($("<option value='"+path+"'>"+jvm+"</option>"));
+        });
+        //Try to set the one we had from before:
+        $(".jvm-select").each(function(i, e) {
+            if (current_jvm_selections[i] != null) {
+                $(e).val(current_jvm_selections[i]);
+            }
+            if ($(e).val() == null) {
+                $(e).find("option:first-child").attr("selected", "selected");
+                alert("Warning - cluster JVM selection changed")
+            }
+        });
+        if (callback != null) 
+            callback();
+    });
 }
 
 $(document).ready(function() {
@@ -262,36 +298,8 @@ $(document).ready(function() {
 
     //Refresh jvm list on cluster selection
     $('#cluster').change(function(e) {
-        var cluster = $('#cluster').val();
-        $.get('/api/clusters/'+cluster, function(data) {
-            //Remember the current jvm selections:
-            var current_jvm_selections = [];
-            $(".jvm-select").each(function(i, e) {
-                current_jvm_selections[i] = $(e).val();
-            });
-            //Clear out the jvm lists and fetch new one:
-            $(".jvm-select").empty();
-            if(data.jvms==null) {
-                alert("Warning: cluster '"+ cluster+ "' has no JVMs defined.");
-                return;
-            }
-            $.each(data.jvms, function(jvm, path) {
-                $(".jvm-select").append($("<option value='"+path+"'>"+jvm+"</option>"));
-            });
-            //Try to set the one we had from before:
-            $(".jvm-select").each(function(i, e) {
-                if (current_jvm_selections[i] != null) {
-                    $(e).val(current_jvm_selections[i]);
-                }
-                if ($(e).val() == null) {
-                    $(e).find("option:first-child").attr("selected", "selected");
-                    alert("Warning - cluster JVM selection changed")
-                }
-            });
-
-        });
+        update_jvm_selections();
     });
-    //$("#cluster").change();
 
     query = parseUri(location).queryKey;
     if (query.clone != undefined) {

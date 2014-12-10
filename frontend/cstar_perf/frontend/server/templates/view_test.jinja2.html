@@ -76,6 +76,7 @@ h3 {
       {% if revision['env'] %}
         <tr><td>Environment</td><td><pre>{{revision['env']}}</pre></td></tr>
       {% endif %}
+        <tr><td>JVM</td><td><pre>{{revision['java_home']}}</pre></td></tr>
       {% for option, value in revision['options'].items() %}
         <tr><td>{{option}}</td><td>{{value}}</td></tr>
       {% endfor %}
