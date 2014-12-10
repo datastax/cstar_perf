@@ -19,6 +19,9 @@ from oauth2client.client import ( AccessTokenRefreshError,
 from app import app, db, sockets
 from model import Model, UnknownUserError, UnknownTestError
 from notifications import console_subscribe
+from cstar_perf.frontend.lib.util import random_token
+from cstar_perf.frontend import SERVER_KEY_PATH
+from cstar_perf.frontend.lib.crypto import APIKey
 
 import logging
 log = logging.getLogger('cstar_perf.controllers')
@@ -29,6 +32,8 @@ gplus = build('plus', 'v1')
 google_client_secrets = os.path.join(os.path.expanduser("~"),'.cstar_perf','client_secrets.json')
 with open(google_client_secrets) as f:
     google_client_id = json.load(f)['web']['client_id']
+
+server_key = APIKey.load(SERVER_KEY_PATH)
 
 ################################################################################
 #### Template functions:
@@ -141,7 +146,7 @@ def login():
 
 @app.route('/logout', methods=['GET','POST'])
 def logout():
-    for i in ['credentials','gplus_id','logged_in'] :
+    for i in ['credentials','gplus_id','logged_in','bypass_csrf'] :
         try:
             session.pop(i)
         except KeyError:
@@ -238,6 +243,36 @@ def cluster(cluster_name):
 ################################################################################
 #### JSON API
 ################################################################################
+
+@app.route('/api/login', methods=['GET','POST'])
+def login_for_apps():
+    """Login for API access only"""
+    if request.method == "GET":
+        session['unsigned_access_token'] = random_token()
+        session['logged_in'] = False
+        return jsonify({"token":session['unsigned_access_token'],
+                        "signature":server_key.sign_message(session['unsigned_access_token'])})
+    elif request.method == "POST":
+        # Client posts it's login name and a signed token.
+        data = request.get_json()
+        # Verify signed token against stored public key for that name.
+        pubkey = APIKey(db.get_pub_key(data['login'])['pubkey'])
+        print pubkey.get_pub_key()
+        print data['signature']
+        print session['unsigned_access_token']
+        try:
+            pubkey.verify_message(session['unsigned_access_token'], data['signature'])
+        except Exception, e:
+            raise e
+            session['logged_in'] = False
+            del session['unsigned_access_token']
+            return make_response(jsonify({'error':'Bad token signature.'}), 401)
+        # Token has valid signature, grant login:
+        session['logged_in'] = True
+        # Mark this session as safe to bypass csrf protection, due to the ECDSA authentication:
+        session['bypass_csrf'] = True
+        return jsonify({'success':'Logged in'})
+
 
 @app.route('/api/tests/schedule', methods=['POST'])
 @requires_auth('user')
