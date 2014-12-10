@@ -400,7 +400,7 @@ def destroy(leave_data=False):
     """Uninstall Cassandra and clean up data and logs"""
     # We used to have a better pattern match for the Cassandra
     # process, but it got fragile if you put too many JVM params. 
-    fab.run('pkill -9 -f $HOME/fab/java/bin/java', quiet=True)
+    fab.run('killall -9 java', quiet=True)
     fab.run('pkill -f "python.*fincore_capture"', quiet=True)
     fab.run('rm -rf fab/cassandra')
     fab.run('rm -rf fab/scripts')
