@@ -17,7 +17,8 @@ requires = (
     'supervisor',
     'pexpect',
     'blist',
-    'superlance'
+    'superlance',
+    'requests'
 )
 
 setup(
