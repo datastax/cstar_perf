@@ -144,7 +144,7 @@ create a JSON file located in ``~/.cstar_perf/cluster_config.json``.
 Here's the config for our example cluster::
 
     {
-        "commitlog_directory": "/mnt/d1/commitlog"
+        "commitlog_directory": "/mnt/d1/commitlog",
         "data_file_directories": [
             "/mnt/d2/data",
             "/mnt/d3/data",
@@ -172,7 +172,7 @@ Here's the config for our example cluster::
                 "internal_ip": "10.0.0.103",
                 "hostname": "cnode3", 
                 "seed": true
-            },
+            }
         }, 
         "user": "your_username",
         "name": "example1", 
