@@ -78,7 +78,11 @@ class Email(object):
         msg['From'] = self.config['from']
         msg['To'] = ", ".join(self.recipients)
         msg['BCC'] = self.config.get('always_bcc', None)
-        s.sendmail(self.config['from'], self.recipients, msg.as_string())
+        try:
+            s.sendmail(self.config['from'], self.recipients, msg.as_string())
+        except smtplib.SMTPRecipientsRefused:
+            log.warn("Bad recipients for mail (not an email address?) : {recipients}".format(recipients=self.recipients))
+            return False
         log.info("Sent email to {recipients}".format(recipients=self.recipients))
 
 class TestStatusUpdateEmail(Email):
