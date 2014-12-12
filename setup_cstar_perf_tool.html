@@ -220,41 +220,41 @@ machine (<tt class="docutils literal"><span class="pre">stress1</span></tt> in o
 <p>cstar_perf.tool needs to know about your cluster. For this you need to
 create a JSON file located in <tt class="docutils literal"><span class="pre">~/.cstar_perf/cluster_config.json</span></tt>.
 Here&#8217;s the config for our example cluster:</p>
-<div class="highlight-python"><div class="highlight"><pre>{
-    &quot;commitlog_directory&quot;: &quot;/mnt/d1/commitlog&quot;
-    &quot;data_file_directories&quot;: [
-        &quot;/mnt/d2/data&quot;,
-        &quot;/mnt/d3/data&quot;,
-        &quot;/mnt/d4/data&quot;
-    ],
-    &quot;block_devices&quot;: [
-        &quot;/dev/sdb&quot;,
-        &quot;/dev/sdc&quot;,
-        &quot;/dev/sdd&quot;,
-        &quot;/dev/sde&quot;
-    ],
-    &quot;blockdev_readahead&quot;: &quot;256&quot;,
-    &quot;hosts&quot;: {
-        &quot;cnode1&quot;: {
-            &quot;internal_ip&quot;: &quot;10.0.0.101&quot;,
-            &quot;hostname&quot;: &quot;cnode1&quot;,
-            &quot;seed&quot;: true
-        },
-        &quot;cnode2&quot;: {
-            &quot;internal_ip&quot;: &quot;10.0.0.102&quot;,
-            &quot;hostname&quot;: &quot;cnode2&quot;,
-            &quot;seed&quot;: true
-        },
-        &quot;cnode3&quot;: {
-            &quot;internal_ip&quot;: &quot;10.0.0.103&quot;,
-            &quot;hostname&quot;: &quot;cnode3&quot;,
-            &quot;seed&quot;: true
-        },
-    },
-    &quot;user&quot;: &quot;your_username&quot;,
-    &quot;name&quot;: &quot;example1&quot;,
-    &quot;saved_caches_directory&quot;: &quot;/mnt/d2/saved_caches&quot;
-}
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s">&quot;commitlog_directory&quot;</span><span class="p">:</span> <span class="s">&quot;/mnt/d1/commitlog&quot;</span><span class="p">,</span>
+    <span class="s">&quot;data_file_directories&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s">&quot;/mnt/d2/data&quot;</span><span class="p">,</span>
+        <span class="s">&quot;/mnt/d3/data&quot;</span><span class="p">,</span>
+        <span class="s">&quot;/mnt/d4/data&quot;</span>
+    <span class="p">],</span>
+    <span class="s">&quot;block_devices&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="s">&quot;/dev/sdb&quot;</span><span class="p">,</span>
+        <span class="s">&quot;/dev/sdc&quot;</span><span class="p">,</span>
+        <span class="s">&quot;/dev/sdd&quot;</span><span class="p">,</span>
+        <span class="s">&quot;/dev/sde&quot;</span>
+    <span class="p">],</span>
+    <span class="s">&quot;blockdev_readahead&quot;</span><span class="p">:</span> <span class="s">&quot;256&quot;</span><span class="p">,</span>
+    <span class="s">&quot;hosts&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s">&quot;cnode1&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&quot;internal_ip&quot;</span><span class="p">:</span> <span class="s">&quot;10.0.0.101&quot;</span><span class="p">,</span>
+            <span class="s">&quot;hostname&quot;</span><span class="p">:</span> <span class="s">&quot;cnode1&quot;</span><span class="p">,</span>
+            <span class="s">&quot;seed&quot;</span><span class="p">:</span> <span class="n">true</span>
+        <span class="p">},</span>
+        <span class="s">&quot;cnode2&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&quot;internal_ip&quot;</span><span class="p">:</span> <span class="s">&quot;10.0.0.102&quot;</span><span class="p">,</span>
+            <span class="s">&quot;hostname&quot;</span><span class="p">:</span> <span class="s">&quot;cnode2&quot;</span><span class="p">,</span>
+            <span class="s">&quot;seed&quot;</span><span class="p">:</span> <span class="n">true</span>
+        <span class="p">},</span>
+        <span class="s">&quot;cnode3&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s">&quot;internal_ip&quot;</span><span class="p">:</span> <span class="s">&quot;10.0.0.103&quot;</span><span class="p">,</span>
+            <span class="s">&quot;hostname&quot;</span><span class="p">:</span> <span class="s">&quot;cnode3&quot;</span><span class="p">,</span>
+            <span class="s">&quot;seed&quot;</span><span class="p">:</span> <span class="n">true</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="s">&quot;user&quot;</span><span class="p">:</span> <span class="s">&quot;your_username&quot;</span><span class="p">,</span>
+    <span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;example1&quot;</span><span class="p">,</span>
+    <span class="s">&quot;saved_caches_directory&quot;</span><span class="p">:</span> <span class="s">&quot;/mnt/d2/saved_caches&quot;</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>The required settings :</p>
