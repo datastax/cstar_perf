@@ -3,6 +3,12 @@ div#chart_controls {
     position: absolute;
 }
 
+#loading_indicator {
+    height: 600px;
+    position: absolute;
+    width: 900px;
+}
+
 #chart_controls > table {
     width: 640px;
 }

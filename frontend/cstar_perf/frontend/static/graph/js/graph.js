@@ -1,5 +1,7 @@
 var drawGraph = function() {
 
+    $("body").append($("<div id='loading_indicator'></div>"));
+
     $("svg").remove();
 
     //Dataset and metric to draw is passed via query option:
@@ -532,9 +534,12 @@ var drawGraph = function() {
 
     }
 
+    $('#loading_indicator').loadingOverlay();
+
     d3.json(stats_db, function(error, data) {
         //Filter the dataset for the one we want:
         raw_data = data;
+        $('#loading_indicator').loadingOverlay('remove');
         graph_callback();
     });
 
