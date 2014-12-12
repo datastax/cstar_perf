@@ -1,0 +1,28 @@
+{
+    "cluster": "sarang",
+    "title": "test regressions", 
+    "description": "test regressions", 
+    "num_nodes": "3", 
+    "operations": [
+        {
+            "command": "write n=10000 -rate threads=50", 
+            "operation": "stress"
+        }, 
+        {
+            "command": "read n=10000 -rate threads=50", 
+            "operation": "stress"
+        }
+    ], 
+    "revisions": [
+        {
+            "env": "", 
+            "label": null, 
+            "options": {
+                "use_vnodes": true
+            },
+            "java_home": "~/fab/jvms/1.7.0_72",
+            "revision": "apache/cassandra-2.1", 
+            "yaml": ""
+        }
+    ]
+}

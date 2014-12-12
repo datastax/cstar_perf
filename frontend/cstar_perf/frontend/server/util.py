@@ -37,11 +37,14 @@ def csrf_protect_app(app):
 
     @app.before_request
     def csrf_protect():
+        if request.path == "/api/login" or session.get('bypass_csrf', False):
+            # Bypass csrf protection for trusted api sessions (see /api/login_for_apps):
+            return
         if request.method == "POST":
             token = session.get('_csrf_token', None)
             header = request.headers.get('X-csrf', None)
             if not token or not header or token != header:
-                abort(make_response("Invalid token", 403))
+                abort(make_response("Invalid x-csrf token", 403))
 
     def generate_csrf_token():
         if '_csrf_token' not in session:

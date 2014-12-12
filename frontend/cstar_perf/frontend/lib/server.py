@@ -39,7 +39,7 @@ def run_server():
 
 
 def main():
-    parser = argparse.ArgumentParser(description='cstar_perf_server')
+    parser = argparse.ArgumentParser(description='cstar_perf_server', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--get-credentials', dest='gen_credentials',
                         action='store_true', help='Get and/or create ECDSA key for signing requests.')
 

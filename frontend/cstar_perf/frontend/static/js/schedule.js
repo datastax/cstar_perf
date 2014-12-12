@@ -223,6 +223,18 @@ var createJob = function() {
     return JSON.stringify(job);
 }
 
+//Get test definition link:
+var show_job_json = function() {
+    var json = JSON.stringify(JSON.parse(createJob()), undefined, 2);
+    $("#schedule-test").hide();
+    $("#container").append($("<pre>").append(json));
+    $("#get_job_json").remove();
+    if (query.clone != undefined) {
+        query.show_json = true;
+        updateURLBar(query);
+    }
+}
+
 var cloneExistingJob = function(job_id) {
     $.get("/api/tests/id/" + job_id, function(job) {
         test = job['test_definition'];
@@ -248,6 +260,12 @@ var cloneExistingJob = function(job_id) {
         $.each(test['operations'], function(i, operation) {
             addOperationDiv(false, operation['operation'], operation['command']);            
         });
+
+        query = parseUri(location).queryKey;
+        if (query.show_json != undefined) {
+            show_job_json();
+        }
+
    });
 }
 
@@ -282,6 +300,12 @@ var update_jvm_selections = function(callback) {
             callback();
     });
 }
+
+var updateURLBar = function(query) {
+    //Update the URL bar with the current parameters:
+    window.history.replaceState(null,null,parseUri(location).path + "?" + $.param(query));
+};
+
 
 $(document).ready(function() {
     //Add revision button callback:
@@ -332,4 +356,11 @@ $(document).ready(function() {
         });
         e.preventDefault();
     });
+
+
+    $("#get_job_json").click(function(e) {
+        show_job_json()
+        e.preventDefault();
+    });
+
 });

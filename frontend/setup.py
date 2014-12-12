@@ -35,7 +35,8 @@ setup(
     entry_points = {'console_scripts': 
                     ['cstar_perf_client = cstar_perf.frontend.client.client:main',
                      'cstar_perf_server = cstar_perf.frontend.lib.server:main',
-                     'cstar_perf_notifications = cstar_perf.frontend.server.notifications:main']},
+                     'cstar_perf_notifications = cstar_perf.frontend.server.notifications:main',
+                     'cstar_perf_schedule = cstar_perf.frontend.client.schedule:main']},
 )
 
 from cstar_perf.frontend.lib.crypto import generate_server_keys

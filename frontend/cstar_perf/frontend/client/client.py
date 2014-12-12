@@ -545,7 +545,7 @@ def create_credentials():
     print("Server public key is: {key}".format(key=apikey.get_pub_key()))
 
 def main():
-    parser = argparse.ArgumentParser(description='cstar_perf job client')
+    parser = argparse.ArgumentParser(description='cstar_perf job client', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', '--server', default='ws://localhost:8000/api/cluster_comms',
                         help='Server endpoint', dest='server')
     parser.add_argument('--get-credentials', dest='gen_credentials',
