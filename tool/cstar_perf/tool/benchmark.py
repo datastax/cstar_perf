@@ -18,6 +18,7 @@ import threading
 import socket
 import getpass
 import logging
+import yaml
 
 # Import the default config first:
 import fab_cassandra as cstar
@@ -46,8 +47,22 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     """
     if cfg is not None:
         cstar.setup(cfg)
+
+    # Parse yaml 
+    if cfg.has_key('yaml'):
+        cass_yaml = yaml.load(cfg['yaml'])
+        if cass_yaml is not None:
+            if type(cass_yaml) is not dict:
+                raise JobFailure('Invalid yaml, was expecting a dictionary: {cass_yaml}'.format(cass_yaml=cass_yaml))
+            cstar.config['yaml'] = cass_yaml
+    if cfg.has_key('options'):
+        if cfg['options'] is not None:
+            cstar.config.update(cfg['options'])
+            del cstar.config['options']
+
     logger.info("### Config: ###")
     pprint(cstar.config)
+
 
     # Set device readahead:
     if cfg['blockdev_readahead'] is not None:

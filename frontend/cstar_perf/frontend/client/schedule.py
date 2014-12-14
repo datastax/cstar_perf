@@ -2,6 +2,7 @@ import argparse
 import requests
 import json
 from cstar_perf.frontend.lib.crypto import APIKey, BadConfigFileException
+from cstar_perf.frontend import CLIENT_CONFIG_PATH
 
 class Scheduler(object):
     def __init__(self, server_domain):
@@ -12,6 +13,11 @@ class Scheduler(object):
     def login(self):
         """Login to the server, return an authenticated requests session"""
         url = self.endpoint+"/login"
+
+        config = ConfigParser.RawConfigParser()
+        config.read(CLIENT_CONFIG_PATH)
+        self.__client_name = config.get('cluster','name')
+
         client_key = APIKey.load(key_type='client')
         server_key = APIKey.load(key_type='server')
         # request a login token
@@ -26,7 +32,7 @@ class Scheduler(object):
             raise RuntimeError('Could not request login token : {} - {}'.format(r, r.text))
 
         # Sign the token and post it back:
-        data = {'login': 'sarang',
+        data = {'login': self.__client_name,
                 'signature': client_key.sign_message(data['token'])}
         r = self.session.post(url, data=json.dumps(data), headers={'content-type': 'application/json'})
         if r.json().get('success', '') != 'Logged in':

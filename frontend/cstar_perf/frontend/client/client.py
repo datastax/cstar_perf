@@ -187,16 +187,6 @@ class JobRunner(object):
         """Perform a job the server gave us, stream output and artifacts to the given websocket."""
         job = copy.deepcopy(job['test_definition'])
         # Cleanup the job structure according to what stress_compare needs:
-        for revision in job['revisions']:
-            cass_yaml = yaml.load(revision['yaml'])
-            if cass_yaml is not None:
-                if type(cass_yaml) is not dict:
-                    raise JobFailure('Invalid yaml, was expecting a dictionary: {cass_yaml}'.format(cass_yaml=cass_yaml))
-                revision.update(cass_yaml)
-            del revision['yaml']
-            if revision['options'] is not None:
-                revision.update(revision['options'])
-            del revision['options']
         for operation in job['operations']:
             operation['type'] = operation['operation']
             del operation['operation']

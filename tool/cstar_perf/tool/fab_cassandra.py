@@ -332,18 +332,29 @@ def bootstrap(git_fetch=True):
     conf_file.seek(0)
     cass_yaml = yaml.load(conf_file.read())
 
-    # Only update values in the yaml for settings that exist in
-    # Cassandra's Config class : 
+    # Get the canonical list of options from the c* source code:
     cstar_config_opts = get_cassandra_config_options()
+
+    # Cassandra YAML values can come from two places: 
+    # 1) Set as options at the top level of the config. This is how
+    # legacy cstar_perf did it. These are unvalidated:
     for option, value in config.items():
         if option in cstar_config_opts:
             cass_yaml[option] = value
+    # 2) Set in the second level 'yaml' dictionary. This is how the
+    # frontend and bootstrap.py does it. These take precedence over
+    # the #1 style and are always validated for typos / invalid options.
+    for option, value in config.get('yaml', {}).items():
+        if option not in cstar_config_opts:
+            raise ValueError('Unknown C* yaml option: {}'.format(option))
+        cass_yaml[option] = value
 
-    if config['use_vnodes']:
-        cass_yaml['num_tokens'] = config['num_tokens']
-    else:
-        cass_yaml['initial_token'] = cfg['initial_token']
-        cass_yaml['num_tokens'] = 1
+    if 'num_tokens' not in config.get('yaml', {}):
+        if config.get('use_vnodes', True):
+            cass_yaml['num_tokens'] = config['num_tokens']
+        else:
+            cass_yaml['initial_token'] = cfg['initial_token']
+            cass_yaml['num_tokens'] = 1
     cass_yaml['listen_address'] = cfg['internal_ip']
     cass_yaml['seed_provider'][0]['parameters'][0]['seeds'] =  ",".join(config['seeds'])
     if partitioner == 'random':
