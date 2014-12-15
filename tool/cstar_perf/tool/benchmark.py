@@ -191,12 +191,12 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3, com
 
     def compactionstats(nodes, check_interval):
         """Check for compactions via nodetool compactionstats"""
-        pattern = re.compile("^pending tasks: 0\n")
+        pattern = re.compile("(^|\n)pending tasks: 0\n")
         nodes = set(nodes)
         while True:
             output = nodetool_multi(nodes, 'compactionstats')
             for node in list(nodes):
-                if pattern.match(output[node]):
+                if pattern.search(output[node]):
                     nodes.remove(node)
             if len(nodes) == 0:
                 break
