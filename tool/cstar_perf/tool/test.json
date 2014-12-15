@@ -1,9 +1,0 @@
-{
-    "revision": "cassandra-2.1.2",
-    "label": "test",
-    "yaml": "memtable_cleanup_threshold: 0.9\nmemtable_allocation_type: offheap_objects",
-    "env": "",
-    "options": {
-        "use_vnodes": true
-    }
-}

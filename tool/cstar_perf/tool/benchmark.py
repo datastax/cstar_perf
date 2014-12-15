@@ -50,7 +50,9 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
 
     # Parse yaml 
     if cfg.has_key('yaml'):
-        cass_yaml = yaml.load(cfg['yaml'])
+        cass_yaml = cfg['yaml']
+        if isinstance(cfg['yaml'], basestring):
+            cass_yaml = yaml.load(cfg['yaml'])
         if cass_yaml is not None:
             if type(cass_yaml) is not dict:
                 raise JobFailure('Invalid yaml, was expecting a dictionary: {cass_yaml}'.format(cass_yaml=cass_yaml))
