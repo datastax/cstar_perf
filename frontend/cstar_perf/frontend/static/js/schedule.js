@@ -45,7 +45,7 @@ var addRevisionDiv = function(animate){
         "        <label class='col-md-4 control-label' for='{revision_id}-jvm'>JVM</label>" +
         "        <div class='col-md-8'>" +
         "          <select id='{revision_id}-jvm' " +
-        "                  class='jvm-select form-control required'>" +
+        "                  class='jvm-select form-control' required>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
