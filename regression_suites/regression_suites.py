@@ -7,7 +7,7 @@ CSTAR_SERVER = "cstar.datastax.com"
 def create_baseline_config():
     """Creates a config for testing the latest dev build(s) against stable and oldstable"""
     
-    dev_revisions = ['trunk'] + get_branches()[:2]
+    dev_revisions = ['apache/trunk'] + get_branches()[:2]
     stable = get_tagged_releases('stable')[0]
     oldstable = get_tagged_releases('oldstable')[0]
 
