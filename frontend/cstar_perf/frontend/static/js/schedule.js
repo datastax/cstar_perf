@@ -250,6 +250,9 @@ var cloneExistingJob = function(job_id) {
             $("#revision-"+rev+"-label").val(revision['label']);
             $("#revision-"+rev+"-yaml").val(revision['yaml']);
             $("#revision-"+rev+"-env-vars").val(revision['env']);
+            if (revision['options'] == undefined) {
+                revision['options'] = {};
+            }
             $("#revision-"+rev+"-options-vnodes").attr("checked", revision['options']['use_vnodes'])
             update_jvm_selections(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);

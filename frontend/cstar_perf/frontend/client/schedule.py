@@ -1,6 +1,7 @@
 import argparse 
 import requests
 import json
+import ConfigParser
 from cstar_perf.frontend.lib.crypto import APIKey, BadConfigFileException
 from cstar_perf.frontend import CLIENT_CONFIG_PATH
 

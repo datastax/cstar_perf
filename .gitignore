@@ -11,3 +11,4 @@ vagrant/.vagrant
 /tool/dist
 /tool/*.egg-info
 ctool_launch.py
+cassandra.logdir_IS_UNDEFINED
