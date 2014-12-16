@@ -61,4 +61,4 @@ def get_branches():
     # Sort by semver:
     branches.sort(reverse=True)
 
-    return ['cassandra-'+b.vstring for b in branches]
+    return ['apache/cassandra-'+b.vstring for b in branches]
