@@ -440,9 +440,9 @@ def start():
     if not config['use_jna']:
         env = 'JVM_EXTRA_OPTS=-Dcassandra.boot_without_jna=true\n\n' + env
     # Turn on GC logging:
-    if config.get('gc_logging', True):
-        log_dir = fab.run("readlink -m {log_dir}".format(log_dir=config['log_dir']))
-        env = "JVM_OPTS=\"$JVM_OPTS -XX:+PrintGCApplicationStoppedTime -Xloggc:{log_dir}/gc-`date +%s`.log\"\n\n".format(log_dir=log_dir) + env
+    fab.run("mkdir -p ~/fab/cassandra/logs")
+    log_dir = fab.run("readlink -m {log_dir}".format(log_dir=config['log_dir']))
+    env = "JVM_OPTS=\"$JVM_OPTS -Xloggc:{log_dir}/gc-$HOSTNAME.log\"\n\n".format(log_dir=log_dir) + env
 
     env_script = "{name}.sh".format(name=uuid.uuid1())
     env_file = StringIO(env)
