@@ -87,7 +87,7 @@ var addRevisionDiv = function(animate){
 
 };
 
-var addOperationDiv = function(animate, operation, cmd){
+var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
     schedule.n_operations++;
     var operation_id = 'operation-'+schedule.n_operations;
     if (!cmd)
@@ -113,6 +113,19 @@ var addOperationDiv = function(animate, operation, cmd){
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-command' type='text'" +
         "                 class='form-control input-md command' value='{cmd}' required=''></input>" +
+        "        </div>" +
+        "      </div>" +
+        "            " +
+        "      <div class='form-group'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-options'>Options</label>" +
+        "        <div class='col-md-8'>" +
+        "          <div class='checkbox'>" +
+        "            <input type='checkbox' class='wait-for-compaction' id='{operation_id}-wait-for-compaction' checked='checked'>" +
+        "            <label for='{operation_id}-wait-for-compaction'>" +
+        "              Wait for compactions before next operation" +
+        "            </label>" +
+        "	  </div>" +
         "        </div>" +
         "      </div>" +
         "            " +
@@ -182,7 +195,11 @@ var addOperationDiv = function(animate, operation, cmd){
             this.remove();
         });
     });
-    
+
+    //Check wait_for_compaction box:
+    if (wait_for_compaction === false) {
+        $("#"+operation_id+"-wait-for-compaction").prop("checked", false);
+    }
 };
 
 var createJob = function() {
@@ -218,6 +235,7 @@ var createJob = function() {
         if (job.operations[i]['operation'] === 'stress') {
             job.operations[i]['command'] = operation.find(".command").val();
         }
+        job.operations[i]['wait_for_compaction'] = operation.find(".wait-for-compaction").is(":checked");
     });
 
     return JSON.stringify(job);
@@ -253,7 +271,7 @@ var cloneExistingJob = function(job_id) {
             if (revision['options'] == undefined) {
                 revision['options'] = {};
             }
-            $("#revision-"+rev+"-options-vnodes").attr("checked", revision['options']['use_vnodes'])
+            $("#revision-"+rev+"-options-vnodes").prop("checked", revision['options']['use_vnodes'])
             update_jvm_selections(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);
             });
@@ -261,7 +279,7 @@ var cloneExistingJob = function(job_id) {
         });
         //Operations:
         $.each(test['operations'], function(i, operation) {
-            addOperationDiv(false, operation['operation'], operation['command']);            
+            addOperationDiv(false, operation['operation'], operation['command'], operation['wait_for_compaction']);
         });
 
         query = parseUri(location).queryKey;
@@ -338,7 +356,7 @@ $(document).ready(function() {
         addOperationDiv(false, 'stress', 'write n=19000000 -rate threads=50');
         addOperationDiv(false, 'stress', 'read n=19000000 -rate threads=50');
     }
-
+    
     //Validate form and submit:
     $("form#schedule-test").submit(function(e) {
         var job = createJob();
