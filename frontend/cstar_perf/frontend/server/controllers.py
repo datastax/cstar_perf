@@ -288,13 +288,21 @@ def schedule_test():
 def cancel_test():
     """Cancel a scheduled test"""
     test_id = request.form['test_id']
+    test = db.get_test(test_id)
+
+    # If test is scheduled, we can immediately cancel.
+    # If test is already in progress, we need to mark as
+    # cancel_pending to await the client to cancel the job itself.
+    new_status = 'cancelled'
+    if test['status'] == 'in_progress':
+        new_status = 'cancel_pending'
+
     if user_in_role('admin'):
-        db.update_test_status(test_id, 'cancelled')
+        db.update_test_status(test_id, new_status)
     else:
         # Check if the test is owned by the user:
-        test = db.get_test(test_id)
         if test['user'] == get_user_id():
-            db.update_test_status(test_id, 'cancelled')
+            db.update_test_status(test_id, new_status)
         else:
             return make_response(jsonify({'error':'Access Denied to modify test {test_id}'
                             .format(test_id=test_id)}), 401)
@@ -306,8 +314,17 @@ def get_test(test_id):
     """Retrieve the definition for a scheduled test"""
     try:
         test = db.get_test(test_id)
-        log.debug(test)
         return jsonify(test)
+    except UnknownTestError:
+        return make_response(jsonify({'error':'Unknown Test {test_id}.'.format(test_id=test_id)}), 404)
+
+@app.route('/api/tests/status/id/<test_id>')
+@requires_auth('user')
+def get_test_status(test_id):
+    """Retrieve the status for a test"""
+    try:
+        status = db.get_test_status(test_id)
+        return jsonify({'status':status})
     except UnknownTestError:
         return make_response(jsonify({'error':'Unknown Test {test_id}.'.format(test_id=test_id)}), 404)
 

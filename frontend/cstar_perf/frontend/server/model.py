@@ -65,12 +65,14 @@ class UnknownAPIKeyError(Exception):
 class NoTestsScheduledError(Exception):
     pass
 
+TEST_STATES =  ('scheduled', 'in_progress', 'completed', 'cancel_pending', 'cancelled', 'failed')
 
 class Model(object):
 
     statements = {
         'insert_test': "INSERT INTO tests (test_id, user, cluster, status, test_definition) VALUES (?, ?, ?, ?, ?);",
         'select_test': "SELECT * FROM tests WHERE test_id = ?;",
+        'get_test_status': "SELECT status FROM tests WHERE test_id = ?;",
         'update_test_set_status': "UPDATE tests SET status = ? WHERE test_id = ?",
         'update_test_set_status_completed': "UPDATE tests SET status = ?, completed_date = ? WHERE test_id = ?",
         'insert_test_status': "INSERT INTO test_status (status, cluster, test_id, user, title) VALUES (?, ?, ?, ?, ?);",
@@ -200,8 +202,18 @@ class Model(object):
         test = self.__test_row_to_dict(test)
         return test
 
+    def get_test_status(self, test_id):
+        session = self.get_session()
+        if not isinstance(test_id, uuid.UUID):
+            test_id = uuid.UUID(test_id)
+        try:
+            status = session.execute(self.__prepared_statements['get_test_status'], (test_id,))[0]
+        except IndexError:
+            raise UnknownTestError('Unknown test {test_id}'.format(test_id=test_id))
+        return status[0]
+
     def update_test_status(self, test_id, status):
-        assert status in ('scheduled', 'in_progress', 'completed', 'cancelled', 'failed'), "{status} is not a valid test state".format(status=status)
+        assert status in TEST_STATES, "{status} is not a valid test state".format(status=status)
         session = self.get_session()
         if not isinstance(test_id, uuid.UUID):
             test_id = uuid.UUID(test_id)
@@ -308,7 +320,8 @@ class Model(object):
             raise NoTestsScheduledError('No tests scheduled for {cluster}'.format(cluster=cluster))
 
     def get_in_progress_tests(self, cluster, limit=999999999):
-        return self.get_test_status_by_cluster('in_progress', cluster, 'ASC', limit)
+        return self.get_test_status_by_cluster('in_progress', cluster, 'ASC', limit) + \
+            self.get_test_status_by_cluster('cancel_pending', cluster, 'ASC', limit)
 
     def get_completed_tests(self, limit=999999999):
         session = self.get_session()

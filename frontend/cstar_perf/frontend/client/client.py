@@ -17,6 +17,9 @@ import tarfile
 import hashlib
 import shutil
 import traceback
+import urlparse
+import threading
+import psutil
 from collections import namedtuple
 from distutils.dir_util import mkpath
 
@@ -29,9 +32,11 @@ from cstar_perf.frontend.lib.crypto import APIKey, BadConfigFileException
 from cstar_perf.frontend.lib.util import random_token, timeout, TimeoutError, format_bytesize, cd
 from cstar_perf.frontend.lib.socket_comms import Command, Response, CommandResponseBase, receive_data, UnauthenticatedError
 from cstar_perf.tool.stress_compare import stress_compare
+from api_client import APIClient
 
 logging.basicConfig(level=logging.DEBUG)
 logging.getLogger('paramiko').setLevel(logging.WARNING)
+logging.getLogger('requests').setLevel(logging.WARNING)
 log = logging.getLogger('cstar_perf.client')
 
 from cstar_perf.frontend import CLIENT_CONFIG_PATH, KEEPALIVE_MARKER, EOF_MARKER
@@ -211,6 +216,13 @@ class JobRunner(object):
                               kind='console', name='console_out', eof=EOF_MARKER, keepalive=KEEPALIVE_MARKER)
         response = self.send(command, assertions={'message':'ready'})
 
+        # Start a status checking thread.
+        # If a user cancel's the job after it's marked in_progress, we
+        # need to periodically check for that state change and kill
+        # our test:
+        cancel_checker = JobCancellationTracker(urlparse.urlparse(self.ws_endpoint).netloc, job['test_id'])
+        cancel_checker.start()
+
         # Run stress_compare in a separate process, collecting the
         # output as an artifact:
         try:
@@ -231,6 +243,7 @@ class JobRunner(object):
                     except TimeoutError:
                         self.send(base64.b64encode(KEEPALIVE_MARKER))
         finally:
+            cancel_checker.stop()
             self.send(base64.b64encode(EOF_MARKER))
 
         response = self.receive(response, assertions={'message':'stream_received', 'done':True})
@@ -480,6 +493,39 @@ class JobRunner(object):
             log.error('server provided bad signature for auth token')
             raise
         response.respond(authenticated=True, done=True)
+
+class JobCancellationTracker(threading.Thread):
+    """Thread to poll test status changes on the server and kill jobs if requested"""
+    def __init__(self, server, test_id, check_interval=60):
+        self.test_id = test_id
+        self.stop_requested = False
+        self.api_client = APIClient(server)
+        self.check_interval = check_interval
+        threading.Thread.__init__(self)
+        log.info("Starting to watch for job status changes on the server for: {}".format(self.test_id))
+
+    def run(self):
+        self.api_client.login()
+        while self.stop_requested == False:
+            time.sleep(self.check_interval)
+            # Check job status:
+            status = self.api_client.get('/tests/status/id/'+self.test_id)
+            if status.get('status', None) in ('cancelled', 'cancel_pending'):
+                self.kill_jobs()                
+
+    def stop(self):
+        self.stop_requested = True
+
+    def kill_jobs(self):
+        """Kill cstar_perf_stress and cassandra-stress"""
+        for proc in psutil.process_iter():
+            if proc.name().startswith("cstar_perf_stre"):
+                log.info("Killing cstar_perf_stress - pid:{}".format(proc.pid))
+                proc.kill()
+            if proc.name() == "java":
+                if "org.apache.cassandra.stress.Stress" in " ".join(proc.cmdline()):
+                    log.info("Killing cassandra-stress - pid:{}".format(proc.pid))
+                    proc.kill()
 
 def create_credentials():
     """Create ecdsa keypair for authenticating with server. Save these to

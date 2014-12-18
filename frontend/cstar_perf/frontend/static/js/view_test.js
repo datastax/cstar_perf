@@ -33,7 +33,7 @@ $(document).ready(function() {
     //Create cancel button for tests in scheduled status:
     var field = $("#test_status");
     var test_id = $("#test_id").text();
-    if (field.text() === "scheduled") {
+    if (field.text() === "scheduled" || field.text() === "in_progress") {
         var btn = $("<button class='btn' style='margin-left:30px'>Cancel Test</button>").click(function() {
             cancelTest(test_id, function(){
                 window.location.reload();

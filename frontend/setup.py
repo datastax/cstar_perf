@@ -18,7 +18,8 @@ requires = (
     'pexpect',
     'blist',
     'superlance',
-    'requests'
+    'requests',
+    'psutil'
 )
 
 setup(
