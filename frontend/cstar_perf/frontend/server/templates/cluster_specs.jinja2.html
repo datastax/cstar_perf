@@ -1,0 +1,70 @@
+{% extends 'layout.jinja2.html' %}
+{% from 'test_macro.jinja2.html' import test_table %}
+
+{% block title %}Cluster Specs{% endblock %}
+
+{% block style %}
+.cluster_specs {
+   visibility: hidden;
+}
+{% endblock %}
+
+{% block body %}
+<h1>Cluster Specs</h1>
+
+<div id="datastax_cstar_perf_specs" class="cluster_specs">
+  <!-- DataStax specific cluster specs -->  
+  <h2>blade_11</h2>
+  <table class="table">
+    <tr><th class="col-md-2">number of
+    nodes</th><th class="col-md-2">CPU</th><th class="col-md-2">RAM</th><th class="col-md-2">Disks</th></tr>
+    <tr><td>1 stress, 3 Cassandra</td><td>2x <a href="http://ark.intel.com/products/75789/Intel-Xeon-Processor-E5-2620-v2-15M-Cache-2_10-GHz">Intel(R) Xeon(R) CPU E5-2620 v2 @
+        2.10GHz</a> (12 cores total)</td><td>64G</td><td>3 Samsung SSD 845DC EVO 240GB, mdadm
+        RAID 0</td></tr>
+  </table>
+  <img src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/RarOiY8JnMXZovA/blade-11-1a.png"/>
+
+
+  <h2>blade_11_b</h2>
+  <table class="table">
+    <tr><th class="col-md-2">number of
+    nodes</th><th class="col-md-2">CPU</th><th class="col-md-2">RAM</th><th class="col-md-2">Disks</th></tr>
+    <tr><td>1 stress, 3 Cassandra</td><td>2x <a href="http://ark.intel.com/products/75789/Intel-Xeon-Processor-E5-2620-v2-15M-Cache-2_10-GHz">Intel(R) Xeon(R) CPU E5-2620 v2 @
+        2.10GHz</a> (12 cores total)</td><td>64G</td><td>3 x Samsung SSD 845DC EVO 240GB, mdadm
+        RAID 0</td></tr>
+  </table>
+  <img src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/RarOiY8JnMXZovA/blade-11-1a.png"/>
+
+  <h2>bdplab</h2>
+  <table class="table">
+    <tr><th class="col-md-2">number of
+    nodes</th><th class="col-md-2">CPU</th><th class="col-md-2">RAM</th><th class="col-md-2">Disks</th></tr>
+    <tr><td>1 stress, 3 Cassandra</td><td>2x <a href="http://ark.intel.com/products/47925/Intel-Xeon-Processor-E5620-12M-Cache-2_40-GHz-5_86-GTs-Intel-QPI">Intel(R) Xeon(R) CPU E5620
+    @2.40GHz</a> (8 cores total)</td><td>32G</td><td>7 x Western Digital WD5003ABYX 500GB, JBOD</td></tr>
+  </table>
+  <img src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/Z04jrMTFA66dv2X/bdplab0.png"/>
+
+
+  <h2>austin</h2>
+  <table class="table">
+    <tr><th class="col-md-2">number of
+    nodes</th><th class="col-md-2">CPU</th><th class="col-md-2">RAM</th><th class="col-md-2">Disks</th></tr>
+    <tr><td>1 stress, 3 Cassandra</td><td>1x <a href="http://ark.intel.com/products/42927/Intel-Xeon-Processor-X3430-(8M-Cache-2_40-GHz)">Intel(R) Xeon(R) CPU X3430 @
+    2.40GHz</a> (4 cores)</td><td>16G</td><td>2 x Western Digital
+    WD5001AALS 500GB, mdadm RAID 0</td></tr>
+  </table>
+  <img src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/SJpbvq6PzTe3mjT/austin.png"/>
+
+
+</div>
+
+<script type="text/javascript">
+$(document).ready(function() {
+  console.log(window.location.host);
+  if (window.location.host == "cstar.datastax.com") {
+      $("#datastax_cstar_perf_specs").css("visibility","visible");
+  }
+});
+</script>
+
+{% endblock %}

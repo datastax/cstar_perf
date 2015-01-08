@@ -239,6 +239,11 @@ def schedule():
 def cluster(cluster_name):
     return render_template('cluster.jinja2.html',
                            cluster_name=cluster_name)
+
+@app.route('/cluster/specs', methods=['GET'])
+def cluster_specs():
+    return render_template('cluster_specs.jinja2.html')
+
     
 ################################################################################
 #### JSON API
