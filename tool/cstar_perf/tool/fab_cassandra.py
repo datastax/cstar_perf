@@ -202,7 +202,7 @@ def setup(my_config=None):
             break
 
     #Aggregate those nodes which are seeds into a single list:
-    config['seeds'] = [v['internal_ip'] for v in config['hosts'].values() 
+    config['seeds'] = [v.get('external_ip', v['internal_ip']) for v in config['hosts'].values() 
                       if v.get('seed',False)]
 
     # Tell fabric which hosts to use, unless some were 
@@ -356,6 +356,7 @@ def bootstrap(git_fetch=True):
             cass_yaml['initial_token'] = cfg['initial_token']
             cass_yaml['num_tokens'] = 1
     cass_yaml['listen_address'] = cfg['internal_ip']
+    cass_yaml['broadcast_address'] = cfg.get('external_ip', cfg['internal_ip'])
     cass_yaml['seed_provider'][0]['parameters'][0]['seeds'] =  ",".join(config['seeds'])
     if partitioner == 'random':
         cass_yaml['partitioner'] = 'org.apache.cassandra.dht.RandomPartitioner'
@@ -367,7 +368,8 @@ def bootstrap(git_fetch=True):
     if not config.has_key('endpoint_snitch'):
         for node in config['hosts'].values():
             if node.get('datacenter',False):
-                config['endpoint_snitch'] = "PropertyFileSnitch"
+                config['endpoint_snitch'] = "GossipingPropertyFileSnitch"
+                cass_yaml['auto_bootstrap'] = False
                 break
         else:
             config['endpoint_snitch'] = "SimpleSnitch"
@@ -376,10 +378,12 @@ def bootstrap(git_fetch=True):
         cass_yaml['endpoint_snitch'] = 'PropertyFileSnitch'
         fab.run("echo 'default=dc1:r1' > fab/cassandra/conf/cassandra-topology.properties")
         for node in config['hosts'].values():
-            line = '%s=%s:%s' % (node['internal_ip'], 
-                                 node.get('datacenter','dc1'), 
-                                 node.get('rack','r1'))
+            line = '%s=%s:%s' % (node['external_ip'], node.get('datacenter', 'dc1'), node.get('rack', 'r1'))
             fab.run("echo '%s' >> fab/cassandra/conf/cassandra-topology.properties" % line)
+    if config['endpoint_snitch'] == "GossipingPropertyFileSnitch":
+        cass_yaml['endpoint_snitch'] = 'GossipingPropertyFileSnitch'
+        fab.run("echo 'dc={dc}\nrack={rack}' > fab/cassandra/conf/cassandra-rackdc.properties".format(
+            dc=cfg.get('datacenter','dc1'), rack=cfg.get('rack','r1')))
 
     # Save config:
     conf_file = StringIO()
@@ -442,7 +446,8 @@ def start():
     # Turn on GC logging:
     fab.run("mkdir -p ~/fab/cassandra/logs")
     log_dir = fab.run("readlink -m {log_dir}".format(log_dir=config['log_dir']))
-    env = "JVM_OPTS=\"$JVM_OPTS -Xloggc:{log_dir}/gc.log\"\n\n".format(log_dir=log_dir) + env
+    env = "JVM_OPTS=\"$JVM_OPTS -Djava.rmi.server.hostname={hostname} -Xloggc:{log_dir}/gc.log\"\n\n".format(
+        hostname=fab.env.host, log_dir=log_dir) + env
 
     env_script = "{name}.sh".format(name=uuid.uuid1())
     env_file = StringIO(env)
@@ -475,10 +480,10 @@ def ensure_running(retries=15, wait=10):
     time.sleep(15)
     for attempt in range(retries):
         ring = StringIO(fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool ring'.format(java_home=config['java_home'])))
-        private_ips = [x['internal_ip'] for x in config['hosts'].values()]
-        nodes_up = dict((host,False) for host in private_ips)
+        broadcast_ips = [x.get('external_ip', x['internal_ip']) for x in config['hosts'].values()]
+        nodes_up = dict((host,False) for host in broadcast_ips)
         for line in ring:
-            for host in private_ips:
+            for host in broadcast_ips:
                 if host in line and " Up " in line:
                     nodes_up[host] = True
         for node,up in nodes_up.items():

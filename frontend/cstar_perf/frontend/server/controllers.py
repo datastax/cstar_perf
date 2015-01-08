@@ -294,7 +294,7 @@ def cancel_test():
     # If test is already in progress, we need to mark as
     # cancel_pending to await the client to cancel the job itself.
     new_status = 'cancelled'
-    if test['status'] == 'in_progress':
+    if test['status'] == 'in_progress' or test['status'] == 'cancel_pending':
         new_status = 'cancel_pending'
 
     if user_in_role('admin'):
