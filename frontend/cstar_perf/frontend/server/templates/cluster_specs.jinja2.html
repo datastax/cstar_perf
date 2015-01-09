@@ -22,7 +22,7 @@
         2.10GHz</a> (12 cores total)</td><td>64G</td><td>3 Samsung SSD 845DC EVO 240GB, mdadm
         RAID 0</td></tr>
   </table>
-  <img src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/RarOiY8JnMXZovA/blade-11-1a.png"/>
+  <img data-src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/RarOiY8JnMXZovA/blade-11-1a.png"/>
 
 
   <h2>blade_11_b</h2>
@@ -33,7 +33,7 @@
         2.10GHz</a> (12 cores total)</td><td>64G</td><td>3 x Samsung SSD 845DC EVO 240GB, mdadm
         RAID 0</td></tr>
   </table>
-  <img src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/RarOiY8JnMXZovA/blade-11-1a.png"/>
+  <img data-src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/RarOiY8JnMXZovA/blade-11-1a.png"/>
 
   <h2>bdplab</h2>
   <table class="table">
@@ -42,7 +42,7 @@
     <tr><td>1 stress, 3 Cassandra</td><td>2x <a href="http://ark.intel.com/products/47925/Intel-Xeon-Processor-E5620-12M-Cache-2_40-GHz-5_86-GTs-Intel-QPI">Intel(R) Xeon(R) CPU E5620
     @2.40GHz</a> (8 cores total)</td><td>32G</td><td>7 x Western Digital WD5003ABYX 500GB, JBOD</td></tr>
   </table>
-  <img src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/Z04jrMTFA66dv2X/bdplab0.png"/>
+  <img data-src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/Z04jrMTFA66dv2X/bdplab0.png"/>
 
 
   <h2>austin</h2>
@@ -53,7 +53,7 @@
     2.40GHz</a> (4 cores)</td><td>16G</td><td>2 x Western Digital
     WD5001AALS 500GB, mdadm RAID 0</td></tr>
   </table>
-  <img src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/SJpbvq6PzTe3mjT/austin.png"/>
+  <img data-src="https://s3.amazonaws.com/uploads.hipchat.com/6528/202179/SJpbvq6PzTe3mjT/austin.png"/>
 
 
 </div>
@@ -62,6 +62,10 @@
 $(document).ready(function() {
   console.log(window.location.host);
   if (window.location.host == "cstar.datastax.com") {
+      //Dynamically load images:
+      $("#datastax_cstar_perf_specs img").each(function(i, img) {
+          $(img).attr("src", $(img).data("src"));
+      });
       $("#datastax_cstar_perf_specs").css("visibility","visible");
   }
 });
