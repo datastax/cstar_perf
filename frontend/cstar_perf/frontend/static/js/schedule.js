@@ -8,10 +8,22 @@ var addRevisionDiv = function(animate){
     var revision_id = 'revision-'+schedule.n_revisions;
     var template = "<div id='{revision_id}' class='revision'><legend>Test Revisions<a id='remove-{revision_id}' class='pull-right remove-revision'><span class='glyphicon" +
         "                  glyphicon-remove'></span></a></legend>" +
+
+        "      <div class='form-group'>" +
+        "        <label class='col-md-4 control-label' for='{revision_id}-product'>Product</label>" +
+        "        <div class='col-md-8'>" +
+        "          <select id='{revision_id}-product' " +
+        "                  class='product-select form-control' required>" +
+        "            <option value='cassandra'>Cassandra</option>" +
+        "            <option value='dse'>DSE</option>" +
+        "          </select>" +
+        "        </div>" +
+        "      </div>" +
+
         "      <div class='form-group'>" +
         "        <label class='col-md-4 control-label' for='{revision_id}-refspec'>Revision</label>  " +
         "        <div class='col-md-8'>" +"" +
-        "          <input id='{revision_id}-refspec' type='text' placeholder='Git branch, tag, or commit id' class='refspec form-control input-md' required>" +
+        "          <input id='{revision_id}-refspec' type='text' placeholder='Git branch, tag, commit id or DSE version' class='refspec form-control input-md' required>" +
         "        </div>" +
         "      </div>" +
         "" +
@@ -216,6 +228,7 @@ var createJob = function() {
     $("#schedule-revisions div.revision").each(function(i, revision) {
         revision = $(revision);
         job.revisions[i] = {
+            product: revision.find(".product-select").val(),
             revision: revision.find(".refspec").val(),
             label: revision.find(".revision-label").val() ? revision.find(".revision-label").val() : null,
             yaml: revision.find(".yaml").val(),
@@ -265,6 +278,7 @@ var cloneExistingJob = function(job_id) {
             addRevisionDiv(false);
             var rev = i + 1;
             $("#revision-"+rev+"-refspec").val(revision['revision']);
+            $("#revision-"+rev+"-product").val(revision['product']);
             $("#revision-"+rev+"-label").val(revision['label']);
             $("#revision-"+rev+"-yaml").val(revision['yaml']);
             $("#revision-"+rev+"-env-vars").val(revision['env']);
