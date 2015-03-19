@@ -1,5 +1,5 @@
 from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash, teardown, 
-                       log_stats, log_set_title, log_add_data, retrieve_logs, cstar, restart,
+                       log_stats, log_set_title, log_add_data, retrieve_logs, restart,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
                        drop_page_cache, wait_for_compaction)
 from benchmark import config as fab_config

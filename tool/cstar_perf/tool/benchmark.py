@@ -21,7 +21,8 @@ import logging
 import yaml
 
 # Import the default config first:
-import fab_cassandra as cstar
+import fab_common as common
+import fab_dse as dse
 # Then import our cluster specific config:
 from cluster_config import config
 
@@ -46,7 +47,7 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     Return the gid id of the branch checked out
     """
     if cfg is not None:
-        cstar.setup(cfg)
+        common.setup(cfg)
 
     # Parse yaml 
     if cfg.has_key('yaml'):
@@ -57,14 +58,14 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
             cass_yaml = {}
         if type(cass_yaml) is not dict:
             raise JobFailure('Invalid yaml, was expecting a dictionary: {cass_yaml}'.format(cass_yaml=cass_yaml))
-        cstar.config['yaml'] = cass_yaml
+        common.config['yaml'] = cass_yaml
     if cfg.has_key('options'):
         if cfg['options'] is not None:
-            cstar.config.update(cfg['options'])
-            del cstar.config['options']
+            common.config.update(cfg['options'])
+            del common.config['options']
 
     logger.info("### Config: ###")
-    pprint(cstar.config)
+    pprint(common.config)
 
 
     # Set device readahead:
@@ -75,50 +76,53 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
 
     # Destroy cassandra deployment and data:
     if destroy:
-        execute(cstar.destroy, leave_data=leave_data)
-        execute(cstar.ensure_stopped)
+        execute(common.destroy, leave_data=leave_data)
+        execute(common.ensure_stopped)
     else:
         #Shutdown cleanly:
-        execute(cstar.stop)
-        execute(cstar.ensure_stopped)
+        execute(common.stop)
+        execute(common.ensure_stopped)
+
+    # dse setup and binaries download (local)
+    dse.setup(common.config)
 
     # Bootstrap C* onto the cluster nodes, as well as the localhost,
     # so we have access to nodetool, stress etc - the local host will
     # not be added to the cluster unless it has a corresponding entry
     # in the cluster config:
-    hosts = list(cstar.fab.env['hosts'])
+    hosts = list(common.fab.env['hosts'])
     localhost = socket.gethostname().split(".")[0]
     if localhost not in [host.split(".")[0] for host in hosts]:
         # Use the local username for this host, as it may be different
         # than the cluster defined 'user' parameter:
         hosts += [getpass.getuser() + "@" + localhost]
-    with cstar.fab.settings(hosts=hosts):
-        git_ids = execute(cstar.bootstrap, git_fetch=git_fetch)
+    with common.fab.settings(hosts=hosts):
+        git_ids = execute(common.bootstrap, git_fetch=git_fetch)
 
     git_id = list(set(git_ids.values()))
     assert len(git_id) == 1, "Not all nodes had the same cassandra version: {git_ids}".format(git_ids=git_ids)
     git_id = git_id[0]
 
-    execute(cstar.start)
-    execute(cstar.ensure_running, hosts=[cstar.config['seeds'][0]])
+    execute(common.start)
+    execute(common.ensure_running, hosts=[common.config['seeds'][0]])
     time.sleep(30)
 
     logger.info("Started cassandra on {n} nodes with git SHA: {git_id}".format(
-        n=len(cstar.fab.env['hosts']), git_id=git_id))
+        n=len(common.fab.env['hosts']), git_id=git_id))
     return git_id
 
 def restart():
-    execute(cstar.stop)
-    execute(cstar.ensure_stopped)
-    execute(cstar.start)
-    execute(cstar.ensure_running)
+    execute(common.stop)
+    execute(common.ensure_stopped)
+    execute(common.start)
+    execute(common.ensure_running)
 
 def teardown(destroy=False, leave_data=False):
     if destroy:
-        execute(cstar.destroy, leave_data=leave_data)
+        execute(common.destroy, leave_data=leave_data)
     else:
-        execute(cstar.stop)
-        execute(cstar.ensure_stopped)
+        execute(common.stop)
+        execute(common.ensure_stopped)
 
 def nodetool(cmd):
     """Run a nodetool command"""
@@ -143,11 +147,11 @@ def bash(script, nodes=None, user=None):
     if type(script) in (list, tuple):
         script = "\n".join(script)
     if nodes is None:
-        nodes = cstar.fab.env.hosts
+        nodes = common.fab.env.hosts
     if user is None:
-        user = cstar.fab.env.user
-    with cstar.fab.settings(user=user, hosts=nodes):
-        execute(cstar.bash, script)
+        user = common.fab.env.user
+    with common.fab.settings(user=user, hosts=nodes):
+        execute(common.bash, script)
 
 def cqlsh(script, node):
     """Run a cqlsh script on a node"""
@@ -235,7 +239,7 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3, com
                                 nodes=nodes, output=output))
 
     if nodes is None:
-        nodes = set(cstar.fab.env.hosts)
+        nodes = set(common.fab.env.hosts)
     else:
         nodes = set(nodes)
 
@@ -263,7 +267,7 @@ def set_device_read_ahead(read_ahead, devices=None):
     If devices argument is None, use the 'block_devices' setting from the cluster config."""
     if devices is None:
         devices = config['block_devices']
-    execute(cstar.set_device_read_ahead, read_ahead, devices)
+    execute(common.set_device_read_ahead, read_ahead, devices)
 
 def drop_page_cache():
     """Drop the page cache"""
@@ -331,19 +335,19 @@ def stress(cmd, revision_tag, stats=None):
 
 def retrieve_logs(local_directory):
     """Retrieve each node's logs to the given local directory."""
-    execute(cstar.copy_logs, local_directory=local_directory)
+    execute(common.copy_logs, local_directory=local_directory)
 
 def retrieve_fincore_logs(local_directory):
     """Retrieve each node's fincore logs to the given local directory."""
-    execute(cstar.copy_fincore_logs, local_directory=local_directory)
+    execute(common.copy_fincore_logs, local_directory=local_directory)
 
 def start_fincore_capture(interval=10):
     """Start linux-fincore monitoring of Cassandra data files on each node"""
-    execute(cstar.start_fincore_capture, interval=interval)
+    execute(common.start_fincore_capture, interval=interval)
 
 def stop_fincore_capture():
     """Stop linux-fincore monitoring"""
-    execute(cstar.stop_fincore_capture)
+    execute(common.stop_fincore_capture)
 
 def log_add_data(file, data):
     """Merge the dictionary data into the json log file root."""

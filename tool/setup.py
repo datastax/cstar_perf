@@ -3,7 +3,8 @@ from setuptools import setup, find_packages
 
 requires = (
     'fabric',
-    'pyyaml'
+    'pyyaml',
+    'requests'
 )
 
 setup(

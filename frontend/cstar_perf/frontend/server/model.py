@@ -39,6 +39,7 @@
 
 import cassandra
 from cassandra.cluster import Cluster
+from cassandra.util import OrderedMap
 import json
 import uuid
 import logging
@@ -365,9 +366,14 @@ class Model(object):
         rows = session.execute(self.__prepared_statements['select_clusters'], [])
         clusters = {}
         for row in rows:
+            jvms = row[2]
+            if isinstance(row[2], OrderedMap):
+                jvms = {}
+                for jvm in row[2]:
+                    jvms[jvm] =  row[2][jvm]
             clusters[row[0]] = {'name': row[0],
                                 'description': row[1],
-                                'jvms': row[2],
+                                'jvms': jvms,
                                 'num_nodes' : row[3]}
         return clusters
 
