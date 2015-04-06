@@ -3,6 +3,8 @@ schedule = {
     n_operations: 0
 };
 
+clusters = {};
+
 var addRevisionDiv = function(animate){
     schedule.n_revisions++;
     var revision_id = 'revision-'+schedule.n_revisions;
@@ -101,18 +103,78 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "          <select id='{operation_id}-type'" +
         "                  class='form-control type'>" +
         "            <option value='stress'>stress</option>" +
-        "            <option value='flush'>flush</option>" +
-        "            <option value='compact'>compact</option>" +
+        "            <option value='nodetool'>nodetool</option>" +
+        "            <option value='cqlsh'>cqlsh</option>" +
+        "            <option value='bash'>bash</option>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
         "      " +
-        "      <div class='form-group stress'>" +
+        "      <div class='form-group type stress'>" +
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-command'>Stress Command</label>  " +
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-command' type='text'" +
-        "                 class='form-control input-md command' value='{cmd}' required=''></input>" +
+        "                 class='form-control input-md command-stress' value='{cmd}' required=''></input>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes stress'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Nodes</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select multiple id='{operation_id}-nodes'" +
+        "                 class='form-control input-md command-stress-nodes'></select>" +
+        "        </div>" +
+        "      </div>" +
+        "      " +
+        "      <div class='form-group type nodetool'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>Nodetool Command</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <input id='{operation_id}-command' type='text'" +
+        "                 class='form-control input-md command-nodetool' value='' required=''></input>" +
+        "        </div>" + 
+        "      </div>" +
+        "      <div class='form-group nodes nodetool'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Nodes</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select multiple id='{operation_id}-nodes'" +
+        "                 class='form-control input-md command-nodetool-nodes'></select>" +
+        "        </div>" +
+        "      </div>" +
+        "      " +
+        "      <div class='form-group type cqlsh'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>CQL script</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <textarea id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-cqlsh' required=''></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes cqlsh'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Node</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select id='{operation_id}-nodes'" +
+        "                 class='form-control input-md command-cqlsh-nodes'></select>" +
+        "        </div>" +
+        "      </div>" +
+        "            " +
+        "      <div class='form-group type bash'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>BASH script</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <textarea id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-bash' required=''></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes bash'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Nodes</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select multiple id='{operation_id}-nodes'" +
+        "                 class='form-control input-md command-bash-nodes'></select>" +
         "        </div>" +
         "      </div>" +
         "            " +
@@ -179,12 +241,11 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
     if (animate)
         newDiv.hide();
     $("#schedule-operations").append(newDiv);
+    fillOperationNodesList();
     $("#"+operation_id+"-type").change(function(){
-        if (this.value == 'stress') {
-            $("#"+operation_id+" div.stress").show();
-        } else {
-            $("#"+operation_id+" div.stress").hide();
-        }
+        $("#"+operation_id+" div.type").hide();
+        $("#"+operation_id+" div.nodes").hide();
+        $("#"+operation_id+" div."+this.value).show();
     }).val(operation).change();
     if (animate)
         newDiv.slideDown();
@@ -201,6 +262,28 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         $("#"+operation_id+"-wait-for-compaction").prop("checked", false);
     }
 };
+
+var fillOperationNodesList = function() {
+    var cluster = $("#cluster").val();
+    console.log("Filling node lists for " + cluster);
+    $(".nodes select").children("option").remove();
+    $(".nodes select").each(function(i, e) {
+        //Fill in available nodes to run commands on:
+        $.each(clusters[cluster].nodes, function(i, node) {
+            $(e).append($("<option value='"+node+"'>"+node+"</option>"));
+        });
+    });
+    $(".nodes.stress select, .nodes.bash select, .nodes.nodetool select").each(function(i, e) {
+        $(e).multiselect({
+            includeSelectAllOption: true,
+            selectAllValue: 'ALL'
+        });
+        $(e).multiselect('selectAll', false);
+        $(e).multiselect('rebuild');
+        $(e).multiselect('refresh');
+    });
+}
+
 
 var createJob = function() {
     //Parse the form elements and schedule job to run.
@@ -228,12 +311,24 @@ var createJob = function() {
     //Operations:
     job.operations = [];
     $("#schedule-operations div.operation").each(function(i, operation) {
-        operation = $(operation);
+        var operation = $(operation);
+        var type = operation.find(".type").val();
         job.operations[i] = {
-            operation: operation.find(".type").val(),
+            operation: type,
         };
-        if (job.operations[i]['operation'] === 'stress') {
-            job.operations[i]['command'] = operation.find(".command").val();
+        if (_.contains(['stress','nodetool'], type)) {
+            job.operations[i]['command'] = operation.find(".command-"+type).val();
+        } else if (_.contains(['cqlsh','bash'], type)) {
+            job.operations[i]['script'] = operation.find(".script-"+type).val().split("\n");
+        }
+        //Gather nodes to run operation on:
+        if (_.contains(['stress', 'nodetool','bash'], type)) {
+            job.operations[i]['nodes'] = [];
+            operation.find('.nodes.'+type+" :selected").each(function(j, selected){
+                job.operations[i]['nodes'][j] = $(selected).text();
+            });
+        } else if (type === 'cqlsh') {
+            job.operations[i]['node'] = operation.find('.nodes.'+type+" :selected").text();
         }
         job.operations[i]['wait_for_compaction'] = operation.find(".wait-for-compaction").is(":checked");
     });
@@ -245,12 +340,20 @@ var createJob = function() {
 var show_job_json = function() {
     var json = JSON.stringify(JSON.parse(createJob()), undefined, 2);
     $("#schedule-test").hide();
-    $("#container").append($("<pre>").append(json));
-    $("#get_job_json").remove();
+    $("#container").append($("<pre id='job_json'>").append(json));
+    $("#get_job_json").hide();
     if (query.clone != undefined) {
         query.show_json = true;
         updateURLBar(query);
     }
+
+    history.pushState(null, null, '/schedule/json');
+    window.addEventListener("popstate", function(e) {
+        $("#job_json").remove();
+        $("#get_job_json").show();
+        $("#schedule-test").show();        
+    });
+
 }
 
 var cloneExistingJob = function(job_id) {
@@ -291,35 +394,33 @@ var cloneExistingJob = function(job_id) {
 }
 
 var update_jvm_selections = function(callback) {
-    var cluster = $('#cluster').val();
-    $.get('/api/clusters/'+cluster, function(data) {
-        //Remember the current jvm selections:
-        var current_jvm_selections = [];
-        $(".jvm-select").each(function(i, e) {
-            current_jvm_selections[i] = $(e).val();
-        });
-        //Clear out the jvm lists and fetch new one:
-        $(".jvm-select").empty();
-        if(data.jvms==null) {
-            alert("Warning: cluster '"+ cluster+ "' has no JVMs defined.");
-            return;
-        }
-        $.each(data.jvms, function(jvm, path) {
-            $(".jvm-select").append($("<option value='"+path+"'>"+jvm+"</option>"));
-        });
-        //Try to set the one we had from before:
-        $(".jvm-select").each(function(i, e) {
-            if (current_jvm_selections[i] != null) {
-                $(e).val(current_jvm_selections[i]);
-            }
-            if ($(e).val() == null) {
-                $(e).find("option:first-child").attr("selected", "selected");
-                alert("Warning - cluster JVM selection changed")
-            }
-        });
-        if (callback != null) 
-            callback();
+    var cluster = clusters[$('#cluster').val()];
+    //Remember the current jvm selections:
+    var current_jvm_selections = [];
+    $(".jvm-select").each(function(i, e) {
+        current_jvm_selections[i] = $(e).val();
     });
+    //Clear out the jvm lists and fetch new one:
+    $(".jvm-select").empty();
+    if(cluster.jvms==null) {
+        alert("Warning: cluster '"+ cluster.name + "' has no JVMs defined.");
+        return;
+    }
+    $.each(cluster.jvms, function(jvm, path) {
+        $(".jvm-select").append($("<option value='"+path+"'>"+jvm+"</option>"));
+    });
+    //Try to set the one we had from before:
+    $(".jvm-select").each(function(i, e) {
+        if (current_jvm_selections[i] != null) {
+            $(e).val(current_jvm_selections[i]);
+        }
+        if ($(e).val() == null) {
+            $(e).find("option:first-child").attr("selected", "selected");
+            alert("Warning - cluster JVM selection changed")
+        }
+    });
+    if (callback != null) 
+        callback();
 }
 
 var updateURLBar = function(query) {
@@ -329,59 +430,64 @@ var updateURLBar = function(query) {
 
 
 $(document).ready(function() {
-    //Add revision button callback:
-    $('button#add-revision').click(function(e) {
-        addRevisionDiv(true);
-        e.preventDefault();
-    });
-
-    //Add operation button callback:
-    $('button#add-operation').click(function(e) {
-        addOperationDiv(true, 'stress');
-        e.preventDefault();
-    });
-
-    //Refresh jvm list on cluster selection
-    $('#cluster').change(function(e) {
-        update_jvm_selections();
-    });
-
-    query = parseUri(location).queryKey;
-    if (query.clone != undefined) {
-        //Clone an existing job specified in the query string:
-        cloneExistingJob(query.clone);
-    } else {
-        //Create a new job from scratch:
-        addRevisionDiv(false);
-        addOperationDiv(false, 'stress', 'write n=19000000 -rate threads=50');
-        addOperationDiv(false, 'stress', 'read n=19000000 -rate threads=50');
-    }
-    
-    //Validate form and submit:
-    $("form#schedule-test").submit(function(e) {
-        var job = createJob();
-        console.log(job);
-        $.ajax({
-            type: "POST",
-            url: "/api/tests/schedule",
-            data: job,
-            contentType: 'application/json'
-        }).success(function(data) {
-            //Redirect to the status URL for the job.
-            //Use replace so we don't ever go back to the schedule page if
-            //we click back, since the form will have lost it's state.
-            window.location.replace(data['url']);
-        }).error(function(data) {
-            console.log(data);
-            alert("error: "+data.status+" "+data.statusText+" "+data.responseText);
+    //Get cluster information:
+    $.getJSON('/api/clusters', function(data) {
+        clusters = data['clusters'];
+        //Add revision button callback:
+        $('button#add-revision').click(function(e) {
+            addRevisionDiv(true);
+            e.preventDefault();
         });
-        e.preventDefault();
-    });
+
+        //Add operation button callback:
+        $('button#add-operation').click(function(e) {
+            addOperationDiv(true, 'stress');
+            e.preventDefault();
+        });
+
+        //Refresh node and jvm lists on cluster selection
+        $('#cluster').change(function(e) {
+            update_jvm_selections();
+            fillOperationNodesList();
+        });
+
+        query = parseUri(location).queryKey;
+        if (query.clone != undefined) {
+            //Clone an existing job specified in the query string:
+            cloneExistingJob(query.clone);
+        } else {
+            //Create a new job from scratch:
+            addRevisionDiv(false);
+            addOperationDiv(false, 'stress', 'write n=19000000 -rate threads=50');
+            addOperationDiv(false, 'stress', 'read n=19000000 -rate threads=50');
+        }
+        
+        //Validate form and submit:
+        $("form#schedule-test").submit(function(e) {
+            var job = createJob();
+            console.log(job);
+            $.ajax({
+                type: "POST",
+                url: "/api/tests/schedule",
+                data: job,
+                contentType: 'application/json'
+            }).success(function(data) {
+                //Redirect to the status URL for the job.
+                //Use replace so we don't ever go back to the schedule page if
+                //we click back, since the form will have lost it's state.
+                window.location.replace(data['url']);
+            }).error(function(data) {
+                console.log(data);
+                alert("error: "+data.status+" "+data.statusText+" "+data.responseText);
+            });
+            e.preventDefault();
+        });
 
 
-    $("#get_job_json").click(function(e) {
-        show_job_json()
-        e.preventDefault();
+        $("#get_job_json").click(function(e) {
+            show_job_json()
+            e.preventDefault();
+        });
     });
 
 });

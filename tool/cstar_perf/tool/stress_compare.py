@@ -31,6 +31,8 @@ def validate_revisions_list(revisions):
 def validate_operations_list(operations):
     """Spot check a list of operations for required parameters"""
     for op in operations:
+        if op.has_key('operation'):
+            op['type'] = op['operation']
         assert op.has_key('type'), "Operation {op} needs a type".format(op=op)
         assert op['type'] in OPERATIONS, "Unknown operation '{type}'".format(type=op['type'])
         if op['type'] == 'stress':
@@ -129,16 +131,18 @@ def stress_compare(revisions,
             if operation['type'] == 'stress':
                 # Default to all the nodes of the cluster if no 
                 # nodes were specified in the command:
-                if operation.has_key('nodes'):
-                    cmd = "{command} -node {hosts}".format(
-                        command=operation['command'], 
-                        hosts=",".join(host=operation['nodes']))
-                elif '-node' in operation['command']:
-                    cmd = operation['command']
-                else:
+                nodes = operation.get('nodes','ALL')
+                if nodes == 'ALL':
                     cmd = "{command} -node {hosts}".format(
                         command=operation['command'], 
                         hosts=",".join([n for n in fab_config['hosts']]))
+                elif '-node' not in operation['command']:
+                    cmd = "{command} -node whitelist {hosts}".format(
+                        command=operation['command'], 
+                        hosts=",".join(host=operation['nodes']))
+                else:
+                    cmd = operation['command']
+
                 stats['command'] = cmd
                 stats['intervals'] = []
                 stats['test'] = '{operation_i}_{operation}'.format(
@@ -173,6 +177,8 @@ def stress_compare(revisions,
 
             elif operation['type'] == 'bash':
                 nodes = operation.get('nodes', [n for n in fab_config['hosts']])
+                if nodes == 'ALL':
+                    nodes =  [n for n in fab_config['hosts']]
                 logger.info("Running bash commands on {node}".format(nodes=nodes))
                 output = bash(operation['script'], nodes)
                 stats['output'] = output.split("\n")
