@@ -11,6 +11,7 @@ cstar_perf is a performance testing platform for Apache Cassandra.
 In a mostly automated fashion, it can do the following:
 
 * Download and build Cassandra source code
+* Download and setup DSE binaries
 * Configure and bootstrap nodes
 * Run stress workloads
 * Capture performance metrics
