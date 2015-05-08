@@ -450,7 +450,9 @@ def start():
     log_dir = fab.run("readlink -m {log_dir}".format(log_dir=config['log_dir']))
     env = "JVM_OPTS=\"$JVM_OPTS -Djava.rmi.server.hostname={hostname} -Xloggc:{log_dir}/gc.log\"\n\n".format(
         hostname=fab.env.host, log_dir=log_dir) + env
-
+    # Enable JMX without authentication
+    env = "JVM_OPTS=\"$JVM_OPTS -Dcom.sun.management.jmxremote.port=7199 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false\"\n" + env
+    
     env_script = "{name}.sh".format(name=uuid.uuid1())
     env_file = StringIO(env)
     fab.run('mkdir -p ~/fab/scripts')
