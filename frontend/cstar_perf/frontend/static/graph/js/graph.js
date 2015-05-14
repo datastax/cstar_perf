@@ -18,8 +18,31 @@ var drawGraph = function() {
     ymin = query.ymin;
     ymax = query.ymax;
 
-    //Stress-ng (2.1) metrics:
-    var stress_metrics = [
+    //Stress metrics, depend on the version of stress used.
+    //Here are the latest trunk metrics:
+    var stress_trunk_metrics = [
+        'total_ops',
+        'op_rate',
+        'key_rate',
+        'row_rate',
+        'mean',
+        'med',
+        '95th_latency',
+        '99th_latency',
+        '99.9th_latency',
+        'max_latency',
+        'elapsed_time',
+        'stderr',
+        'errors',
+        'gc_count',
+        'gc_max_ms',
+        'gc_sum_ms',
+        'gc_sdv_ms',
+        'gc_mb'
+    ];
+
+    //Stress metrics from cassandra 2.1
+    var stress_21_metrics = [
         'total_ops',
         'adj_row_rate',
         'op_rate',
@@ -38,7 +61,16 @@ var drawGraph = function() {
         'gc_sum_ms',
         'gc_sdv_ms',
         'gc_mb'
-    ];
+    ]
+
+    // Use the stats date to determine which stats to use :
+    // Before May 13th 2014 - we use cassandra 2.1 metrics
+    if (UUID_to_Date(query.stats) < 1431534892202) {
+        var stress_metrics = stress_21_metrics;
+    } else {
+        var stress_metrics = stress_trunk_metrics;
+    }
+    
     var stress_metric_names = {
         'total_ops': 'Total operations',
         'op_rate': 'Operations / Second',
@@ -51,6 +83,7 @@ var drawGraph = function() {
         'max_latency': 'Maximum latency',
         'elapsed_time': 'Total operation time (seconds)',
         'stderr': 'stderr',
+        'errors': 'error count',
         'gc_count': 'GC count',
         'gc_max_ms': 'GC longest pause (ms)',
         'gc_sum_ms': 'GC total pause (ms)',
@@ -140,7 +173,7 @@ var drawGraph = function() {
         var data_by_title = {};
         //Keep track of what operations are availble from the test:
         var operations = {};
-
+        
         raw_data.stats.forEach(function(d) {
             // Make a copy of d so we never modify raw_data
             d = $.extend({}, d);
@@ -189,7 +222,6 @@ var drawGraph = function() {
         data.forEach(function(d) {
             d.date = new Date(Date.parse(d.date));
         });
-
 
         $("svg").remove();
         //Setup initial zoom level:
