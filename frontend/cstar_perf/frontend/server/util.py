@@ -15,6 +15,9 @@ def create_app_config(config_path=SERVER_CONFIG_PATH):
     # Ensure app has server url:
     if not config.has_option('server', 'url'):
         config.set('server', 'url', 'http://localhost:8000')
+    # Ensure app has a database to connect to:
+    if not config.has_option('server','cassandra_hosts'):
+        config.set('server','cassandra_hosts', 'localhost')
     with open(config_path, 'w') as f:
         config.write(f)
     return config
