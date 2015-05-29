@@ -12,3 +12,4 @@ vagrant/.vagrant
 /tool/*.egg-info
 ctool_launch.py
 cassandra.logdir_IS_UNDEFINED
+client_secrets.json

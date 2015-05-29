@@ -107,7 +107,7 @@ class Model(object):
         email_notifications - if True, perform email notifications for some actions. Defaults to False.
         """
         log.info("Initializing Model...")
-        self.cluster = cluster
+        self.cluster = cluster if type(cluster) == Cluster else Cluster(cluster)
         self.keyspace = keyspace
         self.email_notifications = email_notifications
         self.__shared_session = self.get_session()
