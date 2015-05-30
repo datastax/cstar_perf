@@ -424,6 +424,13 @@ def destroy(leave_data=False):
     fab.run('rm -rf fab/cassandra')
     fab.run('rm -rf fab/scripts')
     fab.run('rm -f fab/nohup.log')
+
+    # Ensure directory configurations look sane
+    assert type(config['data_file_directories']) == list
+    for t in [config['saved_caches_directory'], config['commitlog_directory'],
+              config['flush_directory'], config['log_dir']] + config['data_file_directories']:
+        assert type(t) in (str, unicode) and len(t) > 1, '{t} doesn\'t look like a directory'.format(t=t)
+    
     if not leave_data:
         for d in config['data_file_directories']:
             fab.run('rm -rf {data}/*'.format(data=d))

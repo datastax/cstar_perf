@@ -206,7 +206,7 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False, install_fron
         node_name = "%s_%02d" % (cluster_name,i)
         ssh_path = os.path.split(get_ssh_key_pair()[0])[0]
         run_cmd = ('docker run --label cstar_node=true --label '
-            'cluster_name={cluster_name} --label node={node_num} -d --name={node_name} '
+            'cluster_name={cluster_name} --label node={node_num} -d -m 2G --name={node_name} '
             '-h {node_name}'.format(
                 cluster_name=cluster_name, node_num=i, node_name=node_name,
                 ssh_path=ssh_path))
@@ -260,7 +260,7 @@ def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False):
         "name": cluster_name,
         "stress_node": first_node,
         "user":"cstar",
-        "data_file_directories": '/data/cstar_perf/data',
+        "data_file_directories": ['/data/cstar_perf/data'],
         "commitlog_directory": '/data/cstar_perf/commitlog',
         "saved_caches_directory": '/data/cstar_perf/saved_caches'
     }
@@ -271,12 +271,11 @@ def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False):
     # Setup ~/fab directory (java, ant, stress, etc) on the first node
     with fab.settings(hosts=first_node):
         fab_execute(fab_deploy.setup_fab_dir)
-    # Then rsync ~/fab to the other nodes:
+        # Install cstar_perf
+        fab_execute(fab_deploy.install_cstar_perf_tool, existing_checkout=mount_host_src)
+    # rsync ~/fab to the other nodes:
     with fab.settings(hosts=other_nodes):
         fab_execute(fab_deploy.copy_fab_dir, first_node)
-
-    # Install cstar_perf
-    fab_execute(fab_deploy.install_cstar_perf_tool, existing_checkout=mount_host_src)
 
 def info(cluster_name):
     containers = get_containers(cluster_name, all_metadata=True)
