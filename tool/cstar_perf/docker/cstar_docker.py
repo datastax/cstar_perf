@@ -7,7 +7,7 @@ import os
 import shutil
 import sys
 import json
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import tempfile
 from distutils.version import LooseVersion
 
@@ -15,6 +15,10 @@ import logging
 logging.basicConfig()
 log = logging.getLogger('cstar_docker')
 log.setLevel(logging.INFO)
+
+from fabric import api as fab
+from cstar_perf.tool import fab_deploy
+from fabric.tasks import execute as fab_execute
 
 docker_image_name = 'datastax/cstar_docker'
 # Dockerfile for cstar_perf, there are string format parameters in here:
@@ -40,7 +44,18 @@ RUN \
       openssh-server \
       zulu-8 \
       zulu-7 \
+      ant \
       libjna-java
+
+# Download and compile cassandra, we don't use this verison, but what
+# this does is provide a git cache and primes the ~/.m2 directory to
+# speed things up:
+RUN useradd -ms /bin/bash cstar
+USER cstar
+RUN git clone http://github.com/apache/cassandra.git ~/.docker_cassandra.git 
+RUN cd ~/.docker_cassandra.git && \
+    JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 JAVA_HOME=/usr/lib/jvm/zulu-8-amd64 ant clean jar
+USER root
 
 #### Setup SSH
 RUN mkdir /var/run/sshd && \
@@ -51,17 +66,26 @@ RUN mkdir /var/run/sshd && \
 ENV NOTVISIBLE "in users profile"
 RUN echo "export VISIBLE=now" >> /etc/profile
 
-RUN useradd -ms /bin/bash cstar && \
-  mkdir -p /home/cstar/.ssh && \
+RUN mkdir -p /home/cstar/.ssh && \
   chmod 700 /home/cstar/.ssh && \
   echo '{ssh_pub_key}' > /home/cstar/.ssh/authorized_keys && \
+  ssh-keygen -P '' -f /home/cstar/.ssh/id_rsa && \
+  cat /home/cstar/.ssh/id_rsa.pub >> /home/cstar/.ssh/authorized_keys && \
   chmod 600 /home/cstar/.ssh/authorized_keys && \
+  echo  'Host *' > /home/cstar/.ssh/config && \
+  echo  '    StrictHostKeyChecking no' >> /home/cstar/.ssh/config &&\
+  echo  '    UserKnownHostsFile=/dev/null' >> /home/cstar/.ssh/config && \
   chown -R cstar:cstar /home/cstar/.ssh
 
 RUN mkdir -p /root/.ssh && \
   chmod 700 /root/.ssh && \
-  echo '{ssh_pub_key}' > /root/.ssh/authorized_keys && \
-  chmod 600 /home/cstar/.ssh/authorized_keys
+  cp /home/cstar/.ssh/authorized_keys /root/.ssh/authorized_keys && \
+  cp /home/cstar/.ssh/id_rsa /root/.ssh/id_rsa && \
+  cp /home/cstar/.ssh/config /root/.ssh/config
+
+RUN mkdir -p /home/cstar/git/cstar_perf && \
+    chown -R cstar:cstar /home/cstar/git
+VOLUME ["/home/cstar/git/cstar_perf"]
 
 ### Expose SSH and Cassandra ports
 EXPOSE 22 7000 7001 7199 9042 9160 61620 61621
@@ -150,9 +174,12 @@ def get_containers(cluster_regex='all', all_metadata=False):
     else:
         return container_names
 
-def launch(num_nodes, cluster_name='cnode', destroy_existing=False, install_frontend=False, install_tool=True, verbose=False):
+def launch(num_nodes, cluster_name='cnode', destroy_existing=False, install_frontend=False,
+           install_tool=True, mount_host_src=False, verbose=False):
     """Launch cluster nodes, return metadata (ip addresses etc) for the nodes"""
 
+    assert num_nodes > 0, "Cannot start a cluster with {} nodes".format(num_nodes)
+    
     if install_frontend and not install_tool:
         log.error("Cannot install cstar_perf.frontend without also installing cstar_perf.tool")
         exit(1)
@@ -173,23 +200,34 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False, install_fron
                       'in your launch command')
             exit(1)
 
-    log.info('Launching a {} node cstar_perf cluster...'.format(num_nodes))
-    node_data = {}
+    log.info('Launching a {} node cluster...'.format(num_nodes))
+    node_data = OrderedDict()
     for i in range(num_nodes):
         node_name = "%s_%02d" % (cluster_name,i)
         ssh_path = os.path.split(get_ssh_key_pair()[0])[0]
-        p=subprocess.Popen(shlex.split(
-            'docker run --label cstar_node=true --label '
-            'cluster_name={cluster_name} --label node={node_num} -d -m 256M --name={node_name} '
-            '-h {node_name} {docker_image_name}'.format(
+        run_cmd = ('docker run --label cstar_node=true --label '
+            'cluster_name={cluster_name} --label node={node_num} -d --name={node_name} '
+            '-h {node_name}'.format(
                 cluster_name=cluster_name, node_num=i, node_name=node_name,
-                ssh_path=ssh_path, docker_image_name=docker_image_name)),
+                ssh_path=ssh_path))
+        if mount_host_src:
+            cstar_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, os.pardir))
+            run_cmd = run_cmd + " -v {cstar_dir}:/home/cstar/git/cstar_perf".format(cstar_dir=cstar_dir)
+        run_cmd = run_cmd + ' ' + docker_image_name
+        p=subprocess.Popen(shlex.split(run_cmd),
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         container_id = p.communicate()[0].strip()
         node_data[node_name] = get_container_data(container_id)
+    hosts = {name:data['NetworkSettings']['IPAddress'] for name,data in node_data.items()}
+    fab.env.hosts = [n for n in hosts.values()]
+    fab.env.user = 'cstar'
+
+    # Write /etc/hosts
+    fab_execute(fab_deploy.setup_hosts_file, hosts)
 
     if install_tool:
         log.info("Installing cstar_perf.tool ... ")
+        __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=mount_host_src)
     if install_frontend:
         log.info("Installing cstar_perf.frontend ... ")
             
@@ -198,6 +236,47 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False, install_fron
         print("")
         info(cluster_name)
     return node_data
+    
+def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False):
+    first_node = hosts.values()[0]
+    other_nodes = hosts.values()[1:]
+    # Get the block device names
+    block_devices = list({tuple(x)[0] for x in fab_execute(fab_deploy.get_block_devices, ['/data/cstar_perf']).values()})
+    log.info("Block devices found across cluster: {}".format(block_devices))
+
+    # Create the cluster config file
+    cluster_config = {
+        "block_devices": block_devices,
+        "blockdev_readahead": 0,
+        "hosts": {
+            host : {
+                "hostname": host,
+                "internal_ip": ip,
+                "external_ip": ip,
+                "seed": True,
+                "datacenter": 'dc1'
+            } for host, ip in hosts.items()
+        },
+        "name": cluster_name,
+        "stress_node": first_node,
+        "user":"cstar",
+        "data_file_directories": '/data/cstar_perf/data',
+        "commitlog_directory": '/data/cstar_perf/commitlog',
+        "saved_caches_directory": '/data/cstar_perf/saved_caches'
+    }
+    
+    with fab.settings(hosts=first_node):
+        fab_execute(fab_deploy.copy_cluster_config, cluster_config)
+
+    # Setup ~/fab directory (java, ant, stress, etc) on the first node
+    with fab.settings(hosts=first_node):
+        fab_execute(fab_deploy.setup_fab_dir)
+    # Then rsync ~/fab to the other nodes:
+    with fab.settings(hosts=other_nodes):
+        fab_execute(fab_deploy.copy_fab_dir, first_node)
+
+    # Install cstar_perf
+    fab_execute(fab_deploy.install_cstar_perf_tool, existing_checkout=mount_host_src)
 
 def info(cluster_name):
     containers = get_containers(cluster_name, all_metadata=True)
@@ -250,7 +329,8 @@ def execute_cmd(cmd, args):
     if cmd == 'launch':
         launch(args.num_nodes, cluster_name=args.name,
                destroy_existing=args.destroy_existing,
-               install_frontend=args.frontend, install_tool=not args.no_install, verbose=True)
+               install_frontend=args.frontend, install_tool=not args.no_install,
+               mount_host_src=args.mount, verbose=True)
     elif cmd == 'destroy':
         destroy(args.cluster_regex)
     elif cmd == 'list':
@@ -278,6 +358,8 @@ def main():
         '--no-install', help='Don\'t install cstar_perf.tool', action='store_true')
     launch.add_argument(
         '-f', '--frontend', help='Install cstar_perf.frontend, the web frontend (tool only is installed by default)', action='store_true')
+    launch.add_argument(
+        '-m', '--mount', help='Mount the host system\'s cstar_perf checkout rather than install from github', action='store_true')
     launch.add_argument(
         '--destroy-existing', help='Destroy any existing cluster with the same name before launching', action="store_true")
 
