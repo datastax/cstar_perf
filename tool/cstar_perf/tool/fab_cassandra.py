@@ -292,9 +292,9 @@ def bootstrap(git_fetch=True):
 
         fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml clean'.format(java_home=config['java_home']))
         if config['override_version'] is not None:
-            fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml -Dversion={version}'.format(java_home=config['java_home'], version=config['override_version']))
+            fab.run('JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml -Dversion={version}'.format(java_home=config['java_home'], version=config['override_version']))
         else:
-            fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml'.format(java_home=config['java_home']))
+            fab.run('JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml'.format(java_home=config['java_home']))
 
         # Archive this build for future runs:
         fab.run('cp -a ~/fab/cassandra ~/fab/cassandra_builds/{git_id}'.format(git_id=git_id))
@@ -593,6 +593,8 @@ def copy_root_setup():
 def set_device_read_ahead(read_ahead, devices):
     with fab.settings(user='root'):
         for device in devices:
+            if 'docker' in device:
+                continue # Docker has no device handle, so we can't set any parameters on it
             fab.run('blockdev --setra {read_ahead} {device}'.format(read_ahead=read_ahead,device=device))
 
 @fab.parallel
