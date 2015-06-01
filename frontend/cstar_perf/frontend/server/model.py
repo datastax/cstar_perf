@@ -434,9 +434,7 @@ class Model(object):
 
     def validate_user_passphrase(self, user_id, passphrase):
         passphrase = base64.b64encode(passphrase.encode("utf-8"))
-        log.info(repr(passphrase))
         res = self.get_user_passphrase_hash(user_id)
-        log.info(repr(res))
         pw_hash, salt = res
         return check_password_hash(passphrase, pw_hash, salt)
         
