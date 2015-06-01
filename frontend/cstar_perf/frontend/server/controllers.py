@@ -165,13 +165,15 @@ def login_with_passphrase():
     data = request.get_json(force=True)
     log.info("Initiating login with passphrase")
 
-    #TODO: check the supplied passphrase against the database
-    #RIGHT NOW ANY PASSPHRASE WORKS
-    
-    session['logged_in'] = True
-    session['user_id'] = data['email']
-    return make_response(jsonify({'success':'Successfully connected user.'}), 
-                         200)
+    try:
+        if db.validate_user_passphrase(data['email'], data['passphrase']): 
+            session['logged_in'] = True
+            session['user_id'] = data['email']
+            return make_response(jsonify({'success':'Successfully connected user.'}), 
+                                 200)
+    except UnknownUserError:
+        pass
+    return make_response(jsonify({'error':'Unauthorized - did you enter the user right user / passphrase?'}), 401)
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -182,7 +184,6 @@ def login():
         return login_with_google()
     else:
         raise AssertionError('Invalid authentication type configured in server.conf: {}'.format(authentication_type))
-
 
 @app.route('/logout', methods=['GET','POST'])
 def logout():
