@@ -10,7 +10,7 @@ function signinCallback(authResult) {
             url: '/login',
             contentType: 'application/octet-stream; charset=utf-8',
             success: function(result) {
-                window.location.reload();
+                window.location.href="/tests";
             },
             processData: false,
             data: authResult['code']
@@ -51,7 +51,11 @@ function signInLocal() {
         url: '/login',
         contentType: 'application/octet-stream; charset=utf-8',
         success: function(result) {
-            window.location.reload();
+            window.location.href="/tests";
+        },
+        error: function(xhr, status) {
+            result = JSON.parse(xhr.responseText);
+            alert(result.error);
         },
         processData: false,
         dataType: 'json',
