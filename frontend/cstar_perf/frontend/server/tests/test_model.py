@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 import uuid
 import string
@@ -106,6 +107,11 @@ class TestModel(unittest.TestCase):
         self.assertEquals(jack.user_id, 'jack@repairman.org')
         self.assertEquals(jack.full_name, 'Repairman Jack')
         self.assertEquals(jack.roles, set(['user','admin','repairman']))
+
+        jack_pw = u"Jack's nifty passphrase with unicode - Ѧʋcн Ɯσω - Śő Múćĥ Ŵőŵ"
+        m.set_user_passphrase(jack.user_id, jack_pw)
+        self.assertTrue(m.validate_user_passphrase(jack.user_id, jack_pw))
+        self.assertFalse(m.validate_user_passphrase(jack.user_id, "Not jack's passphrase"))
         
         jack_roles = m.get_user_roles('jack@repairman.org')
         self.assertEquals(jack_roles, set(['user','admin','repairman']))

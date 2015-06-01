@@ -29,8 +29,6 @@ FROM ubuntu:latest
 MAINTAINER Ryan McGuire <ryan@datastax.com>
 
 RUN \
-  apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0x219BD9C9 && \
-  echo "deb http://repos.azulsystems.com/ubuntu `lsb_release -cs` main" >> /etc/apt/sources.list.d/zulu.list && \
   apt-get update && \
   apt-get -y upgrade && \
   apt-get install -y \
@@ -42,10 +40,17 @@ RUN \
       python-dev \
       python-pip \
       openssh-server \
-      zulu-8 \
-      zulu-7 \
       ant \
-      libjna-java
+      libjna-java \
+      python-software-properties
+
+RUN echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections && \
+    add-apt-repository ppa:webupd8team/java && \
+    apt-get update && \
+    apt-get install -y \
+      oracle-java8-installer \
+      oracle-java7-installer \
+      oracle-java8-set-default
 
 # Download and compile cassandra, we don't use this verison, but what
 # this does is provide a git cache and primes the ~/.m2 directory to
@@ -54,7 +59,7 @@ RUN useradd -ms /bin/bash cstar
 USER cstar
 RUN git clone http://github.com/apache/cassandra.git ~/.docker_cassandra.git 
 RUN cd ~/.docker_cassandra.git && \
-    JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 JAVA_HOME=/usr/lib/jvm/zulu-8-amd64 ant clean jar
+    JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 ant clean jar
 USER root
 
 #### Setup SSH
