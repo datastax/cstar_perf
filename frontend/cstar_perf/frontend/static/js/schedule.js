@@ -299,13 +299,24 @@ var createJob = function() {
     job.operations = [];
     $("#schedule-operations div.operation").each(function(i, operation) {
         operation = $(operation);
+        var op = operation.find(".type").val()
         var jobSpec = {
-            operation: operation.find(".type").val(),
+            operation: op,
         };
-        var op = jobSpec['operation'];
         if (op === 'stress') {
             jobSpec['command'] = operation.find(".command-stress").val();
-            // jobSpec['nodes'] = operation.find(".command-stress-nodes").val()
+        }
+        if (op === "nodetool") {
+            jobSpec['command'] = operation.find(".command-nodetool").val();
+            jobSpec['nodes'] = operation.find(".nodes-nodetool").val();
+        }
+        if (op === "cqlsh") {
+            jobSpec['script'] = operation.find(".script-cqlsh").val();
+            jobSpec['node'] = operation.find(".node-cqlsh").val();
+        }
+        if (op === "bash") {
+            jobSpec['script'] = operation.find(".script-bash").val();
+            jobSpec['nodes'] = operation.find(".nodes-bash").val();
         }
         jobSpec['wait_for_compaction'] = operation.find(".wait-for-compaction").is(":checked");
         job.operations[i] = jobSpec;
