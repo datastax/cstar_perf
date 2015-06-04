@@ -376,7 +376,24 @@ var cloneExistingJob = function(job_id) {
    });
 }
 
-var update_cluster_options = function(callback) {
+var update_node_selections = function(callback) {
+    var cluster = $('#cluster').val();
+    $.get('/api/clusters/'+cluster, function(data) {
+        //Clear out the node lists and fetch new one:
+        $(".node-select").empty();
+        if(data.nodes==null) {
+            alert("Warning: cluster '"+ cluster+ "' has no nodes defined.");
+            return;
+        }
+        $.each(data.nodes, function(node, path) {
+            $(".node-select").append($("<option value='"+path+"' selected>"+path+"</option>"));
+        });
+        if (callback != null)
+            callback();
+    });
+}
+
+var update_jvm_selections = function(callback) {
     var cluster = $('#cluster').val();
     $.get('/api/clusters/'+cluster, function(data) {
 
@@ -435,7 +452,8 @@ $(document).ready(function() {
 
     //Refresh jvm list on cluster selection
     $('#cluster').change(function(e) {
-        update_cluster_options();
+        update_jvm_selections();
+        update_node_selections();
     });
 
     query = parseUri(location).queryKey;
