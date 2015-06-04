@@ -126,8 +126,10 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "        <label class='col-md-3 control-label'" +
         "            for='{operation_id}-command'>Nodes</label>  " +
         "        <div class='col-md-9'>" +
-        "          <select multiple id='{operation_id}-nodes'" +
-        "                 class='form-control input-md command-stress-nodes'></select>" +
+        "          <input id='{operation_id}-nodes' type='text'" +
+        "                 class='form-control input-md command-stress-nodes' value='all'" +
+        "                 disabled=disabled>" +
+        "          </input>" +
         "        </div>" +
         "      </div>" +
         "      " +
@@ -143,8 +145,10 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "        <label class='col-md-3 control-label'" +
         "            for='{operation_id}-command'>Nodes</label>  " +
         "        <div class='col-md-9'>" +
-        "          <select multiple id='{operation_id}-nodes'" +
-        "                 class='form-control input-md command-nodetool-nodes'></select>" +
+        "          <input id='{operation_id}-nodes' type='text'" +
+        "                 class='form-control input-md command-nodetool-nodes' value='all'" +
+        "                 disabled=disabled>" +
+        "          </input>" +
         "        </div>" +
         "      </div>" +
         "      " +
@@ -158,10 +162,12 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "      </div>" +
         "      <div class='form-group nodes cqlsh'>" +
         "        <label class='col-md-3 control-label'" +
-        "            for='{operation_id}-command'>Node</label>  " +
+        "            for='{operation_id}-command'>Nodes</label>  " +
         "        <div class='col-md-9'>" +
-        "          <select id='{operation_id}-nodes'" +
-        "                 class='form-control input-md command-cqlsh-nodes'></select>" +
+        "          <input id='{operation_id}-nodes' type='text'" +
+        "                 class='form-control input-md command-cqlsh-nodes' value='node1'" +
+        "                 disabled=disabled>" +
+        "          </input>" +
         "        </div>" +
         "      </div>" +
         "            " +
@@ -177,8 +183,10 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "        <label class='col-md-3 control-label'" +
         "            for='{operation_id}-command'>Nodes</label>  " +
         "        <div class='col-md-9'>" +
-        "          <select multiple id='{operation_id}-nodes'" +
-        "                 class='form-control input-md command-bash-nodes'></select>" +
+        "          <input id='{operation_id}-nodes'" +
+        "                 class='form-control input-md command-bash-nodes' value='all'" +
+        "                 disabled=disabled>" +
+        "          </input>" +
         "        </div>" +
         "      </div>" +
         "            " +
