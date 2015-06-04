@@ -367,7 +367,7 @@ class Model(object):
         for row in rows:
             clusters[row[0]] = {'name': row[0],
                                 'description': row[1],
-                                'jvms': row[2],
+                                'jvms': dict(row[2]),
                                 'num_nodes' : row[3]}
         return clusters
 

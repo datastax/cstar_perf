@@ -92,7 +92,8 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
     var operation_id = 'operation-'+schedule.n_operations;
     if (!cmd)
         cmd = 'write n=19000000 -rate threads=50';
-    var template = "<div id='{operation_id}' class='operation'><legend>Operation<a class='pull-right' id='remove-{operation_id}'><span class='glyphicon" +
+    var template = "" +
+        "<div id='{operation_id}' class='operation'><legend>Operation<a class='pull-right' id='remove-{operation_id}'><span class='glyphicon" +
         "                  glyphicon-remove'></span></a></legend>" +
         "      <div class='form-group'>" +
         "        <label class='col-md-3 control-label'" +
@@ -101,18 +102,78 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "          <select id='{operation_id}-type'" +
         "                  class='form-control type'>" +
         "            <option value='stress'>stress</option>" +
-        "            <option value='flush'>flush</option>" +
-        "            <option value='compact'>compact</option>" +
+        "            <option value='nodetool'>nodetool</option>" +
+        "            <option value='cqlsh'>cqlsh</option>" +
+        "            <option value='bash'>bash</option>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
         "      " +
-        "      <div class='form-group stress'>" +
+        "      <div class='form-group type stress'>" +
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-command'>Stress Command</label>  " +
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-command' type='text'" +
-        "                 class='form-control input-md command' value='{cmd}' required=''></input>" +
+        "                 class='form-control input-md command-stress' value='{cmd}' required=''></input>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes stress'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Nodes</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select multiple id='{operation_id}-nodes'" +
+        "                 class='form-control input-md command-stress-nodes'></select>" +
+        "        </div>" +
+        "      </div>" +
+        "      " +
+        "      <div class='form-group type nodetool'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>Nodetool Command</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <input id='{operation_id}-command' type='text'" +
+        "                 class='form-control input-md command-nodetool' value='' required=''></input>" +
+        "        </div>" + 
+        "      </div>" +
+        "      <div class='form-group nodes nodetool'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Nodes</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select multiple id='{operation_id}-nodes'" +
+        "                 class='form-control input-md command-nodetool-nodes'></select>" +
+        "        </div>" +
+        "      </div>" +
+        "      " +
+        "      <div class='form-group type cqlsh'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>CQL script</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <textarea id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-cqlsh' required=''></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes cqlsh'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Node</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select id='{operation_id}-nodes'" +
+        "                 class='form-control input-md command-cqlsh-nodes'></select>" +
+        "        </div>" +
+        "      </div>" +
+        "            " +
+        "      <div class='form-group type bash'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>BASH script</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <textarea id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-bash' required=''></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes bash'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Nodes</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select multiple id='{operation_id}-nodes'" +
+        "                 class='form-control input-md command-bash-nodes'></select>" +
         "        </div>" +
         "      </div>" +
         "            " +
@@ -125,7 +186,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "            <label for='{operation_id}-wait-for-compaction'>" +
         "              Wait for compactions before next operation" +
         "            </label>" +
-        "	  </div>" +
+        "   </div>" +
         "        </div>" +
         "      </div>" +
         "            " +
@@ -169,7 +230,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "                 <input disabled=disabled id='{revision_id}-kill-nodes-delay' class='kill-nodes-delay' value='300'/> seconds" +
         "              </td></tr>" +
         "           </table>" +
-        "	    </div>" +
+        "     </div>" +
         "        </div>" +
 
         "      </div>" +
@@ -180,10 +241,18 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         newDiv.hide();
     $("#schedule-operations").append(newDiv);
     $("#"+operation_id+"-type").change(function(){
-        if (this.value == 'stress') {
-            $("#"+operation_id+" div.stress").show();
-        } else {
-            $("#"+operation_id+" div.stress").hide();
+        var validOperations = ['stress', 'nodetool', 'cqlsh', 'bash'];
+        if (validOperations.indexOf(this.value) < 0) {
+            console.log(this.value + ' not a valid selection')
+        }
+        for (var i = 0; i < validOperations.length; i++) {
+            var op = validOperations[i];
+            var selected = $("#"+operation_id+" div."+op);
+            if (op === this.value) {
+                selected.show();
+            } else {
+                selected.hide();
+            }
         }
     }).val(operation).change();
     if (animate)
