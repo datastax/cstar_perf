@@ -312,13 +312,16 @@ var createJob = function() {
     job.operations = [];
     $("#schedule-operations div.operation").each(function(i, operation) {
         operation = $(operation);
-        job.operations[i] = {
+        var jobSpec = {
             operation: operation.find(".type").val(),
         };
-        if (job.operations[i]['operation'] === 'stress') {
-            job.operations[i]['command'] = operation.find(".command").val();
+        var op = jobSpec['operation'];
+        if (op === 'stress') {
+            jobSpec['command'] = operation.find(".command-stress").val();
+            // jobSpec['nodes'] = operation.find(".command-stress-nodes").val()
         }
-        job.operations[i]['wait_for_compaction'] = operation.find(".wait-for-compaction").is(":checked");
+        jobSpec['wait_for_compaction'] = operation.find(".wait-for-compaction").is(":checked");
+        job.operations[i] = jobSpec;
     });
 
     return JSON.stringify(job);
