@@ -82,10 +82,10 @@ Your new client public key will be printed on the screen. You need to import thi
     >>> db = Model()
     INFO:cstar_perf.model:Initializing Model...
     INFO:cstar_perf.model:Model initialized
-    >>> db.add_cluster('YOUR_CLUSTER_NAME', 1, 'YOUR_CLUSTER_DESCRIPTION')
+    >>> db.add_cluster('YOUR_CLUSTER_NAME', CLUSTER_HOSTNAMES, 'YOUR_CLUSTER_DESCRIPTION')
     >>> db.add_pub_key('YOUR_CLUSTER_NAME', 'cluster', 'YOUR_CLIENT_PUBLIC_KEY')
 
-Replace YOUR_CLUSTER_NAME with the same cluster name you gave above, and YOUR_CLIENT_PUBLIC_KEY with the generated client key that was printed on your screen.
+Replace YOUR_CLUSTER_NAME with the same cluster name you gave above, CLUSTER_HOSTNAMES is a list containing the hostnames for the Cassandra nodes as defined in `cluster_config.json` and YOUR_CLIENT_PUBLIC_KEY with the generated client key that was printed on your screen.
 
 
 ## Email notifications
