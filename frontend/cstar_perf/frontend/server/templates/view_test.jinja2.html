@@ -92,6 +92,15 @@ h3 {
       {% if op['command'] %}
         <tr><td>Command</td><td><code>{{op['command']}}</code></td></tr>
       {% endif %}
+      {% if op['script'] %}
+        <tr><td>Script</td><td><code>{{op['script']}}</code></td></tr>
+      {% endif %}
+      {% if op['nodes'] %}
+        <tr><td>Nodes</td><td><code>{{op['nodes']}}</code></td></tr>
+      {% endif %}
+      {% if op['node'] %}
+        <tr><td>node</td><td><code>{{op['node']}}</code></td></tr>
+      {% endif %}
       {% if op.has_key('wait_for_compaction') %}
         <tr><td>wait for compactions</td><td>{{op['wait_for_compaction']}}</td></tr>
       {% endif %}

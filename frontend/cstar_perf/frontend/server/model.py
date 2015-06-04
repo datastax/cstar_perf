@@ -95,8 +95,8 @@ class Model(object):
         'select_test_status_all': "SELECT * FROM test_status WHERE status = ? LIMIT ?",
         'delete_test_status': "DELETE FROM test_status WHERE status= ? AND cluster = ? AND test_id = ?",
         'select_clusters_name': "SELECT name from clusters;",
-        'select_clusters': "SELECT name, description, jvms, num_nodes, additional_products FROM clusters;",
-        'insert_clusters': "INSERT INTO clusters (name, num_nodes, description) VALUES (?, ?, ?)",
+        'select_clusters': "SELECT name, description, jvms, nodes, additional_products FROM clusters;",
+        'insert_clusters': "INSERT INTO clusters (name, nodes, description) VALUES (?, ?, ?)",
         'add_cluster_jvm': "UPDATE clusters SET jvms[?]=? WHERE name = ?",
         'add_cluster_product': "UPDATE clusters SET additional_products=additional_products + ? WHERE name = ?",
         'insert_user': "INSERT INTO users (user_id, full_name, roles) VALUES (?, ?, ?);",
@@ -188,8 +188,8 @@ class Model(object):
         session.execute("CREATE TABLE test_artifacts (test_id timeuuid, artifact_type text, description text, artifact blob, PRIMARY KEY (test_id, artifact_type));")
 
         # Cluster information
-        session.execute("CREATE TABLE clusters (name text PRIMARY KEY, num_nodes int, description text, jvms map<text, text>, additional_products set<text>)")
-        
+        session.execute("CREATE TABLE clusters (name text PRIMARY KEY, nodes list<text>, description text, jvms map<text, text>, additional_products set<text>)")
+
         #Users
         session.execute("CREATE TABLE users (user_id text PRIMARY KEY, full_name text, roles set <text>);")
         session.execute("CREATE TABLE user_passphrase (user_id text PRIMARY KEY, hash text, salt text);")
@@ -382,9 +382,9 @@ class Model(object):
     ################################################################################
     #### Cluster Management:
     ################################################################################
-    def add_cluster(self, name, num_nodes, description):
+    def add_cluster(self, name, nodes, description):
         session = self.get_session()
-        session.execute(self.__prepared_statements['insert_clusters'], (name, num_nodes, description))
+        session.execute(self.__prepared_statements['insert_clusters'], (name, nodes, description))
 
     def get_cluster_names(self):
         session = self.get_session()
@@ -412,7 +412,7 @@ class Model(object):
             clusters[row[0]] = {'name': row[0],
                                 'description': row[1],
                                 'jvms': jvms,
-                                'num_nodes' : row[3],
+                                'nodes' : row[3],
                                 'additional_products' : products}
         return clusters
 
