@@ -264,6 +264,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
     if (wait_for_compaction === false) {
         $("#"+operation_id+"-wait-for-compaction").prop("checked", false);
     }
+    update_node_selections(operation_id)
 };
 
 var createJob = function() {
@@ -368,17 +369,23 @@ var cloneExistingJob = function(job_id) {
    });
 }
 
-var update_node_selections = function(callback) {
+var update_node_selections = function(operation_id, callback) {
+    var changeDivs;
+    if (operation_id == null) {
+        changeDivs = $(".node-select");
+    } else {
+        changeDivs = $("div#" + operation_id).find(".node-select");
+    }
     var cluster = $('#cluster').val();
     $.get('/api/clusters/'+cluster, function(data) {
         //Clear out the node lists and fetch new one:
-        $(".node-select").empty();
+        changeDivs.empty();
         if(data.nodes==null) {
             alert("Warning: cluster '"+ cluster+ "' has no nodes defined.");
             return;
         }
         $.each(data.nodes, function(node, path) {
-            $(".node-select").append($("<option value='"+path+"' selected>"+path+"</option>"));
+            changeDivs.append($("<option value='"+path+"' selected>"+path+"</option>"));
         });
         if (callback != null)
             callback();
