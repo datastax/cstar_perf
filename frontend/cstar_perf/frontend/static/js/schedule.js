@@ -113,7 +113,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "        for='{operation_id}-command'>Stress Command</label>  " +
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-command' type='text'" +
-        "                 class='form-control input-md command-stress' value='{command_stress}' required=''></input>" +
+        "                 class='form-control input-md command-stress' value='{command_stress}' required=''>" +
         "        </div>" +
         "      </div>" +
         "      " +
@@ -122,7 +122,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "        for='{operation_id}-command'>Nodetool Command</label>  " +
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-command' type='text'" +
-        "                 class='form-control input-md command-nodetool' value='{command_nodetool}' required=''></input>" +
+        "                 class='form-control input-md command-nodetool' value='{command_nodetool}' required=''>" +
         "        </div>" + 
         "      </div>" +
         "      <div class='form-group nodes nodetool'>" +
@@ -140,7 +140,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "        for='{operation_id}-command'>CQL script</label>  " +
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-script' type='text'" +
-        "                 class='form-control input-md script-cqlsh' required='' value='{script_cqlsh}'></input>" +
+        "                 class='form-control input-md script-cqlsh' required='' value='{script_cqlsh}'>" +
         "        </div>" +
         "      </div>" +
         "      <div class='form-group nodes cqlsh'>" +
@@ -158,7 +158,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "        for='{operation_id}-command'>Bash script</label>  " +
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-script' type='text'" +
-        "                 class='form-control input-md script-bash' required='' value='{script_bash}'></input>" +
+        "                 class='form-control input-md script-bash' required='' value='{script_bash}'>" +
         "        </div>" +
         "      </div>" +
         "      <div class='form-group nodes bash'>" +
