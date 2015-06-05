@@ -172,7 +172,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "            for='{operation_id}-command'>Nodes</label>  " +
         "        <div class='col-md-9'>" +
         "          <select multiple id='{operation_id}-nodes' type='text'" +
-        "                 class='form-control input-md nodes-cqlsh node-select'>" +
+        "                 class='form-control input-md nodes-bash node-select'>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
