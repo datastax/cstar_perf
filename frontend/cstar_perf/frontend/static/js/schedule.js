@@ -136,7 +136,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "            for='{operation_id}-command'>Nodes</label>  " +
         "        <div class='col-md-9'>" +
         "          <select multiple id='{operation_id}-nodes' type='text'" +
-        "                 class='form-control input-md nodes-nodetool node-select' value='all'>" +
+        "                 class='form-control input-md nodes-nodetool node-select'>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
