@@ -87,11 +87,10 @@ var addRevisionDiv = function(animate){
 
 };
 
-var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
+var addOperationDiv = function(animate, operationDefaults){
     schedule.n_operations++;
     var operation_id = 'operation-'+schedule.n_operations;
-    if (!cmd)
-        cmd = 'write n=19000000 -rate threads=50';
+
     var template = "" +
         "<div id='{operation_id}' class='operation'><legend>Operation<a class='pull-right' id='remove-{operation_id}'><span class='glyphicon" +
         "                  glyphicon-remove'></span></a></legend>" +
@@ -114,7 +113,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "        for='{operation_id}-command'>Stress Command</label>  " +
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-command' type='text'" +
-        "                 class='form-control input-md command-stress' value='{command-stress}' required=''></input>" +
+        "                 class='form-control input-md command-stress' value='{command_stress}' required=''></input>" +
         "        </div>" +
         "      </div>" +
         "      " +
@@ -123,7 +122,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "        for='{operation_id}-command'>Nodetool Command</label>  " +
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-command' type='text'" +
-        "                 class='form-control input-md command-nodetool' value='{command-nodetool}' required=''></input>" +
+        "                 class='form-control input-md command-nodetool' value='{command_nodetool}' required=''></input>" +
         "        </div>" + 
         "      </div>" +
         "      <div class='form-group nodes nodetool'>" +
@@ -140,8 +139,8 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-command'>CQL script</label>  " +
         "        <div class='col-md-9'>" +
-        "          <textarea id='{operation_id}-script' type='text'" +
-        "                 class='form-control input-md script-cqlsh' required='' value='{script-cqlsh}'></textarea>" +
+        "          <input id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-cqlsh' required='' value='{script_cqlsh}'></input>" +
         "        </div>" +
         "      </div>" +
         "      <div class='form-group nodes cqlsh'>" +
@@ -158,8 +157,8 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-command'>Bash script</label>  " +
         "        <div class='col-md-9'>" +
-        "          <textarea id='{operation_id}-script' type='text'" +
-        "                 class='form-control input-md script-bash' required='' value='{script-bash}'></textarea>" +
+        "          <input id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-bash' required='' value='{script_bash}'></input>" +
         "        </div>" +
         "      </div>" +
         "      <div class='form-group nodes bash'>" +
@@ -231,7 +230,34 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "      </div>" +
         "     </div>";
 
-    var newDiv = $(template.format({operation:schedule.n_operations, operation_id:operation_id, cmd:cmd}));
+    newOperation = {
+        operationType: operationDefaults.operation || "stress",
+        operation: schedule.n_operations,
+        operation_id: operation_id,
+        // command_nodetool: operationDefaults.command_nodetool || "status",
+    };
+    if (newOperation.operationType === 'stress' && operationDefaults.command) {
+        newOperation.command_stress = operationDefaults.command
+    } else {
+        newOperation.command_stress = "write n=19000000 -rate threads=50";
+    }
+    if (newOperation.operationType === 'nodetool' && operationDefaults.command) {
+        newOperation.command_nodetool = operationDefaults.command;
+    } else {
+        newOperation.command_nodetool = "status";
+    }
+    if (newOperation.operationType === 'cqlsh' && operationDefaults.script) {
+        newOperation.script_cqlsh = operationDefaults.script;
+    } else {
+        newOperation.script_cqlsh = "DESCRIBE TABLES;";
+    }
+    if (newOperation.operationType === 'bash' && operationDefaults.script) {
+        newOperation.script_bash = operationDefaults.script;
+    } else {
+        newOperation.script_bash = "ls";
+    }
+
+    var newDiv = $(template.format(newOperation));
     if (animate)
         newDiv.hide();
     $("#schedule-operations").append(newDiv);
@@ -249,7 +275,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
                 selected.hide();
             }
         }
-    }).val(operation).change();
+    }).val(newOperation.operationType).change();
     if (animate)
         newDiv.slideDown();
 
@@ -261,7 +287,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
     });
 
     //Check wait_for_compaction box:
-    if (wait_for_compaction === false) {
+    if (operationDefaults.wait_for_compaction === false) {
         $("#"+operation_id+"-wait-for-compaction").prop("checked", false);
     }
     update_node_selections(operation_id)
@@ -358,7 +384,7 @@ var cloneExistingJob = function(job_id) {
         });
         //Operations:
         $.each(test['operations'], function(i, operation) {
-            addOperationDiv(false, operation['operation'], operation['command'], operation['wait_for_compaction']);
+            addOperationDiv(false, operation);
         });
 
         query = parseUri(location).queryKey;
@@ -439,7 +465,7 @@ $(document).ready(function() {
 
     //Add operation button callback:
     $('button#add-operation').click(function(e) {
-        addOperationDiv(true, 'stress');
+        addOperationDiv(true);
         e.preventDefault();
     });
 
@@ -456,8 +482,8 @@ $(document).ready(function() {
     } else {
         //Create a new job from scratch:
         addRevisionDiv(false);
-        addOperationDiv(false, 'stress', 'write n=19000000 -rate threads=50');
-        addOperationDiv(false, 'stress', 'read n=19000000 -rate threads=50');
+        addOperationDiv(false, {operation: 'stress', command_stress: 'write n=19000000 -rate threads=50'});
+        addOperationDiv(false, {operation: 'stress', command_stress: 'read n=19000000 -rate threads=50'});
     }
     
     //Validate form and submit:
