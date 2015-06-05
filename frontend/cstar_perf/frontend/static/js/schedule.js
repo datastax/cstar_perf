@@ -230,6 +230,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "      </div>" +
         "     </div>";
 
+    operationDefaults = operationDefaults || {};
     newOperation = {
         operationType: operationDefaults.operation || "stress",
         operation: schedule.n_operations,
