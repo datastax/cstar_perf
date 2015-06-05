@@ -241,7 +241,6 @@ var addOperationDiv = function(animate, operationDefaults){
         operationType: operationDefaults.operation || "stress",
         operation: schedule.n_operations,
         operation_id: operation_id,
-        // command_nodetool: operationDefaults.command_nodetool || "status",
     };
     if (newOperation.operationType === 'stress' && operationDefaults.command) {
         newOperation.command_stress = operationDefaults.command
