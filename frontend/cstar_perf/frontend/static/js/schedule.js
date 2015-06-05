@@ -337,11 +337,11 @@ var createJob = function() {
         }
         if (op === "nodetool") {
             jobSpec['command'] = operation.find(".command-nodetool").val();
-            jobSpec['nodes'] = operation.find(".nodes-nodetool").val();
+            jobSpec['nodes'] = operation.find(".nodes-nodetool").val() || [];
         }
         if (op === "cqlsh") {
             jobSpec['script'] = operation.find(".script-cqlsh").val();
-            jobSpec['node'] = operation.find(".node-cqlsh").val();
+            jobSpec['node'] = operation.find(".node-cqlsh").val() || [];
         }
         if (op === "bash") {
             jobSpec['script'] = operation.find(".script-bash").val();
