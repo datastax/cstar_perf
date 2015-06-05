@@ -460,14 +460,14 @@ var updateURLBar = function(query) {
 $(document).ready(function() {
     //Add revision button callback:
     $('button#add-revision').click(function(e) {
-        addRevisionDiv(true);
         e.preventDefault();
+        addRevisionDiv(true);
     });
 
     //Add operation button callback:
     $('button#add-operation').click(function(e) {
-        addOperationDiv(true);
         e.preventDefault();
+        addOperationDiv(true);
     });
 
     //Refresh jvm list on cluster selection
@@ -489,6 +489,7 @@ $(document).ready(function() {
     
     //Validate form and submit:
     $("form#schedule-test").submit(function(e) {
+        e.preventDefault();
         var job = createJob();
         console.log(job);
         $.ajax({
@@ -505,7 +506,6 @@ $(document).ready(function() {
             console.log(data);
             alert("error: "+data.status+" "+data.statusText+" "+data.responseText);
         });
-        e.preventDefault();
     });
 
 
