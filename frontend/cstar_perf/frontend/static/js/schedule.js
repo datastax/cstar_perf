@@ -291,7 +291,7 @@ var addOperationDiv = function(animate, operationDefaults){
     if (operationDefaults.wait_for_compaction === false) {
         $("#"+operation_id+"-wait-for-compaction").prop("checked", false);
     }
-    update_node_selections(operation_id)
+    update_node_selections(operation_id, operationDefaults)
 };
 
 var createJob = function() {
@@ -396,7 +396,15 @@ var cloneExistingJob = function(job_id) {
    });
 }
 
-var update_node_selections = function(operation_id, callback) {
+var update_node_selections = function(operation_id, operation_defaults, callback) {
+    operation_defaults = operation_defaults || {};
+    var defaultNodeSpec = operation_defaults.nodes;
+    if (!defaultNodeSpec) {
+        if (operation_defaults.node) {
+            var defaultNodeSpec = [operation_defaults.node];
+        }
+    }
+
     var changeDivs;
     if (operation_id == null) {
         changeDivs = $(".node-select");
@@ -412,7 +420,20 @@ var update_node_selections = function(operation_id, callback) {
             return;
         }
         $.each(data.nodes, function(node, path) {
-            changeDivs.append($("<option value='"+path+"' selected>"+path+"</option>"));
+            var newNodeOption = "<option value='"+path+"'";
+            // if the node's name was selected in the default operation, select it here
+            if (defaultNodeSpec) {
+                for (i = 0; i < defaultNodeSpec.length; i++) {
+                    if (defaultNodeSpec[i] === path) {
+                        newNodeOption += " selected";
+                        break;
+                    }
+                }
+            } else {
+                newNodeOption += " selected";
+            }
+            newNodeOption += ">"+path+"</option>";
+            changeDivs.append($(newNodeOption));
         });
         if (callback != null)
             callback();
