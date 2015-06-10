@@ -23,10 +23,10 @@ class APIClient(object):
         kwargs['headers'] = kwargs.get('headers', {})
         kwargs['headers'].update({'content-type': 'application/json'})
         r = self.session.post(self.endpoint + path, data, **kwargs)
-        if r.status_code == 401:
+        if r.status_code == 401 and not path.startswith('/login'):
             self.login()
             r = self.session.post(self.endpoint + path, data, **kwargs)
-        if r.status_code == 200:
+        elif r.status_code == 200:
             return r.json()
         raise RuntimeError('Request failed to {} - {} {}'.format(path, r, r.text))
 
