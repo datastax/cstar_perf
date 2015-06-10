@@ -20,7 +20,7 @@ def create_baseline_config():
     revisions.append({'revision': oldstable, 'label': oldstable+' (oldstable)'})
     for r in revisions:
         r['options'] = {'use_vnodes': True}
-        r['java_home'] = "~/fab/jvms/jdk1.7.0_71"
+        r['java_home'] = "~/fab/jvms/jdk1.7.0_71" if 'oldstable' in r['label'] else "~/fab/jvms/jdk1.8.0_45"
 
     config['title'] = 'Jenkins C* regression suite - {}'.format(datetime.datetime.now().strftime("%Y-%m-%d"))
 
