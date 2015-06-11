@@ -269,7 +269,7 @@ def drop_page_cache():
     """Drop the page cache"""
     bash(['sync', 'echo 3 > /proc/sys/vm/drop_caches'], user='root')
     
-def stress(cmd, revision_tag, stats=None):
+def stress(cmd, revision_tag, stats=None, stress_path=None):
     """Run stress command and collect average statistics"""
     # Check for compatible stress commands. This doesn't yet have full
     # coverage of every option:
@@ -279,8 +279,11 @@ def stress(cmd, revision_tag, stats=None):
     if cmd.strip().startswith("read") and 'threads' not in cmd:
         raise AssertionError('Stress read commands must specify #/threads when used with this tool.')
 
+    if stress_path is None:
+        stress_path = CASSANDRA_STRESS
+
     temp_log = tempfile.mktemp()
-    logger.info("Running stress : %s" % cmd)
+    logger.info("Running stress from {stress_path} : {cmd}".format(stress_path=stress_path, cmd=cmd))
 
     # Record the type of operation being performed:
     operation = cmd.strip().split(" ")[0]
@@ -295,7 +298,7 @@ def stress(cmd, revision_tag, stats=None):
     # realtime output, so pipe the output to a file as a workaround:
     proc = subprocess.Popen('JAVA_HOME={JAVA_HOME} {CASSANDRA_STRESS} {cmd} | tee {temp_log}'
                             .format(JAVA_HOME=JAVA_HOME,
-                                    CASSANDRA_STRESS=CASSANDRA_STRESS,
+                                    CASSANDRA_STRESS=stress_path,
                                     cmd=cmd, temp_log=temp_log), shell=True)
     proc.wait()
     log = open(temp_log)

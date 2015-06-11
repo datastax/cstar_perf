@@ -147,7 +147,7 @@ def stress_compare(revisions,
                 # Run stress:
                 # (stress takes the stats as a parameter, and adds
                 #  more as it runs):
-                stats = stress(cmd, revision, stats)
+                stats = stress(cmd, revision, stats, stress_path=revision_config.get('stress_path', None))
                 # Wait for all compactions to finish (unless disabled):
                 if operation.get('wait_for_compaction', True):
                     compaction_throughput = revision_config.get("compaction_throughput_mb_per_sec", 16)
