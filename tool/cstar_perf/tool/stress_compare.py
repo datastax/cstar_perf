@@ -43,7 +43,6 @@ def validate_operations_list(operations):
             assert op.has_key('command'), "Nodetool operation missing comamnd"
             for option in [' -h',' --host']:
                 assert option not in op['command'], "Nodetool command cananot specify the host, use the nodes parameter in the operation instead"
-            assert op.has_key('nodes'), "Nodetool operation missing nodes list"
         elif op['type'] == 'cqlsh':
             assert op.has_key('script'), "Cqlsh operation missing script"
             assert op.has_key('node'), "Cqlsh operation missing node to run on"
@@ -154,6 +153,8 @@ def stress_compare(revisions,
                     wait_for_compaction(compaction_throughput=compaction_throughput)
 
             elif operation['type'] == 'nodetool':
+                if 'nodes' not in operation:
+                    operation['nodes'] = 'all'
                 if operation['nodes'] in ['all','ALL']:
                     nodes = [n for n in fab_config['hosts']]
                 else:
