@@ -313,7 +313,7 @@ def stress(cmd, revision_tag, stats=None, stress_revision=None):
         stress_path = setup_stress(stress_revision)
 
     temp_log = tempfile.mktemp()
-    logger.info("Running stress from 'stress_path' : {cmd}"
+    logger.info("Running stress from '{stress_path}' : {cmd}"
                 .format(stress_path=stress_path, cmd=cmd))
 
     # Record the type of operation being performed:
