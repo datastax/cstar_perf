@@ -114,7 +114,6 @@ def stress_compare(revisions,
         config['title'] = title
         config['subtitle'] = subtitle
 
-
         # leave_data settting can be set in the revision
         # configuration, or manually in the call to this function.
         # Either is fine, but they shouldn't conflict. If they do,
@@ -226,7 +225,10 @@ def stress_compare(revisions,
                            'subtitle': subtitle,
                            'revisions': revisions})
 
-        teardown(destroy=True, leave_data=revisions[-1].get('leave_data', False))
+        if revisions[-1].get('leave_data', False):
+            teardown(destroy=False, leave_data=True)
+        else:
+            teardown(destroy=True, leave_data=False)
 
 def main():
     parser = argparse.ArgumentParser(description='stress_compare')
