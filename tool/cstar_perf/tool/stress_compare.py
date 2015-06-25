@@ -97,10 +97,10 @@ def stress_compare(revisions,
     # configuration, or manually in the call to this function. Either
     # is fine, but they shouldn't conflict. If they do, ValueError is
     # raised.
-    if initial_destroy = True and pristine_config.get('initial_destroy', None) == False:
+    if initial_destroy == True and pristine_config.get('initial_destroy', None) == False:
         raise ValueError('setting for initial_destroy conflicts in job config and stress_compare() call')
     else:
-        initial_destroy = pristine_config('initial_destroy', initial_destroy)
+        initial_destroy = pristine_config.get('initial_destroy', initial_destroy)
         
     if initial_destroy:
         logger.info("Cleaning up from prior runs of stress_compare ...")
@@ -119,10 +119,10 @@ def stress_compare(revisions,
         # configuration, or manually in the call to this function.
         # Either is fine, but they shouldn't conflict. If they do,
         # ValueError is raised.
-        if leave_data = True and revision_config.get('leave_data', None) == False:
+        if leave_data == True and revision_config.get('leave_data', None) == False:
             raise ValueError('setting for leave_data conflicts in job config and stress_compare() call')
         else:
-            leave_data = revision_config('leave_data', leave_data)
+            leave_data = revision_config.get('leave_data', leave_data)
                 
         logger.info("Bringing up {revision} cluster...".format(revision=revision))
         

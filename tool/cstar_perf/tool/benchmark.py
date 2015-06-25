@@ -66,6 +66,14 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     logger.info("### Config: ###")
     pprint(cstar.config)
 
+    # leave_data settting can be set in the revision
+    # configuration, or manually in the call to this function.
+    # Either is fine, but they shouldn't conflict. If they do,
+    # ValueError is raised.
+    if leave_data == True and cfg.get('leave_data', None) == False:
+        raise ValueError('setting for leave_data conflicts in job config and bootstrap() call')
+    else:
+        leave_data = cfg.get('leave_data', leave_data)
 
     # Set device readahead:
     if cfg['blockdev_readahead'] is not None:
