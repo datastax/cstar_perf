@@ -19,6 +19,7 @@ import socket
 import getpass
 import logging
 import yaml
+import sh
 
 # Import the default config first:
 import fab_cassandra as cstar
@@ -30,10 +31,14 @@ logger = logging.getLogger('benchmark')
 logger.setLevel(logging.INFO)
 
 
-CASSANDRA_STRESS   = os.path.expanduser("~/fab/stress/default/tools/bin/cassandra-stress")
+HOME = os.getenv('HOME')
+CASSANDRA_STRESS_PATH = os.path.expanduser("~/fab/stress/")
+CASSANDRA_STRESS_DEFAULT   = os.path.expanduser("~/fab/stress/default/tools/bin/cassandra-stress")
 CASSANDRA_NODETOOL = os.path.expanduser("~/fab/cassandra/bin/nodetool")
 CASSANDRA_CQLSH    = os.path.expanduser("~/fab/cassandra/bin/cqlsh")
 JAVA_HOME          = os.path.expanduser("~/fab/java")
+
+antcmd = sh.Command(os.path.join(HOME, 'fab/ant/bin/ant'))
 
 def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     """Deploy and start cassandra on the cluster
@@ -268,8 +273,32 @@ def set_device_read_ahead(read_ahead, devices=None):
 def drop_page_cache():
     """Drop the page cache"""
     bash(['sync', 'echo 3 > /proc/sys/vm/drop_caches'], user='root')
-    
-def stress(cmd, revision_tag, stats=None, stress_path=None):
+
+def setup_stress(stress_revision):
+    stress_path = None
+
+    try:
+        git_id = sh.git('--git-dir={home}/fab/cassandra.git'
+                        .format(home=HOME), 'rev-parse', stress_revision).strip()
+    except sh.ErrorReturnCode:
+        raise AssertionError('Invalid stress_revision: {}'.format(stress_revision))
+
+    path = os.path.join(CASSANDRA_STRESS_PATH, git_id)
+    if not os.path.exists(path):
+        logger.info("Building cassandra-stress '{}' in '{}'.".format(stress_revision, path))
+        os.makedirs(path)
+        sh.tar(
+            sh.git("--git-dir={home}/fab/cassandra.git".format(home=HOME), "archive", git_id),
+            'x', '-C', path
+        )
+        antcmd('-Dbasedir={}'.format(path), '-f', '{}/build.xml'.format(path), 'realclean', 'jar')
+
+    stress_path = os.path.join(path, 'tools/bin/cassandra-stress')
+
+    return stress_path
+
+
+def stress(cmd, revision_tag, stats=None, stress_revision=None):
     """Run stress command and collect average statistics"""
     # Check for compatible stress commands. This doesn't yet have full
     # coverage of every option:
@@ -279,19 +308,27 @@ def stress(cmd, revision_tag, stats=None, stress_path=None):
     if cmd.strip().startswith("read") and 'threads' not in cmd:
         raise AssertionError('Stress read commands must specify #/threads when used with this tool.')
 
-    if stress_path is None:
-        stress_path = CASSANDRA_STRESS
+    stress_path = CASSANDRA_STRESS_DEFAULT
+    if stress_revision:
+        stress_path = setup_stress(stress_revision)
 
     temp_log = tempfile.mktemp()
-    logger.info("Running stress from {stress_path} : {cmd}".format(stress_path=stress_path, cmd=cmd))
+    logger.info("Running stress from '{stress_path}' : {cmd}"
+                .format(stress_path=stress_path, cmd=cmd))
 
     # Record the type of operation being performed:
     operation = cmd.strip().split(" ")[0]
 
     if stats is None:
-        stats = {"id":str(uuid.uuid1()),"command":cmd, "intervals":[], 
-                 "test":operation, "revision": revision_tag, 
-                 "date":datetime.datetime.now().isoformat()}
+        stats = {
+            "id": str(uuid.uuid1()),
+            "command": cmd,
+            "intervals": [],
+            "test": operation,
+            "revision": revision_tag,
+            "date": datetime.datetime.now().isoformat(),
+            "stress_revision": stress_revision
+        }
 
     # Run stress:
     # Subprocess communicate() blocks, preventing us from seeing any
