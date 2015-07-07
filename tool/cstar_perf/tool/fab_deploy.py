@@ -85,7 +85,15 @@ def install_cstar_perf_tool(existing_checkout=False):
     # Add all the git remotes and fetch:
     fab.run('fab -f ~/git/cstar_perf/tool/cstar_perf/tool/fab_cassandra.py add_git_remotes')
     fab.run('git -C ~/fab/cassandra.git fetch --all')
-        
+
+def install_cstar_perf_frontend(existing_checkout=False):
+    if not existing_checkout:
+        fab.run("mkdir -p ~/git")
+        fab.run("git -C ~/git clone http://github.com/datastax/cstar_perf.git")
+    with fab.settings(user='root'):
+        fab.run("pip install -e /home/cstar/git/cstar_perf/frontend")
+
+    
 def get_block_devices(directories):
     block_devices = set()
     # Find all the block devices for all directories
