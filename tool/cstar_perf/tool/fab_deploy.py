@@ -93,18 +93,6 @@ def install_cstar_perf_frontend(existing_checkout=False):
     with fab.settings(user='root'):
         fab.run("pip install -e /home/cstar/git/cstar_perf/frontend")
 
-    
-def get_block_devices(directories):
-    block_devices = set()
-    # Find all the block devices for all directories
-    for i,d in enumerate(directories):
-        with fab.settings(user='root'):
-            fab.run('mkdir -p {}'.format(d), quiet=True)
-            dev = fab.run('df {} | tail -n 1 | cut -d " " -f 1'.format(d), quiet=True)
-            assert len(dev) > 0 and dev.startswith("/")
-            block_devices.add(dev)
-    return block_devices
-
 def copy_cluster_config(config):
     config = json.dumps(config, sort_keys=True, indent=4, separators=(',', ': '))
     config_file = StringIO(config)

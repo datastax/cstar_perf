@@ -282,14 +282,11 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
 def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False):
     first_node = hosts.values()[0]
     other_nodes = hosts.values()[1:]
-    # Get the block device names
-    block_devices = list({tuple(x)[0] for x in fab_execute(fab_deploy.get_block_devices, ['/data/cstar_perf']).values()})
-    log.info("Block devices found across cluster: {}".format(block_devices))
 
     # Create the cluster config file
     cluster_config = {
-        "block_devices": block_devices,
-        "blockdev_readahead": 0,
+        "block_devices": [],
+        "blockdev_readahead": None,
         "hosts": {
             host : {
                 "hostname": host,
@@ -329,7 +326,6 @@ def info(cluster_name):
         for node in node_names:
             data = containers[node]
             print("    {} : {}".format(node, data['NetworkSettings']['IPAddress']))
-
 
 def destroy(cluster_regex):
     """Destroy clusters"""
