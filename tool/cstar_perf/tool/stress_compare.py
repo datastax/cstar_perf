@@ -92,7 +92,16 @@ def stress_compare(revisions,
     validate_operations_list(operations)
 
     pristine_config = copy.copy(fab_config)
-    
+
+    # initial_destroy settting can be set in the job
+    # configuration, or manually in the call to this function. Either
+    # is fine, but they shouldn't conflict. If they do, ValueError is
+    # raised.
+    if initial_destroy == True and pristine_config.get('initial_destroy', None) == False:
+        raise ValueError('setting for initial_destroy conflicts in job config and stress_compare() call')
+    else:
+        initial_destroy = pristine_config.get('initial_destroy', initial_destroy)
+        
     if initial_destroy:
         logger.info("Cleaning up from prior runs of stress_compare ...")
         teardown(destroy=True, leave_data=False)
@@ -113,6 +122,15 @@ def stress_compare(revisions,
         config['title'] = title
         config['subtitle'] = subtitle
 
+        # leave_data settting can be set in the revision
+        # configuration, or manually in the call to this function.
+        # Either is fine, but they shouldn't conflict. If they do,
+        # ValueError is raised.
+        if leave_data == True and revision_config.get('leave_data', None) == False:
+            raise ValueError('setting for leave_data conflicts in job config and stress_compare() call')
+        else:
+            leave_data = revision_config.get('leave_data', leave_data)
+                
         logger.info("Bringing up {revision} cluster...".format(revision=revision))
         
         # Drop the page cache between each revision, especially 
@@ -215,7 +233,10 @@ def stress_compare(revisions,
                            'subtitle': subtitle,
                            'revisions': revisions})
 
-        teardown(destroy=True, leave_data=leave_data)
+        if revisions[-1].get('leave_data', False):
+            teardown(destroy=False, leave_data=True)
+        else:
+            teardown(destroy=True, leave_data=False)
 
 def main():
     parser = argparse.ArgumentParser(description='stress_compare')
