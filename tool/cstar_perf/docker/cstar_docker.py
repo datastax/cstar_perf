@@ -14,11 +14,13 @@ from distutils.version import LooseVersion
 import logging
 logging.basicConfig()
 log = logging.getLogger('cstar_docker')
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 
 from fabric import api as fab
 from cstar_perf.tool import fab_deploy
 from fabric.tasks import execute as fab_execute
+
+CONTAINER_DEFAULT_MEMORY = '2G'
 
 docker_image_name = 'datastax/cstar_docker'
 # Dockerfile for cstar_perf, there are string format parameters in here:
@@ -40,6 +42,7 @@ RUN \
       python-dev \
       python-pip \
       openssh-server \
+      libssl-dev \
       ant \
       libjna-java \
       python-software-properties
@@ -89,7 +92,9 @@ RUN mkdir -p /root/.ssh && \
   cp /home/cstar/.ssh/config /root/.ssh/config
 
 RUN mkdir -p /home/cstar/git/cstar_perf && \
-    chown -R cstar:cstar /home/cstar/git
+    chown -R cstar:cstar /home/cstar/git && \
+    mkdir -p /data/cstar_perf && \
+    chown -R cstar:cstar /data
 VOLUME ["/home/cstar/git/cstar_perf"]
 
 ### Expose SSH and Cassandra ports
@@ -179,16 +184,16 @@ def get_containers(cluster_regex='all', all_metadata=False):
     else:
         return container_names
 
-def launch(num_nodes, cluster_name='cnode', destroy_existing=False, install_frontend=False,
-           install_tool=True, mount_host_src=False, verbose=False):
+def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
+           install_tool=True, frontend=False, mount_host_src=False, verbose=False):
     """Launch cluster nodes, return metadata (ip addresses etc) for the nodes"""
 
     assert num_nodes > 0, "Cannot start a cluster with {} nodes".format(num_nodes)
-    
-    if install_frontend and not install_tool:
-        log.error("Cannot install cstar_perf.frontend without also installing cstar_perf.tool")
-        exit(1)
-    
+    if frontend:
+        assert num_nodes == 1, "Can only start a frontend with a single node"
+
+    cluster_type = 'frontend' if frontend else 'cluster'
+        
     try:
         get_container_data(docker_image_name)
     except AssertionError:
@@ -211,14 +216,15 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False, install_fron
         node_name = "%s_%02d" % (cluster_name,i)
         ssh_path = os.path.split(get_ssh_key_pair()[0])[0]
         run_cmd = ('docker run --label cstar_node=true --label '
-            'cluster_name={cluster_name} --label node={node_num} -d -m 2G --name={node_name} '
-            '-h {node_name}'.format(
-                cluster_name=cluster_name, node_num=i, node_name=node_name,
-                ssh_path=ssh_path))
+            'cluster_name={cluster_name} --label cluster_type={cluster_type} --label node={node_num} '
+            '-d -m {CONTAINER_DEFAULT_MEMORY} --name={node_name} -h {node_name}'.format(
+                cluster_name=cluster_name, node_num=i, node_name=node_name, cluster_type=cluster_type,
+                CONTAINER_DEFAULT_MEMORY=CONTAINER_DEFAULT_MEMORY, ssh_path=ssh_path))
         if mount_host_src:
             cstar_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, os.pardir))
             run_cmd = run_cmd + " -v {cstar_dir}:/home/cstar/git/cstar_perf".format(cstar_dir=cstar_dir)
         run_cmd = run_cmd + ' ' + docker_image_name
+        log.debug(run_cmd)
         p=subprocess.Popen(shlex.split(run_cmd),
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         container_id = p.communicate()[0].strip()
@@ -230,17 +236,32 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False, install_fron
     # Write /etc/hosts
     fab_execute(fab_deploy.setup_hosts_file, hosts)
 
-    if install_tool:
-        log.info("Installing cstar_perf.tool ... ")
-        __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=mount_host_src)
-    if install_frontend:
+    if frontend:
         log.info("Installing cstar_perf.frontend ... ")
+        try:
+            __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=mount_host_src)
+        except:
+            destroy(cluster_name)
+            raise
+    elif install_tool:
+        log.info("Installing cstar_perf.tool ... ")
+        try:
+            __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=mount_host_src)
+        except:
+            destroy(cluster_name)
+            raise
             
     if verbose:
         print("Started {} nodes:".format(num_nodes))
         print("")
         info(cluster_name)
     return node_data
+
+def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
+    assert len(hosts) == 1, "Cannot install frontend onto more than one node"
+    host, ip = hosts.popitem()
+    with fab.settings(hosts=ip):
+        fab_execute(fab_deploy.install_cstar_perf_frontend, existing_checkout=mount_host_src)
     
 def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False):
     first_node = hosts.values()[0]
@@ -307,12 +328,16 @@ def list_clusters():
     """List clusters"""
     containers = get_containers('all', all_metadata=True)
     cluster_containers = defaultdict(list)
+    cluster_types = defaultdict(set)
     for container in containers.values():
         cluster_name = container['Config']['Labels']['cluster_name']
+        cluster_types[cluster_name].add(container['Config']['Labels']['cluster_type'])
         cluster_containers[cluster_name].append(container['Id'])
     clusters = sorted([c for c in cluster_containers.keys()])
     for cluster in clusters:
-        print("{}, {} instances".format(cluster, len(cluster_containers[cluster])))
+        assert len(cluster_types[cluster]) == 1, "Cluster '{}' contains multiple node types: {}".format(cluster, cluster_types[cluster])
+        print("{name}, {num_nodes} instances ({cluster_type})".format(
+            name=cluster, num_nodes=len(cluster_containers[cluster]), cluster_type=cluster_types[cluster].pop()))
 
 def ssh(cluster_name, node, user='cstar', ssh_key_path=os.path.join(os.path.expanduser("~"),'.ssh','id_rsa')):
     containers = get_containers(cluster_name, all_metadata=True)
@@ -333,8 +358,15 @@ def execute_cmd(cmd, args):
     if cmd == 'launch':
         launch(args.num_nodes, cluster_name=args.name,
                destroy_existing=args.destroy_existing,
-               install_frontend=args.frontend, install_tool=not args.no_install,
+               install_tool=not args.no_install,
                mount_host_src=args.mount, verbose=True)
+    elif cmd == 'frontend':
+        launch(1, cluster_name=args.name,
+               destroy_existing=args.destroy_existing,
+               frontend=True,
+               mount_host_src=args.mount, verbose=True)
+    elif cmd == 'associate':
+        raise NotImplementedError('todo')
     elif cmd == 'destroy':
         destroy(args.cluster_regex)
     elif cmd == 'list':
@@ -361,12 +393,21 @@ def main():
     launch.add_argument(
         '--no-install', help='Don\'t install cstar_perf.tool', action='store_true')
     launch.add_argument(
-        '-f', '--frontend', help='Install cstar_perf.frontend, the web frontend (tool only is installed by default)', action='store_true')
-    launch.add_argument(
         '-m', '--mount', help='Mount the host system\'s cstar_perf checkout rather than install from github', action='store_true')
     launch.add_argument(
         '--destroy-existing', help='Destroy any existing cluster with the same name before launching', action="store_true")
 
+    frontend = parser_subparsers.add_parser('frontend', description="Launch a single node frontend instance")
+    frontend.add_argument('name', help='The name of the frontend node')
+    frontend.add_argument(
+        '-m', '--mount', help='Mount the host system\'s cstar_perf checkout rather than install from github', action='store_true')
+    frontend.add_argument(
+        '--destroy-existing', help='Destroy any existing cluster with the same name before launching', action="store_true")
+
+    associate = parser_subparsers.add_parser('associate', description="Hook up one or more clusters to a frontend")
+    associate.add_argument('frontend', help='The name of the frontend node')
+    associate.add_argument('clusters', help='The names of the clusters to hook up to the frontend', nargs='+')    
+    
     destroy = parser_subparsers.add_parser('destroy', description='Destroy clusters - specify a regex of cluster names to destroy, or specify \'all\' to destroy all clusters created')
     destroy.add_argument('cluster_regex', help='The regex of the names of clusters to destroy')
 
