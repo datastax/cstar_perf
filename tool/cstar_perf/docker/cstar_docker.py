@@ -221,7 +221,23 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
                 cluster_name=cluster_name, node_num=i, node_name=node_name, cluster_type=cluster_type,
                 CONTAINER_DEFAULT_MEMORY=CONTAINER_DEFAULT_MEMORY, ssh_path=ssh_path))
         if mount_host_src:
-            cstar_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, os.pardir))
+            # Try to find the user's git clone of cstar_perf:
+            candidates = [
+                # Get the directory relative to this file - only works
+                # if user installed in-place (pip install -e)
+                os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir, os.pardir, os.pardir)),
+                # In the current directory:
+                os.getcwd()
+            ]
+            for d in candidates:
+                if os.path.exists(os.path.join(d, '.git')) and \
+                   os.path.exists(os.path.join(d, 'tool')) and \
+                   os.path.exists(os.path.join(d, 'frontend')):
+                    cstar_dir = d
+                    break
+            else:
+                log.error("Could not mount your git checkout of cstar_perf because none could be found. Try installing cstar_perf in developer mode: 'pip install -e ./tool' or try running cstar_docker from the same directory as your checkout")
+                exit(1)
             run_cmd = run_cmd + " -v {cstar_dir}:/home/cstar/git/cstar_perf".format(cstar_dir=cstar_dir)
         run_cmd = run_cmd + ' ' + docker_image_name
         log.debug(run_cmd)
