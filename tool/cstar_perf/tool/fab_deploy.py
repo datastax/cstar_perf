@@ -8,6 +8,7 @@ for other deployment types in the future.
 """
 
 from fabric import api as fab
+from fabric.tasks import execute as fab_execute
 from StringIO import StringIO
 import json
 import re
@@ -86,7 +87,15 @@ def install_cstar_perf_tool(existing_checkout=False):
     fab.run('fab -f ~/git/cstar_perf/tool/cstar_perf/tool/fab_cassandra.py add_git_remotes')
     fab.run('git -C ~/fab/cassandra.git fetch --all')
 
-def install_cstar_perf_frontend(existing_checkout=False):
+def install_cstar_perf_frontend(existing_checkout=False, bootstrap_cassandra=False):
+    """Install the frontend
+
+    If bootstrap_cassandra==True, assume that the client has already been installed and configured
+    """
+    if bootstrap_cassandra:
+        fab.run("cstar_perf_bootstrap -v apache/cassandra-2.1")
+        # Set C* to run automatically on startup:
+        fab.run("")
     if not existing_checkout:
         fab.run("mkdir -p ~/git")
         fab.run("git -C ~/git clone http://github.com/datastax/cstar_perf.git")
