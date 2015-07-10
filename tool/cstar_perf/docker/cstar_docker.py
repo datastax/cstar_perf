@@ -12,6 +12,7 @@ import tempfile
 import time
 from StringIO import StringIO
 import paramiko
+import webbrowser
 from distutils.version import LooseVersion
 
 import logging
@@ -20,6 +21,7 @@ log = logging.getLogger('cstar_docker')
 log.setLevel(logging.DEBUG)
 
 from fabric import api as fab
+from fabric.contrib.files import append as fab_append
 from cstar_perf.tool import fab_deploy
 from fabric.tasks import execute as fab_execute
 
@@ -239,6 +241,9 @@ def get_clusters(cluster_regex='all', all_metadata=False):
     else:
         return cluster_nodes
 
+def check_cluster_exists(cluster_regex):
+    existing_nodes = get_clusters(cluster_regex)
+    return bool(len(existing_nodes))
 
 def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
            install_tool=True, frontend=False, mount_host_src=False, verbose=False,
@@ -281,9 +286,10 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
         ssh_path = os.path.split(get_ssh_key_pair()[0])[0]
         run_cmd = ('docker run --label cstar_node=true --label '
             'cluster_name={cluster_name} --label cluster_type={cluster_type} --label node={node_num} '
-            '-d -m {CONTAINER_DEFAULT_MEMORY} --name={node_name} -h {node_name}'.format(
+            '-d -m {CONTAINER_DEFAULT_MEMORY} --name={node_name} {port_settings} -h {node_name}'.format(
                 cluster_name=cluster_name, node_num=i, node_name=node_name, cluster_type=cluster_type,
-                CONTAINER_DEFAULT_MEMORY=CONTAINER_DEFAULT_MEMORY, ssh_path=ssh_path))
+                CONTAINER_DEFAULT_MEMORY=CONTAINER_DEFAULT_MEMORY, ssh_path=ssh_path,
+                port_settings="-p 127.0.0.1:8000:8000" if frontend else ""))
         if mount_host_src:
             # Try to find the user's git clone of cstar_perf:
             candidates = [
@@ -344,20 +350,49 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
             fab.run("cstar_perf_bootstrap -v cassandra-2.1.8")
         with fab.settings(hosts=ip):
             fab_execute(setup_cassandra)
-        def setup_cassandra_boot():
-            fab.run("echo '' >> /supervisord.conf")
-            fab.run("echo '[program:cassandra]' >> /supervisord.conf")
-            fab.run("echo 'command=/home/cstar/fab/cassandra/bin/cassandra' >> /supervisord.conf")
-            fab.run("echo 'user=cstar' >> /supervisord.conf")
-            fab.run("echo 'autostart=true' >> /supervisord.conf")
-            fab.run("echo 'autorestart=false' >> /supervisord.conf")
-            fab.run("echo 'redirect_stderr=true' >> /supervisord.conf")
+        def setup_boot_items():
+            boot_items = "\n".join([
+                '',
+                '[program:cassandra]',
+                'command=/home/cstar/fab/cassandra/bin/cassandra -f',
+                'priority=1',
+                'user=cstar',
+                'autostart=true',
+                'autorestart=false',
+                'redirect_stderr=true',
+                '',
+                '[program:cstar_perf_notifications]',
+                'command=cstar_perf_notifications -F',
+                'priority=1',
+                'user=cstar',
+                'autostart=true',
+                'autorestart=true',
+                'startretries=30',
+                'redirect_stderr=true',
+                '',
+                '[program:cstar_perf_server]',
+                'command=cstar_perf_server',
+                'priority=2',
+                'user=cstar',
+                'environment=HOME=/home/cstar',
+                'autostart=true',
+                'startretries=30',
+                'autorestart=true',
+                'redirect_stderr=true',
+                ''
+            ])
+            fab_append("/supervisord.conf", boot_items)
         with fab.settings(hosts=ip, user="root"):
-            fab_execute(setup_cassandra_boot)
+            fab_execute(setup_boot_items)
 
         # Install the frontend as well as Cassandra to hold the frontend DB
         fab_execute(fab_deploy.install_cstar_perf_frontend, existing_checkout=mount_host_src)
-    
+
+        # Restart the container so all the auto boot stuff is applied:
+        subprocess.call(shlex.split("docker restart {}".format(host)))
+        log.info("cstar_perf service started, opening in your browser: http://localhost:8000")
+        webbrowser.open("http://localhost:8000")
+        
 def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False, first_cassandra_node=None):
     first_node = hosts.values()[0]
     other_nodes = hosts.values()[1:]
@@ -514,24 +549,36 @@ def ssh(cluster_name, node, user='cstar', ssh_key_path=os.path.join(os.path.expa
         
 def execute_cmd(cmd, args):
     if cmd == 'launch':
-        try:
-            launch(args.num_nodes, cluster_name=args.name,
-                   destroy_existing=args.destroy_existing,
-                   install_tool=not args.no_install,
-                   mount_host_src=args.mount, verbose=True,
-                   client_double_duty=args.client_double_duty)
-        except:
-            destroy(args.name)
-            raise
+        if not check_cluster_exists(args.name) or args.destroy_existing:
+            try:
+                launch(args.num_nodes, cluster_name=args.name,
+                       destroy_existing=args.destroy_existing,
+                       install_tool=not args.no_install,
+                       mount_host_src=args.mount, verbose=True,
+                       client_double_duty=args.client_double_duty)
+            except:
+                destroy(args.name)
+                raise
+        else:
+            log.error('Cannot launch cluster \'{}\' as it already exists.'.format(args.name))
+            log.error('You must destroy the existing cluster, or use --destroy-existing '
+                      'in your launch command')
+            exit(1)            
     elif cmd == 'frontend':
-        try:
-            launch(1, cluster_name=args.name,
-                   destroy_existing=args.destroy_existing,
-                   frontend=True, client_double_duty=True,
-                   mount_host_src=args.mount, verbose=True)
-        except:
-            destroy(args.name)
-            raise
+        if not check_cluster_exists(args.name) or args.destroy_existing:
+            try:
+                launch(1, cluster_name=args.name,
+                       destroy_existing=args.destroy_existing,
+                       frontend=True, client_double_duty=True,
+                       mount_host_src=args.mount, verbose=True)
+            except:
+                destroy(args.name)
+                raise
+        else:
+            log.error('Cannot launch cluster \'{}\' as it already exists.'.format(args.name))
+            log.error('You must destroy the existing cluster, or use --destroy-existing '
+                      'in your launch command')
+            exit(1)            
     elif cmd == 'associate':
         raise NotImplementedError('todo')
     elif cmd == 'start':
