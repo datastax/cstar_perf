@@ -102,9 +102,42 @@ RUN mkdir -p /home/cstar/git/cstar_perf && \
     chown -R cstar:cstar /data
 VOLUME ["/home/cstar/git/cstar_perf"]
 
+RUN echo "%wheel        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers && \
+    groupadd wheel && \
+    gpasswd -a cstar wheel
+
 ### Expose SSH and Cassandra ports
 EXPOSE 22 7000 7001 7199 9042 9160 61620 61621
-CMD ["/usr/sbin/sshd", "-D"]
+
+RUN pip install supervisor
+RUN echo "[unix_http_server]" > /supervisord.conf && \
+    echo "file=/tmp/supervisor.sock"                                                        >> /supervisord.conf && \
+    echo ""                                                                                 >> /supervisord.conf && \
+    echo "[supervisord]"                                                                    >> /supervisord.conf && \
+    echo "logfile=/tmp/supervisord.log "                                                    >> /supervisord.conf && \
+    echo "logfile_maxbytes=50MB        "                                                    >> /supervisord.conf && \
+    echo "logfile_backups=10           "                                                    >> /supervisord.conf && \
+    echo "loglevel=info                "                                                    >> /supervisord.conf && \
+    echo "pidfile=/tmp/supervisord.pid "                                                    >> /supervisord.conf && \
+    echo "nodaemon=false               "                                                    >> /supervisord.conf && \
+    echo "minfds=1024                  "                                                    >> /supervisord.conf && \
+    echo "minprocs=200                 "                                                    >> /supervisord.conf && \
+    echo ""                                                                                 >> /supervisord.conf && \
+    echo "[rpcinterface:supervisor]"                                                        >> /supervisord.conf && \
+    echo "supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface" >> /supervisord.conf && \
+    echo ""                                                                                 >> /supervisord.conf && \
+    echo ""                                                                                 >> /supervisord.conf && \
+    echo "[supervisorctl]"                                                                  >> /supervisord.conf && \
+    echo "serverurl=unix:///tmp/supervisor.sock "                                           >> /supervisord.conf && \
+    echo ""                                                                                 >> /supervisord.conf && \
+    echo "[program:sshd]"                                                                   >> /supervisord.conf && \
+    echo "command=/usr/sbin/sshd -D"                                                        >> /supervisord.conf && \
+    echo "user=root"                                                                        >> /supervisord.conf && \
+    echo "autostart=true"                                                                   >> /supervisord.conf && \
+    echo "autorestart=true"                                                                 >> /supervisord.conf && \
+    echo "redirect_stderr=true"                                                             >> /supervisord.conf
+
+CMD ["supervisord", "-n", "-c", "/supervisord.conf"]
 """
 
 
@@ -286,20 +319,11 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
 
     if frontend:
         log.info("Installing cstar_perf.frontend ... ")
-        try:
-            __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=mount_host_src)
-        except:
-            destroy(cluster_name)
-            raise
+        __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=mount_host_src)
     elif install_tool:
         log.info("Installing cstar_perf.tool ... ")
-        try:
-            __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=mount_host_src,
-                                      first_cassandra_node=first_cassandra_node)
-        except:
-            destroy(cluster_name)
-            raise
-            
+        __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=mount_host_src,
+                                      first_cassandra_node=first_cassandra_node)            
     if verbose:
         print("Started {} nodes:".format(num_nodes))
         print("")
@@ -313,10 +337,26 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
         # Setup cstar_perf.tool, not normally needed on the frontend, but we'll use it to
         # easily bootstrap the frontend's C* backend:
         fab_execute(fab_deploy.setup_fab_dir)
-        __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=mount_host_src, first_cassandra_node=0)        
+        __install_cstar_perf_tool(cluster_name, {host:ip}, mount_host_src=mount_host_src, first_cassandra_node=0)        
+        # Setup C* and add it to the supervisor to start on boot:
+        def setup_cassandra():
+            __update_node_ip_addresses(cluster_name, static_ips={host:'127.0.0.1'})
+            fab.run("cstar_perf_bootstrap -v cassandra-2.1.8")
+        with fab.settings(hosts=ip):
+            fab_execute(setup_cassandra)
+        def setup_cassandra_boot():
+            fab.run("echo '' >> /supervisord.conf")
+            fab.run("echo '[program:cassandra]' >> /supervisord.conf")
+            fab.run("echo 'command=/home/cstar/fab/cassandra/bin/cassandra' >> /supervisord.conf")
+            fab.run("echo 'user=cstar' >> /supervisord.conf")
+            fab.run("echo 'autostart=true' >> /supervisord.conf")
+            fab.run("echo 'autorestart=false' >> /supervisord.conf")
+            fab.run("echo 'redirect_stderr=true' >> /supervisord.conf")
+        with fab.settings(hosts=ip, user="root"):
+            fab_execute(setup_cassandra_boot)
 
         # Install the frontend as well as Cassandra to hold the frontend DB
-        fab_execute(fab_deploy.install_cstar_perf_frontend, existing_checkout=mount_host_src, bootstrap_cassandra=True)
+        fab_execute(fab_deploy.install_cstar_perf_frontend, existing_checkout=mount_host_src)
     
 def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False, first_cassandra_node=None):
     first_node = hosts.values()[0]
@@ -390,15 +430,21 @@ def destroy(cluster_regex):
             destroy_cmd = shlex.split("docker rm -f {}".format(container))
             subprocess.call(destroy_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-def __update_node_ip_addresses(cluster_name):
+def __update_node_ip_addresses(cluster_name, static_ips=None):
     """Update node ip addresses
 
     This is necessary because docker assigns new IP addresses each time a container is restarted
+
+    if static_ips is provided, interpret as a dictionary mapping hosts to ips.
     """
     # Retrieve the current ~/.cstar_perf/cluster_config.json on node 00:
     clusters = get_clusters(cluster_name, all_metadata=True)
     cluster = clusters[cluster_name]
     current_ips = dict([(c['Name'], c['NetworkSettings']['IPAddress']) for c in cluster])
+    if static_ips:
+        updated_ips = static_ips
+    else:
+        updated_ips = current_ips
     node0 = cluster[0]['Name']
     with fab.settings(hosts=current_ips[node0]):
         def get_cluster_config():
@@ -410,9 +456,9 @@ def __update_node_ip_addresses(cluster_name):
 
     # Update cluster_config with the current node IP addresses:
     for host, cfg in cluster_config['hosts'].items():
-        cluster_config['hosts'][host]['internal_ip'] = cluster_config['hosts'][host]['external_ip'] = current_ips[host]
+        cluster_config['hosts'][host]['internal_ip'] = cluster_config['hosts'][host]['external_ip'] = updated_ips[host]
 
-    cluster_config['stress_node'] = current_ips[node0]
+    cluster_config['stress_node'] = updated_ips[node0]
 
     # Replace the config file onto node 0:
     with fab.settings(hosts=cluster[0]['NetworkSettings']['IPAddress']):
@@ -468,16 +514,24 @@ def ssh(cluster_name, node, user='cstar', ssh_key_path=os.path.join(os.path.expa
         
 def execute_cmd(cmd, args):
     if cmd == 'launch':
-        launch(args.num_nodes, cluster_name=args.name,
-               destroy_existing=args.destroy_existing,
-               install_tool=not args.no_install,
-               mount_host_src=args.mount, verbose=True,
-               client_double_duty=args.client_double_duty)
+        try:
+            launch(args.num_nodes, cluster_name=args.name,
+                   destroy_existing=args.destroy_existing,
+                   install_tool=not args.no_install,
+                   mount_host_src=args.mount, verbose=True,
+                   client_double_duty=args.client_double_duty)
+        except:
+            destroy(args.name)
+            raise
     elif cmd == 'frontend':
-        launch(1, cluster_name=args.name,
-               destroy_existing=args.destroy_existing,
-               frontend=True, client_double_duty=True,
-               mount_host_src=args.mount, verbose=True)
+        try:
+            launch(1, cluster_name=args.name,
+                   destroy_existing=args.destroy_existing,
+                   frontend=True, client_double_duty=True,
+                   mount_host_src=args.mount, verbose=True)
+        except:
+            destroy(args.name)
+            raise
     elif cmd == 'associate':
         raise NotImplementedError('todo')
     elif cmd == 'start':
@@ -491,7 +545,7 @@ def execute_cmd(cmd, args):
     elif cmd == 'info':
         info(args.cluster_name)
     elif cmd == 'ssh':
-        ssh(args.cluster_name, args.node, user=args.user)
+        ssh(args.cluster_name, args.node, user=args.login_name)
     elif cmd == 'build':
         build_docker_image(force=args.force)
     else:
@@ -536,8 +590,8 @@ def main():
 
     ssh = parser_subparsers.add_parser('ssh', description='SSH to cluster node')
     ssh.add_argument('cluster_name', help='The name of the cluster')
-    ssh.add_argument('node', help='The node number', type=int)
-    ssh.add_argument('-u', '--user', help='User to login as (default: cstar)', default='cstar')
+    ssh.add_argument('node', help='The node number', type=int, nargs='?', default=0)
+    ssh.add_argument('-l', '--login_name', help='User to login as (default: cstar)', default='cstar')
 
     build = parser_subparsers.add_parser('build', description='Build the Docker image')
     build.add_argument(
