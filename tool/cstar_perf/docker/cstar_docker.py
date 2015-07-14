@@ -201,6 +201,7 @@ def get_clusters(cluster_regex='all', all_metadata=False):
     Returns a list of names, unless all_metadata=True, then a map of
     all container inspection data is returned.
     """
+    cluster_regex = cluster_regex + ("" if cluster_regex.endswith("$") else "$")
     clusters = defaultdict(list) # {cluster_name : [first_node_metadata, 2nd...], ...}
     cluster_nodes = defaultdict(list)
     p = subprocess.Popen(shlex.split("docker ps -aq"), stdout=subprocess.PIPE)
@@ -218,7 +219,7 @@ def get_clusters(cluster_regex='all', all_metadata=False):
                 if labels['cstar_node'] == 'true':
                     container_name = data['Name'] = data['Name'].lstrip('/')
                     node_num = labels['node'] = int(labels['node'])
-                    if cluster_regex.lower() == 'all' or re.match(cluster_regex, container_name):
+                    if cluster_regex.lower() == 'all$' or re.match(cluster_regex, labels['cluster_name']):
                         clusters[labels['cluster_name']].append(data)
                         cluster_nodes[labels['cluster_name']].append(container_name)
             except KeyError:
