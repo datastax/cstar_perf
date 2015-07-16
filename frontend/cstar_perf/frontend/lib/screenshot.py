@@ -1,11 +1,17 @@
-"""
-Uses a selenium grid instance to retrieve graph images and store them as png
+"""Uses a selenium grid instance to retrieve graph images and store them as png.
+
+Depends on the Selenium client driver and docker setup for the user account running this script.
 
 Usage: 
 
 >>> from cstar_perf.frontend.lib import screenshot
 >>> screenshot.get_graph_png(url="http://cstar.datastax.com/graph?stats=ffbe9cb6-2b31-11e5-af4a-42010af0688f",
                              image_path="my_screenshot.png")
+
+The first time this is run, it will download the selenium docker
+container, start up the grid service on localhost:4444, fetch the
+given url, wait for it to render, then take a screenshot and save it
+locally.
 
 """
 
@@ -50,7 +56,7 @@ def start_selenium_grid(docker_image='selenium/standalone-chrome'):
                              '127.0.0.1:4444:4444',
                              '--name',
                              'cstar_perf_selenium',
-                             'selenium/standalone-chrome'])
+                             docker_image])
         assert check_docker_service() == (True, True), "Docker failed to create or start container"
     else:
         logging.info("Found running cstar_perf_selenium docker container ...")
