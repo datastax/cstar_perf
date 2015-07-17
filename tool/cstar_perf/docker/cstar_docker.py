@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 import json
+import hashlib
 from collections import defaultdict, OrderedDict
 import tempfile
 import time
@@ -52,6 +53,7 @@ RUN \
       libssl-dev \
       ant \
       libjna-java \
+      psmisc \
       python-software-properties
 
 RUN echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections && \
@@ -157,9 +159,13 @@ def check_docker_version(expected_version='1.6.0'):
             raise AssertionError(
                 'Found docker version {}. This tool requires version {}+'.format(
                     version, expected_version))
+
+def get_dockerfile():
+    ssh_pub_file=get_ssh_key_pair()[1]
+    with open(ssh_pub_file) as f:
+        return dockerfile.format(ssh_pub_key=f.read().strip())
         
 def build_docker_image(tag=docker_image_name, force=False):
-    ssh_pub_file=get_ssh_key_pair()[1]
     if force:
         rmi_cmd = shlex.split("docker rmi -f {} -".format(tag))
         log.info('Removing docker image...')
@@ -167,9 +173,30 @@ def build_docker_image(tag=docker_image_name, force=False):
 
     build_cmd = shlex.split("docker build -t {} {} -".format(tag, '--no-cache' if force else ''))
     p=subprocess.Popen(build_cmd, stdin=subprocess.PIPE)
-    with open(ssh_pub_file) as f:
-        p.communicate(dockerfile.format(ssh_pub_key=f.read().strip()))
-    
+    p.communicate(get_dockerfile())
+    if p.returncode == 0:
+        # Save the hash of the dockerfile so we can know if we need to
+        # rebuild the image:
+        dockerfile_hash = os.path.join(os.path.expanduser("~"), ".cstar_perf","cstar_docker_image_hash")
+        docker_image_hash = hashlib.sha256(get_dockerfile()).hexdigest()
+        with open(dockerfile_hash, 'w') as f:
+            f.write(docker_image_hash)
+
+def check_if_build_necessary(exit_if_not_ready=True):
+    """Checks the previous hash of the dockerfile against the latest
+    version to determine if a rebuild is nescessary"""
+    current_dockerfile_hash = hashlib.sha256(get_dockerfile()).hexdigest()
+    try:
+        with open(os.path.join(os.path.expanduser("~"), ".cstar_perf","cstar_docker_image_hash")) as f:
+            previous_dockerfile_hash = f.read().strip()
+        needs_rebuild = not current_dockerfile_hash == previous_dockerfile_hash
+    except IOError:
+        needs_rebuild = True
+    if needs_rebuild and exit_if_not_ready:
+        print("The Dockerfile has changed since you last built the image. You must rebuild your image:")
+        print ("   cstar_docker build")
+        exit(1)
+        
 def get_container_data(container):
     inspect_cmd = shlex.split("docker inspect {}".format(container))
     p = subprocess.Popen(inspect_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -250,7 +277,6 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
            install_tool=True, frontend=False, mount_host_src=False, verbose=False,
            client_double_duty=False):
     """Launch cluster nodes, return metadata (ip addresses etc) for the nodes"""
-
     assert num_nodes > 0, "Cannot start a cluster with {} nodes".format(num_nodes)
     if frontend:
         assert num_nodes == 1 and client_double_duty, "Can only start a frontend with a single node"
@@ -263,6 +289,8 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
         print("The docker image {} was not found, build the docker image first "
               "with: 'cstar_docker build'".format(docker_image_name))
         exit(1)
+    check_if_build_necessary()
+
     existing_nodes = get_clusters(cluster_name)
     if len(existing_nodes):
         if destroy_existing:
