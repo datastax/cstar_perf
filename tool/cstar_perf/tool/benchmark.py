@@ -280,7 +280,8 @@ def set_device_read_ahead(read_ahead, devices=None):
 
 def drop_page_cache():
     """Drop the page cache"""
-    bash(['sync', 'echo 3 > /proc/sys/vm/drop_caches'], user='root')
+    if not config.get('docker', False):
+        bash(['sync', 'echo 3 > /proc/sys/vm/drop_caches'], user='root')
 
 def setup_stress(stress_revision):
     stress_path = None
