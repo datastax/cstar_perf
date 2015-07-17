@@ -84,7 +84,8 @@ def install_cstar_perf_tool(existing_checkout=False):
         fab.run("pip install -e /home/cstar/git/cstar_perf/tool")
 
     # Add all the git remotes and fetch:
-    fab.run('fab -f ~/git/cstar_perf/tool/cstar_perf/tool/fab_cassandra.py add_git_remotes')
+    fab.run('fab -f ~/git/cstar_perf/tool/cstar_perf/tool/fab_cassandra.py -H {hosts} add_git_remotes'.format(
+        hosts=",".join([fab.env.hosts] if isinstance(fab.env.hosts, basestring) else fab.env.hosts)))
     fab.run('git -C ~/fab/cassandra.git fetch --all')
 
 def install_cstar_perf_frontend(existing_checkout=False):
