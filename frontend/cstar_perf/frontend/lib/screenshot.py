@@ -26,6 +26,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
+from PIL import Image
+from io import BytesIO
 
 def check_docker_service():
     """Checks if the selenium docker instance is running
@@ -61,8 +63,9 @@ def start_selenium_grid(docker_image='selenium/standalone-chrome'):
     else:
         logging.info("Found running cstar_perf_selenium docker container ...")
         
-def get_graph_png(url, image_path, timeout=60):
+def get_graph_png(url, image_path=None, timeout=60, x_crop=None, y_crop=None):
     start_selenium_grid()
+    print "Fetching screenshot of url " + url
 
     driver = webdriver.Remote(
         command_executor='http://127.0.0.1:4444/wd/hub',
@@ -74,8 +77,35 @@ def get_graph_png(url, image_path, timeout=60):
         element = WebDriverWait(driver, timeout).until(
             EC.presence_of_element_located((By.ID, "svg_container"))
         )
-        driver.save_screenshot(image_path)
-        logging.info("Saved image: {image_path}".format(image_path=image_path))
+
+        imageBytes = driver.get_screenshot_as_png()
+
+        if x_crop is not None or y_crop is not None:
+            image = Image.open(BytesIO(imageBytes))
+
+            box = image.getbbox()
+            left = 0
+            upper = 0
+            right = box[2]
+            lower = box[3]
+
+            if x_crop is not None:
+                right = x_crop
+            if y_crop is not None:
+                lower = y_crop
+
+            image = image.crop( (left, upper, right, lower) )
+
+            newBytes = BytesIO()
+            image.save(newBytes, "PNG")
+            imageBytes = newBytes.getvalue()
+
+        if image_path:
+            logging.info("Saved image: {image_path}".format(image_path=image_path))
+            with open(image_path, 'wb') as f:
+                f.write(imageBytes)
+        else:
+            return imageBytes
     finally:
         driver.quit()
 

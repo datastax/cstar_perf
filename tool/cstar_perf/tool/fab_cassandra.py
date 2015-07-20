@@ -256,7 +256,9 @@ def bootstrap(git_fetch=True):
 
     #Fetch latest git changes:
     if git_fetch:
+        print "fetching git"
         git_checkout_status = fab.run('test -d ~/fab/cassandra.git', quiet=True)
+        print "git checkout status " + git_checkout_status
         if git_checkout_status.return_code > 0:
             fab.run('git init --bare ~/fab/cassandra.git')
             for name,url in git_repos:
