@@ -199,6 +199,7 @@ class JobRunner(object):
         job_dir = os.path.join(os.path.expanduser('~'),'.cstar_perf','jobs',job['test_id'])
         mkpath(job_dir)
         stats_path = os.path.join(job_dir,'stats.{test_id}.json'.format(test_id=job['test_id']))
+        summary_path = os.path.join(job_dir,'stats_summary.{test_id}.json'.format(test_id=job['test_id']))
         stress_log_path = os.path.join(job_dir,'stress_compare.{test_id}.log'.format(test_id=job['test_id']))
 
         stress_json = json.dumps(dict(revisions=job['revisions'],
@@ -256,6 +257,12 @@ class JobRunner(object):
             stats = json.loads(stats.read())
             for rev in stats['revisions']:
                 system_logs.append(os.path.join(log_dir, "{name}.tar.gz".format(name=rev['last_log'])))
+            with open(summary_path, 'w') as summary:
+                for rev in job['revisions']:
+                    for op_num, op in enumerate(job['operations']):
+                        if op['type'] == 'stress':
+                            del stats['stats'][op_num]['intervals']
+                json.dump(obj=stats, fp=summary, sort_keys=True, indent=4, separators=(',', ': '))
         # Make a new tarball containing all the revision logs:
         tmptardir = tempfile.mkdtemp()
         try:
@@ -305,6 +312,7 @@ class JobRunner(object):
             We already stream console logs during the job itself, but
             these can get interrupted, so, better to send it again.
           stats       - stress statistics (intervals, aggregates) JSON
+          stats_summary - stress statistics with only aggregates
           system_logs - cassandra logs
 
         returns a namedtuple of sent, failed to transmit, or missing artifacts.
@@ -329,6 +337,7 @@ class JobRunner(object):
         for kind, pattern, binary in (
                 ('console', 'stress_compare.{job_id}.log', False),
                 ('stats', 'stats.{job_id}.json', False),
+                ('stats_summary', 'stats_summary.{job_id}.json', False),
                 ('system_logs', 'cassandra_logs.{job_id}.tar.gz', True)):
             stream(kind, pattern, binary)
 
