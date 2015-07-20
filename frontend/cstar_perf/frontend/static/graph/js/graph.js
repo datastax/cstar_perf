@@ -12,84 +12,100 @@ var drawGraph = function() {
     var operation = query.operation;
     var smoothing = query.smoothing;
     var show_aggregates = query.show_aggregates;
+    var no_decorations = query.no_decorations;
+    var command = query.command;
+    var rendering_series_graph = command == 'series';
+    var draw_decorations = (no_decorations && no_decorations === 'false') || !no_decorations;
 
     xmin = query.xmin;
     xmax = query.xmax;
     ymin = query.ymin;
     ymax = query.ymax;
 
-    //Stress metrics, depend on the version of stress used.
-    //Here are the latest trunk metrics:
-    var stress_trunk_metrics = [
-        'total_ops',
-        'op_rate',
-        'key_rate',
-        'row_rate',
-        'mean',
-        'med',
-        '95th_latency',
-        '99th_latency',
-        '99.9th_latency',
-        'max_latency',
-        'elapsed_time',
-        'stderr',
-        'errors',
-        'gc_count',
-        'gc_max_ms',
-        'gc_sum_ms',
-        'gc_sdv_ms',
-        'gc_mb'
-    ];
-
-    //Stress metrics from cassandra 2.1
-    var stress_21_metrics = [
-        'total_ops',
-        'adj_row_rate',
-        'op_rate',
-        'key_rate',
-        'row_rate',
-        'mean',
-        'med',
-        '95th_latency',
-        '99th_latency',
-        '99.9th_latency',
-        'max_latency',
-        'elapsed_time',
-        'stderr',
-        'gc_count',
-        'gc_max_ms',
-        'gc_sum_ms',
-        'gc_sdv_ms',
-        'gc_mb'
-    ]
-
-    // Use the stats date to determine which stats to use :
-    // Before May 13th 2014 - we use cassandra 2.1 metrics
-    if (UUID_to_Date(query.stats) < 1431534892202) {
-        var stress_metrics = stress_21_metrics;
-    } else {
-        var stress_metrics = stress_trunk_metrics;
-    }
-    
-    var stress_metric_names = {
-        'total_ops': 'Total operations',
-        'op_rate': 'Operations / Second',
-        'key_rate': 'Key rate',
-        'mean': 'Latency mean',
-        'med': 'Latency median',
-        '95th_latency': 'Latency 95th percentile',
-        '99th_latency': 'Latency 99th percentile',
-        '99.9th_latency': 'Latency 99.9th percentile',
-        'max_latency': 'Maximum latency',
-        'elapsed_time': 'Total operation time (seconds)',
-        'stderr': 'stderr',
-        'errors': 'error count',
-        'gc_count': 'GC count',
-        'gc_max_ms': 'GC longest pause (ms)',
-        'gc_sum_ms': 'GC total pause (ms)',
-        'gc_sdv_ms': 'GC pause standard deviation (ms)',
-        'gc_mb': 'GC memory freed (MB)'
+    //Map from a URL metric selection to the array in the JSON object returned by the frontend
+    var series_summary_metrics = {
+        'op_rate' : 'op rate',
+        '99th_latency' : 'latency 99th percentile',
+        '99.9th_latency' : 'latency 99.9th percentile'
     };
+
+    if (rendering_series_graph) {
+        stats_db = '/api/series/' + query.series + '/' + query.start_timestamp + '/' + query.end_timestamp + '/summaries';
+        draw_decorations = false;
+    } else {
+        //Stress metrics, depend on the version of stress used.
+        //Here are the latest trunk metrics:
+        var stress_trunk_metrics = [
+            'total_ops',
+            'op_rate',
+            'key_rate',
+            'row_rate',
+            'mean',
+            'med',
+            '95th_latency',
+            '99th_latency',
+            '99.9th_latency',
+            'max_latency',
+            'elapsed_time',
+            'stderr',
+            'errors',
+            'gc_count',
+            'gc_max_ms',
+            'gc_sum_ms',
+            'gc_sdv_ms',
+            'gc_mb'
+        ];
+
+        //Stress metrics from cassandra 2.1
+        var stress_21_metrics = [
+            'total_ops',
+            'adj_row_rate',
+            'op_rate',
+            'key_rate',
+            'row_rate',
+            'mean',
+            'med',
+            '95th_latency',
+            '99th_latency',
+            '99.9th_latency',
+            'max_latency',
+            'elapsed_time',
+            'stderr',
+            'gc_count',
+            'gc_max_ms',
+            'gc_sum_ms',
+            'gc_sdv_ms',
+            'gc_mb'
+        ]
+
+        // Use the stats date to determine which stats to use :
+        // Before May 13th 2014 - we use cassandra 2.1 metrics
+        if (UUID_to_Date(query.stats) < 1431534892202) {
+            var stress_metrics = stress_21_metrics;
+        } else {
+            var stress_metrics = stress_trunk_metrics;
+        }
+
+        var stress_metric_names = {
+            'total_ops': 'Total operations',
+            'op_rate': 'Operations / Second',
+            'key_rate': 'Key rate',
+            'mean': 'Latency mean',
+            'med': 'Latency median',
+            '95th_latency': 'Latency 95th percentile',
+            '99th_latency': 'Latency 99th percentile',
+            '99.9th_latency': 'Latency 99.9th percentile',
+            'max_latency': 'Maximum latency',
+            'elapsed_time': 'Total operation time (seconds)',
+            'stderr': 'stderr',
+            'errors': 'error count',
+            'gc_count': 'GC count',
+            'gc_max_ms': 'GC longest pause (ms)',
+            'gc_sum_ms': 'GC total pause (ms)',
+            'gc_sdv_ms': 'GC pause standard deviation (ms)',
+            'gc_mb': 'GC memory freed (MB)'
+        };
+    }
 
     var updateURLBar = function() {
         //Update the URL bar with the current parameters:
@@ -114,55 +130,69 @@ var drawGraph = function() {
     console.log(show_aggregates);
     updateURLBar();
 
-    var metric_index = stress_metrics.indexOf(metric);
-    var time_index = stress_metrics.indexOf('elapsed_time');
+    var xLabel;
+    var yLabel;
+    if (rendering_series_graph) {
+        metric_index = 0;
+        time_index = 1;
+        xLabel = "Date";
+        yLabel = series_summary_metrics[query.metric];
+    } else {
+        var metric_index = stress_metrics.indexOf(metric);
+        var time_index = stress_metrics.indexOf('elapsed_time');
+        xLabel = stress_metric_names['elapsed_time'];
+        yLabel = stress_metric_names[metric];
+    }
+    var operation_selector;
 
-    /// Add dropdown controls to select chart criteria / options:
-    var chart_controls = $('<div id="chart_controls"/>');
-    var chart_controls_tbl = $('<table/>');
-    chart_controls.append(chart_controls_tbl);
-    $('body').append(chart_controls);
-    var metric_selector = $('<select id="metric_selector"/>');
-    $.each(stress_metric_names, function(k,v) {
-        if (k == 'elapsed_time') {
-            return; //Elapsed time makes no sense to graph, skip it.
-        }
-        var option = $('<option/>').attr('value', k).text(v);
-        if (metric == k) {
-            option.attr('selected','selected');
-        }
-        metric_selector.append(option);
+    if (draw_decorations) {
+        /// Add dropdown controls to select chart criteria / options:
+        var chart_controls = $('<div id="chart_controls"/>');
+        var chart_controls_tbl = $('<table/>');
+        chart_controls.append(chart_controls_tbl);
+        $('body').append(chart_controls);
+        var metric_selector = $('<select id="metric_selector"/>');
+        $.each(stress_metric_names, function(k,v) {
+            if (k == 'elapsed_time') {
+                return; //Elapsed time makes no sense to graph, skip it.
+            }
+            var option = $('<option/>').attr('value', k).text(v);
+            if (metric == k) {
+                option.attr('selected','selected');
+            }
+            metric_selector.append(option);
 
-    });
-    chart_controls_tbl.append('<tr><td><label for="metric_selector"/>Choose metric:</label></td><td id="metric_selector_td"></td></tr>')
-    $('#metric_selector_td').append(metric_selector);
+        });
+        chart_controls_tbl.append('<tr><td><label for="metric_selector"/>Choose metric:</label></td><td id="metric_selector_td"></td></tr>')
+        $('#metric_selector_td').append(metric_selector);
 
-    var operation_selector = $('<select id="operation_selector"/>')
-    chart_controls_tbl.append('<tr><td><label for="operation_selector"/>Choose operation:</label></td><td id="operation_selector_td"></td></tr>')
-    $('#operation_selector_td').append(operation_selector);
+        operation_selector = $('<select id="operation_selector"/>')
+        chart_controls_tbl.append('<tr><td><label for="operation_selector"/>Choose operation:</label></td><td id="operation_selector_td"></td></tr>')
+        $('#operation_selector_td').append(operation_selector);
 
 
-    var smoothing_selector = $('<select id="smoothing_selector"/>')
-    $.each([1,2,3,4,5,6,7,8], function(i, v) {
-        var option = $('<option/>').attr('value', v).text(v);
-        if (smoothing == v) {
-            option.attr('selected','selected');
-        }
-        smoothing_selector.append(option);
-    });
-    chart_controls_tbl.append('<tr><td style="width:150px"><label for="smoothing_selector"/>Data smoothing:</label></td><td id="smoothing_selector_td"></td></tr>')
-    $("#smoothing_selector_td").append(smoothing_selector);
+        var smoothing_selector = $('<select id="smoothing_selector"/>')
+        $.each([1,2,3,4,5,6,7,8], function(i, v) {
+            var option = $('<option/>').attr('value', v).text(v);
+            if (smoothing == v) {
+                option.attr('selected','selected');
+            }
+            smoothing_selector.append(option);
+        });
+        chart_controls_tbl.append('<tr><td style="width:150px"><label for="smoothing_selector"/>Data smoothing:</label></td><td id="smoothing_selector_td"></td></tr>')
+        $("#smoothing_selector_td").append(smoothing_selector);
 
-    var show_aggregates_checkbox = $('<input type="checkbox" id="show_aggregates_checkbox"/>');
-    chart_controls_tbl.append('<tr><td style="padding-top:10px"><label for="show_aggregates_checkbox">Show aggregates</label></td><td id="show_aggregates_td"></td></tr>');
-    $("#show_aggregates_td").append(show_aggregates_checkbox);
-    show_aggregates_checkbox.attr("checked", show_aggregates);
+        var show_aggregates_checkbox = $('<input type="checkbox" id="show_aggregates_checkbox"/>');
+        chart_controls_tbl.append('<tr><td style="padding-top:10px"><label for="show_aggregates_checkbox">Show aggregates</label></td><td id="show_aggregates_td"></td></tr>');
+        $("#show_aggregates_td").append(show_aggregates_checkbox);
+        show_aggregates_checkbox.attr("checked", show_aggregates);
 
-    chart_controls_tbl.append('<tr><td colspan="100%">Zoom: <a href="#" id="reset_zoom">reset</a><table id="zoom"><tr><td><label for="xmin"/>x min</label></td><td><input id="xmin"/></td><td><label for="xmax"/>x max</label></td><td><input id="xmax"/></td></tr><tr><td><label for="ymin"/>y min</label></td><td><input id="ymin"/></td><td><label for="ymax"/>y max</label></td><td><input id="ymax"/></td></tr></table></td></tr>');
+        chart_controls_tbl.append('<tr><td colspan="100%">Zoom: <a href="#" id="reset_zoom">reset</a><table id="zoom"><tr><td><label for="xmin"/>x min</label></td><td><input id="xmin"/></td><td><label for="xmax"/>x max</label></td><td><input id="xmax"/></td></tr><tr><td><label for="ymin"/>y min</label></td><td><input id="ymin"/></td><td><label for="ymax"/>y max</label></td><td><input id="ymax"/></td></tr></table></td></tr>');
 
-    chart_controls_tbl.append('<tr><td style="padding-top:10px" colspan="100%">To hide/show a dataset click on the associated colored box</td></tr>');
+        chart_controls_tbl.append('<tr><td style="padding-top:10px" colspan="100%">To hide/show a dataset click on the associated colored box</td></tr>');
 
-    chart_controls_tbl.append('<tr><td style="padding-top:10px" colspan="100%"><a href="#" id="dl-test-data">Download raw test data</a></td></tr>');
+        chart_controls_tbl.append('<tr><td style="padding-top:10px" colspan="100%"><a href="#" id="dl-test-data">Download raw test data</a></td></tr>');
+    }
 
     var raw_data;
 
@@ -173,55 +203,98 @@ var drawGraph = function() {
         var data_by_title = {};
         //Keep track of what operations are availble from the test:
         var operations = {};
-        
-        raw_data.stats.forEach(function(d) {
-            // Make a copy of d so we never modify raw_data
-            d = $.extend({}, d);
-            operations[d.test] = true;
-            if (d.test!=operation) {
-                return;
-            }
-            d.title = d['label'] != undefined ? d['label'] : d['revision'];
-            data_by_title[d.title] = d;
-            data.push(d);
-            trials[d.title] = d;
-            //Clean up the intervals:
-            //Remove every other item, so as to smooth the line:
-            var new_intervals = [];
-            d.intervals.forEach(function(i, x) {
-                if (x % smoothing == 0) {
-                    new_intervals.push(i);
-                }
-            });
-            d.intervals = new_intervals;
-        });
 
-        //Fill operations available from test:
-        operation_selector.children().remove();
-        $.each(operations, function(k) {
-            var option = $('<option/>').attr('value', k).text(k);
-            if (operation == k) {
-                option.attr('selected','selected');
-            }
-            operation_selector.append(option);
-        });
-
+        //Don't need to do anything to get the metric for series data
+        //JSON has already been normalized
         var getMetricValue = function(d) {
-            if (metric_index >= 0) {
-                //This is one of the metrics directly reported by stress:
-                return d[metric_index];
-            } else {
-                //This metric is not reported by stress, so compute it ourselves:
-                if (metric == 'num_timeouts') {
-                    return d[stress_metrics.indexOf('interval_op_rate')] - d[stress_metrics.indexOf('interval_key_rate')];
-                }
-            }
+            return d[0];
         };
 
-        //Parse the dates:
-        data.forEach(function(d) {
-            d.date = new Date(Date.parse(d.date));
-        });
+        //Graphing a series of jobs is a completely different animal.
+        if (rendering_series_graph) {
+            var process_summary = function( operation, revision, summaries) {
+                var fakeData = {};
+                var fakeIntervals = [];
+                fakeData.intervals = fakeIntervals;
+                fakeData.title = revision;
+                data.push(fakeData);
+                raw_data.title = query.series;
+
+                fakeTime = 1;
+
+                for (datum of summaries[series_summary_metrics[query.metric]]) {
+                    fakeIntervals.push([ parseFloat(datum), fakeTime]);
+                    fakeTime++;
+                }
+
+                trials[fakeData.title] = fakeData;
+                data_by_title[fakeData.title] = fakeData;
+            };
+
+            //Side effects? What side effects?
+            for (var candidateOperation in raw_data.summaries) {
+                if (!raw_data.summaries.hasOwnProperty(candidateOperation)) continue
+                if (!(candidateOperation === operation))
+                    continue;
+
+                for (var candidateRevision in raw_data.summaries[candidateOperation]) {
+                    if (!raw_data.summaries[candidateOperation].hasOwnProperty(candidateRevision)) continue
+                    process_summary( candidateOperation, candidateRevision, raw_data.summaries[candidateOperation][candidateRevision]);
+                }
+            }
+        } else {
+            //Graph interval metrics from within an individual job
+            raw_data.stats.forEach(function(d) {
+                // Make a copy of d so we never modify raw_data
+                d = $.extend({}, d);
+                operations[d.test] = true;
+                if (d.test!=operation) {
+                    return;
+                }
+                d.title = d['label'] != undefined ? d['label'] : d['revision'];
+                data_by_title[d.title] = d;
+                data.push(d);
+                trials[d.title] = d;
+                //Clean up the intervals:
+                //Remove every other item, so as to smooth the line:
+                var new_intervals = [];
+                d.intervals.forEach(function(i, x) {
+                    if (x % smoothing == 0) {
+                        new_intervals.push(i);
+                    }
+                });
+                d.intervals = new_intervals;
+            });
+
+            //Fill operations available from test:
+            if (operation_selector) {
+                operation_selector.children().remove();
+                $.each(operations, function(k) {
+                    var option = $('<option/>').attr('value', k).text(k);
+                    if (operation == k) {
+                        option.attr('selected','selected');
+                    }
+                    operation_selector.append(option);
+                });
+            }
+
+            getMetricValue = function(d) {
+                if (metric_index >= 0) {
+                    //This is one of the metrics directly reported by stress:
+                    return d[metric_index];
+                } else {
+                    //This metric is not reported by stress, so compute it ourselves:
+                    if (metric == 'num_timeouts') {
+                        return d[stress_metrics.indexOf('interval_op_rate')] - d[stress_metrics.indexOf('interval_key_rate')];
+                    }
+                }
+            };
+
+            //Parse the dates:
+            data.forEach(function(d) {
+                d.date = new Date(Date.parse(d.date));
+            });
+        }
 
         $("svg").remove();
         //Setup initial zoom level:
@@ -233,12 +306,15 @@ var drawGraph = function() {
                 query.ymin = ymin = undefined;
                 query.ymax = ymax = undefined;
             }
-            query.xmin = xmin = query.xmin ? query.xmin : 0;
-            query.xmax = xmax = query.xmax ? query.xmax : Math.round(d3.max(data, function(d) {
+
+            var getMaxX = function(d) {
                 if (d.intervals.length > 0) {
                     return d.intervals[d.intervals.length-1][time_index];
                 }
-            }) * 1.1 * 100) / 100;
+            };
+            
+            query.xmin = xmin = query.xmin ? query.xmin : 0;
+            query.xmax = xmax = query.xmax ? query.xmax : Math.round(d3.max(data, getMaxX) * 1.1 * 100) / 100;
             query.ymin = ymin = query.ymin ? query.ymin : 0;
             query.ymax = ymax = query.ymax ? query.ymax : Math.round(d3.max(data, function(d) {
                 return d3.max(d.intervals, function(i) {
@@ -286,9 +362,16 @@ var drawGraph = function() {
         });
 
         //Setup chart:
-        var margin = {top: 20, right: 1180, bottom: 2240, left: 60};
-        var width = 2060 - margin.left - margin.right;
-        var height = 2700 - margin.top - margin.bottom;
+        if (rendering_series_graph) 
+        {
+            var margin = {top: 20, right: 1180, bottom: 2240, left: 60};
+            var width = 2060 - margin.left - margin.right;
+            var height = 2700 - margin.top - margin.bottom;
+        } else {
+            var margin = {top: 20, right: 1180, bottom: 2240, left: 60};
+            var width = 2060 - margin.left - margin.right;
+            var height = 2700 - margin.top - margin.bottom;
+        }
 
         var x = d3.scale.linear()
             .domain([xmin, xmax])
@@ -380,7 +463,7 @@ var drawGraph = function() {
             .attr("y", height + 30 )
             .style("text-anchor", "middle")
             .style("font-size", "1.2em")
-            .text(stress_metric_names['elapsed_time']);
+            .text(xLabel);
 
         // y-axis
         svg.append("g")
@@ -392,7 +475,7 @@ var drawGraph = function() {
             .attr("dy", ".91em")
             .style("font-size", "1.2em")
             .style("text-anchor", "end")
-            .text(stress_metric_names[metric]);
+            .text(yLabel);
 
         var trial = svg.selectAll(".trial")
             .data(data)
@@ -582,3 +665,4 @@ $(document).ready(function(){
     drawGraph();
 
 });
+

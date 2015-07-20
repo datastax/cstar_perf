@@ -140,6 +140,7 @@ def stress_compare(revisions,
 
         #Only fetch from git on the first run:
         git_fetch = True if rev_num == 0 else False
+        print "git fetch " + str(git_fetch)
         revision_config['git_id'] = git_id = bootstrap(config, destroy=True, leave_data=leave_data, git_fetch=git_fetch)
     
         if capture_fincore:
