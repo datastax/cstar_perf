@@ -299,7 +299,14 @@ def setup_stress(stress_revision):
             sh.git("--git-dir={home}/fab/cassandra.git".format(home=HOME), "archive", git_id),
             'x', '-C', path
         )
-        antcmd('-Dbasedir={}'.format(path), '-f', '{}/build.xml'.format(path), 'realclean', 'jar')
+        try:
+            antcmd('-Dbasedir={}'.format(path), '-f', '{}/build.xml'.format(path),
+                   'realclean', 'jar',
+                   _env={"JAVA_HOME":JAVA_HOME}, _err_to_out=True)
+        except sh.ErrorReturnCode as e:
+            # Using try/except to not get the stdout truncated
+            print(e.stdout)
+            raise(e)
 
     stress_path = os.path.join(path, 'tools/bin/cassandra-stress')
 
