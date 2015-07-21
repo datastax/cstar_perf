@@ -30,6 +30,8 @@ logging.basicConfig()
 logger = logging.getLogger('benchmark')
 logger.setLevel(logging.INFO)
 
+# Ensure stdout is not truncated when a sh.Command fails
+sh.ErrorReturnCode.truncate_cap = 999999
 
 HOME = os.getenv('HOME')
 CASSANDRA_STRESS_PATH = os.path.expanduser("~/fab/stress/")
@@ -299,14 +301,8 @@ def setup_stress(stress_revision):
             sh.git("--git-dir={home}/fab/cassandra.git".format(home=HOME), "archive", git_id),
             'x', '-C', path
         )
-        try:
-            antcmd('-Dbasedir={}'.format(path), '-f', '{}/build.xml'.format(path),
-                   'realclean', 'jar',
-                   _env={"JAVA_HOME":JAVA_HOME}, _err_to_out=True)
-        except sh.ErrorReturnCode as e:
-            # Using try/except to not get the stdout truncated
-            print(e.stdout)
-            raise(e)
+        antcmd('-Dbasedir={}'.format(path), '-f', '{}/build.xml'.format(path),
+               'realclean', 'jar', _env={"JAVA_HOME":JAVA_HOME})
 
     stress_path = os.path.join(path, 'tools/bin/cassandra-stress')
 
