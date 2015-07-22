@@ -135,8 +135,14 @@ def teardown(destroy=False, leave_data=False):
         execute(cstar.stop)
         execute(cstar.ensure_stopped)
 
+class NodetoolException(Exception):
+    pass
+        
 def nodetool(cmd):
-    """Run a nodetool command"""
+    """Run a nodetool command
+    
+    Raises NodetoolException if we can't connect or another error occurs:
+    """
     cmd = "JAVA_HOME={JAVA_HOME} {CASSANDRA_NODETOOL} {cmd}".format(
         JAVA_HOME=JAVA_HOME, CASSANDRA_NODETOOL=CASSANDRA_NODETOOL, cmd=cmd)
     proc = subprocess.Popen(cmd, 
@@ -144,6 +150,8 @@ def nodetool(cmd):
                             stderr=subprocess.STDOUT,
                             shell=True)
     output = proc.communicate()
+    if output.returncode != 0:
+        raise NodetoolException(output)
     return output[0]
 
 def bash(script, nodes=None, user=None):
@@ -194,23 +202,34 @@ def nodetool_multi(nodes, command):
         output[node] = t.output
     return output
 
-def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3, compaction_throughput=16):
+def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
+                        compaction_throughput=16, allowed_connection_errors=10):
     """Wait for all currently scheduled compactions to finish on all (or just specified) nodes
 
     nodes - the nodes to check (None == all)
     check_interval - the time to wait between checks
     idle_confirmations - the number of checks that must show 0 compactions before we assume compactions are really done.
     compaction_throughput - the default compaction_throughput_mb_per_sec setting from the cassandra.yaml
+    allowed_connection_errors - the number of consecutive connection errors allowed before we quit trying
 
     returns the duration all compactions took (margin of error: check_interval * idle_confirmations)
     """
 
     def compactionstats(nodes, check_interval):
         """Check for compactions via nodetool compactionstats"""
+        consecutive_connection_errors = 0
         pattern = re.compile("(^|\n)pending tasks: 0\n")
         nodes = set(nodes)
         while True:
-            output = nodetool_multi(nodes, 'compactionstats')
+            try:
+                output = nodetool_multi(nodes, 'compactionstats')
+                consecutive_connection_errors = 0
+            except NodetoolException:
+                consecutive_connection_errors += 1
+                if consecutive_connection_errors > allowed_connection_errors:
+                    raise NodetoolException(
+                        "Failed to connect via nodetool {consecutive_connection_errors} times in a row.".format(
+                        consecutive_connection_errors=consecutive_connection_errors))
             for node in list(nodes):
                 if pattern.search(output[node]):
                     nodes.remove(node)
@@ -227,12 +246,21 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3, com
 
     def tpstats(nodes, check_interval):
         """Check for compactions via nodetool tpstats"""
+        consecutive_connection_errors = 0
         stat_exists_pattern = re.compile("^CompactionExecutor", re.MULTILINE)
         no_compactions_pattern = re.compile("CompactionExecutor\W*0\W*0\W*[0-9]*\W*0", re.MULTILINE)
 
         nodes = set(nodes)
         while True:
-            output = nodetool_multi(nodes, 'tpstats')
+            try:
+                output = nodetool_multi(nodes, 'tpstats')
+                consecutive_connection_errors = 0
+            except NodetoolException:
+                consecutive_connection_errors += 1
+                if consecutive_connection_errors > allowed_connection_errors:
+                    raise NodetoolException(
+                        "Failed to connect via nodetool {consecutive_connection_errors} times in a row.".format(
+                        consecutive_connection_errors=consecutive_connection_errors))
             for node in list(nodes):
                 if stat_exists_pattern.search(output[node]):
                     if no_compactions_pattern.search(output[node]):
