@@ -150,7 +150,7 @@ def nodetool(cmd):
                             stderr=subprocess.STDOUT,
                             shell=True)
     output = proc.communicate()
-    if output.returncode != 0:
+    if proc.returncode != 0:
         raise NodetoolException(output)
     return output[0]
 
