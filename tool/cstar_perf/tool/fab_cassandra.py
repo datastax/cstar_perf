@@ -111,7 +111,7 @@ log4j.logger.org.apache.thrift.server.TNonblockingServer=ERROR
 
 # An error will be raised if a user try to modify these c* config.
 # They can only be set in the cluster config.
-DENIED_CSTAR_CONFIG = ['commitlog_directory', 'data_file_directories']
+DENIED_CSTAR_CONFIG = ['commitlog_directory', 'data_file_directories', 'saved_caches_directory']
 
 ################################################################################
 ### Setup Configuration:
