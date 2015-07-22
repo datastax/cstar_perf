@@ -45,6 +45,13 @@ def format_bytesize(num):
     return "%3.1f%s" % (num, 'TB')
 
 
+def encode_unicode(
+    obj, encoding='utf-8'):
+    if isinstance(obj, basestring):
+        if not isinstance(obj, unicode):
+            obj = unicode(obj, encoding)
+    return obj
+
 @contextmanager
 def cd(newdir):
     prevdir = os.getcwd()
