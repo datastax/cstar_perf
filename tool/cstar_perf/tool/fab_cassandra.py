@@ -109,6 +109,10 @@ log4j.appender.R.File=${cassandra.logdir}/system.log
 log4j.logger.org.apache.thrift.server.TNonblockingServer=ERROR
 """
 
+# An error will be raised if a user try to modify these c* config.
+# They can only be set in the cluster config.
+DENIED_CSTAR_CONFIG = ['commitlog_directory', 'data_file_directories']
+
 ################################################################################
 ### Setup Configuration:
 ################################################################################
@@ -349,7 +353,11 @@ def bootstrap(git_fetch=True):
     # frontend and bootstrap.py does it. These take precedence over
     # the #1 style and are always validated for typos / invalid options.
     for option, value in config.get('yaml', {}).items():
-        if option not in cstar_config_opts:
+        if option in DENIED_CSTAR_CONFIG:
+            raise ValueError(
+                'C* yaml option "{}" can only be set in the cluster config.'.format(option)
+            )
+        elif option not in cstar_config_opts:
             raise ValueError('Unknown C* yaml option: {}'.format(option))
         cass_yaml[option] = value
 
