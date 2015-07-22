@@ -17,7 +17,7 @@ class APIClient(object):
             r = self.session.get(self.endpoint + path, **kwargs)
         if r.status_code == 200:
             return r.json()
-        raise RuntimeError('Request failed to {} - {} {}'.format(path, r, r.text))
+        raise RuntimeError(u'Request failed to {} - {} {}'.format(path, r, r.text))
 
     def post(self, path, data=None, **kwargs):
         kwargs['headers'] = kwargs.get('headers', {})
@@ -28,7 +28,7 @@ class APIClient(object):
             r = self.session.post(self.endpoint + path, data, **kwargs)
         elif r.status_code == 200:
             return r.json()
-        raise RuntimeError('Request failed to {} - {} {}'.format(path, r, r.text))
+        raise RuntimeError(u'Request failed to {} - {} {}'.format(path, r, r.text))
 
     def delete(self, path, **kwargs):
         r = self.session.delete(self.endpoint + path, **kwargs)
@@ -37,7 +37,7 @@ class APIClient(object):
             r = self.session.delete(self.endpoint + path, **kwargs)
         if r.status_code == 200:
             return r.json()
-        raise RuntimeError('Request failed to {} - {} {}'.format(path, r, r.text))
+        raise RuntimeError(u'Request failed to {} - {} {}'.format(path, r, r.text))
 
     def put(self, path, **kwargs):
         kwargs['headers'] = kwargs.get('headers', {})
@@ -48,7 +48,7 @@ class APIClient(object):
             r = self.session.put(self.endpoint + path, **kwargs)
         if r.status_code == 200:
             return r.json()
-        raise RuntimeError('Request failed to {} - {} {}'.format(path, r, r.text))
+        raise RuntimeError(u'Request failed to {} - {} {}'.format(path, r, r.text))
         
     def login(self):
         """Login to the server, return an authenticated requests session"""
@@ -64,11 +64,11 @@ class APIClient(object):
         try:
             server_key.verify_message(r['token'], r['signature'])
         except Exception, e:
-            raise RuntimeError('The server returned a bad signature for the token.', e)
+            raise RuntimeError(u'The server returned a bad signature for the token.', e)
 
         # Sign the token and post it back:
         data = {'login': self.__client_name,
                 'signature': client_key.sign_message(r['token'])}
         r = self.post('/login', data=json.dumps(data))
         if r.get('success', '') != 'Logged in':
-            raise RuntimeError('Login denied by server')
+            raise RuntimeError(u'Login denied by server')
