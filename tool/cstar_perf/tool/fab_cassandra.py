@@ -249,12 +249,12 @@ def get_cassandra_config_options():
     return [o for o in opts if p.match(o)]
     
 @fab.parallel
-def bootstrap(git_fetch=True):
+def bootstrap(git_fetch=True, revision_override=None):
     """Install and configure Cassandra on each host
     
     Returns the git id for the version checked out.
     """
-    revision = config['revision']
+    revision = revision_override or config['revision']
     partitioner = config['partitioner']
 
     fab.run('mkdir -p fab')
@@ -450,10 +450,12 @@ def start():
 
     # Place environment file on host:
     env = config.get('env', '')
+    fab.puts('env is: {}'.format(env))
 
     if isinstance(env, list) or isinstance(env, tuple):
         env = "\n".join(env)
     env += "\n"
+    fab.puts('env is: {}'.format(env))
     if not config['use_jna']:
         env = 'JVM_EXTRA_OPTS=-Dcassandra.boot_without_jna=true\n\n' + env
     # Turn on GC logging:
@@ -469,6 +471,7 @@ def start():
     fab.run('mkdir -p ~/fab/scripts')
     fab.put(env_file, '~/fab/scripts/{env_script}'.format(env_script=env_script))
 
+    fab.puts('env is: {}'.format(env))
     if len(env_script) > 0:
         fab.run('echo >> ~/fab/scripts/{env_script}'.format(**locals()))
         fab.run('cat ~/fab/cassandra/conf/cassandra-env.sh >> ~/fab/scripts/{env_script}'.format(**locals()))
