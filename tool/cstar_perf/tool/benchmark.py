@@ -110,25 +110,33 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
         hosts += [getpass.getuser() + "@" + localhost]
     if not cfg.get('revision_override'):
         with cstar.fab.settings(hosts=hosts):
-            git_ids = list(execute(cstar.bootstrap, git_fetch=git_fetch).values())
+            git_ids = execute(cstar.bootstrap, git_fetch=git_fetch)
     else:
-        git_ids = []
+        git_ids = {}
         default_hosts = set(hosts) - set(itertools.chain(*cfg['revision_override'].values()))
         print 'default version on {default_hosts}'.format(default_hosts=default_hosts)
         with cstar.fab.settings(hosts=default_hosts):
-            git_ids.extend(list(execute(cstar.bootstrap, git_fetch=git_fetch).values()))
+            git_ids.update(execute(cstar.bootstrap, git_fetch=git_fetch))
         for override_revision, hosts_to_override in cfg['revision_override'].items():
 	    print '{revision} on {hosts_to_override}'.format(revision=override_revision, hosts_to_override=hosts_to_override)
             with cstar.fab.settings(hosts=hosts_to_override):
-                git_ids.extend(list(execute(cstar.bootstrap, git_fetch=git_fetch, revision_override=override_revision).values()))
+                git_ids.update(execute(cstar.bootstrap, git_fetch=git_fetch, revision_override=override_revision))
 
-    git_id_uniques = list(set(git_ids))
+    overridden_host_versions = {}
+    for v, hs in cfg['revision_override'].items():
+        overridden_host_versions.update({h: v for h in hs})
+    expected_host_versions = dict({h: cfg['revision'] for h in hosts}, **overridden_host_versions)
+    expected_host_shas = {h: str(sh.git('--git-dir={home}/fab/cassandra.git'.format(home=HOME), 'rev-parse', v))
+                          for (h, v) in expected_host_versions.items()}
+    expected_host_shas = {h: v.strip() for (h, v) in expected_host_shas.items()}
+
+    assert expected_host_shas == git_ids, 'expected: {}\ngot:{}'.format(expected_host_shas, git_ids)
 
     execute(cstar.start)
     execute(cstar.ensure_running, hosts=[cstar.config['seeds'][0]])
     time.sleep(30)
 
-    logger.info("Started cassandra on {n} nodes with git SHAs: {git_id_uniques}".format(n=len(cstar.fab.env['hosts']), git_id_uniques=git_id_uniques))
+    logger.info("Started cassandra on {n} nodes with git SHAs: {git_ids}".format(n=len(cstar.fab.env['hosts']), git_ids=git_ids))
     return git_ids
 
 def restart():
