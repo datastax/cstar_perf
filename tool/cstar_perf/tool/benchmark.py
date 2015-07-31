@@ -123,7 +123,7 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
                 git_ids.update(execute(cstar.bootstrap, git_fetch=git_fetch, revision_override=override_revision))
 
     overridden_host_versions = {}
-    for v, hs in cfg['revision_override'].items():
+    for v, hs in cfg.get('revision_override', {}).items():
         overridden_host_versions.update({h: v for h in hs})
     expected_host_versions = dict({h: cfg['revision'] for h in hosts}, **overridden_host_versions)
     expected_host_shas = {h: str(sh.git('--git-dir={home}/fab/cassandra.git'.format(home=HOME), 'rev-parse', v))
