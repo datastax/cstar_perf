@@ -27,7 +27,7 @@ def load_app_config(config_path=SERVER_CONFIG_PATH):
     config.read(config_path)
     # Ensure app has secret key for signing cookies:
     if not config.has_section('server') or not config.has_option('server','app_secret'):
-        raise AssertionError('config file ({path}) does not contain app secret'.format(SERVER_CONFIG_PATH))
+        raise AssertionError('config file ({}) does not contain app secret'.format(SERVER_CONFIG_PATH))
     return config
 
 

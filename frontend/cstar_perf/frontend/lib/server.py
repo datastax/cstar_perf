@@ -51,7 +51,8 @@ def main():
     if not os.path.exists(SERVER_KEY_PATH):
         generate_server_keys()
         create_app_config()
-        if args.gen_credentials:
-            return
+
+    if args.gen_credentials:
+        return
 
     run_server()
