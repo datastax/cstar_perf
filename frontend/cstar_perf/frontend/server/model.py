@@ -49,6 +49,11 @@ from collections import namedtuple
 from cstar_perf.frontend.lib.util import random_token, uuid_to_datetime
 from cstar_perf.frontend.server.email_notifications import TestStatusUpdateEmail
 
+try:
+    import from cassandra.util import OrderedMap
+except ImportError:
+    OrderedMap = None
+
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger('cstar_perf.model')
 logging.getLogger('cassandra').setLevel(logging.WARNING)
@@ -365,9 +370,17 @@ class Model(object):
         rows = session.execute(self.__prepared_statements['select_clusters'], [])
         clusters = {}
         for row in rows:
+            jvms = row[2]
+
+            # OrderedMap is in recent c* python driver
+            if OrderedMap and isinstance(row[2], OrderedMap):
+                jvms = {}
+                for jvm in row[2]:
+                    jvms[jvm] =  row[2][jvm]
+
             clusters[row[0]] = {'name': row[0],
                                 'description': row[1],
-                                'jvms': row[2],
+                                'jvms': jvms,
                                 'num_nodes' : row[3]}
         return clusters
 
