@@ -397,14 +397,15 @@ class Model(object):
     ################################################################################
     #### API Keys:
     ################################################################################
-    def add_pub_key(self, name, user_type, pubkey):
+    def add_pub_key(self, name, user_type, pubkey, replace=False):
         """Add an API pubkey with the given name and user_type (cluster, user)"""
         session = self.get_session()
-        try:
-            existing_key = self.get_pub_key(name)
-            raise APIKeyExistsError('API key already exists for {name}'.format(name=name))
-        except UnknownAPIKeyError:
-            pass
+        if not replace:
+            try:
+                existing_key = self.get_pub_key(name)
+                raise APIKeyExistsError('API key already exists for {name}'.format(name=name))
+            except UnknownAPIKeyError:
+                pass
         session.execute(self.__prepared_statements['insert_api_pubkey'], (name, user_type, pubkey))
 
     def get_pub_key(self, name):

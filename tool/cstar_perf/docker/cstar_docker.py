@@ -26,6 +26,8 @@ from fabric.contrib.files import append as fab_append
 from cstar_perf.tool import fab_deploy
 from fabric.tasks import execute as fab_execute
 
+import tasks
+
 CONTAINER_DEFAULT_MEMORY = '2G'
 
 fab.env.user = 'cstar'
@@ -269,6 +271,11 @@ def get_clusters(cluster_regex='all', all_metadata=False):
     else:
         return cluster_nodes
 
+def get_ips(cluster_name):
+    clusters = get_clusters(cluster_name, all_metadata=True)
+    cluster = clusters[cluster_name]
+    return tuple((c['Name'], c['NetworkSettings']['IPAddress']) for c in cluster)
+
 def check_cluster_exists(cluster_regex):
     existing_nodes = get_clusters(cluster_regex)
     return bool(len(existing_nodes))
@@ -417,11 +424,21 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
         # Install the frontend as well as Cassandra to hold the frontend DB
         fab_execute(fab_deploy.install_cstar_perf_frontend, existing_checkout=mount_host_src)
 
+        # Generate and save the credentials
+        with fab.settings(hosts=ip):
+            fab_execute(tasks.generate_frontend_credentials)
+
         # Restart the container so all the auto boot stuff is applied:
         subprocess.call(shlex.split("docker restart {}".format(host)))
+
+        # Post Restart setup
+        frontend_name, frontend_ip = get_ips(cluster_name)[0]
+        with fab.settings(hosts=frontend_ip):
+            fab_execute(tasks.create_default_users)
+
         log.info("cstar_perf service started, opening in your browser: http://localhost:8000")
         webbrowser.open("http://localhost:8000")
-        
+
 def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False, first_cassandra_node=None):
     first_node = hosts.values()[0]
     other_nodes = hosts.values()[1:]
@@ -465,6 +482,8 @@ def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False, first_c
         fab_execute(fab_deploy.setup_fab_dir)
         # Install cstar_perf
         fab_execute(fab_deploy.install_cstar_perf_tool, existing_checkout=mount_host_src)
+        # Install cstar_perf.frontend
+        fab_execute(fab_deploy.install_cstar_perf_frontend, existing_checkout=mount_host_src)
     # rsync ~/fab to the other nodes:
     if len(other_nodes) > 0:
         with fab.settings(hosts=other_nodes):
@@ -494,6 +513,51 @@ def destroy(cluster_regex):
         for container in containers:
             destroy_cmd = shlex.split("docker rm -f {}".format(container))
             subprocess.call(destroy_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+def associate(frontend_name, cluster_names):
+
+    try:
+        frontend = get_clusters(frontend_name, all_metadata=True)[frontend_name][0]
+    except IndexError:
+        raise ValueError("No cluster named {} found".format(frontend_name))
+
+    clusters = []
+    for c in cluster_names:
+        try:
+            cluster = get_clusters(c, all_metadata=True)[c]
+        except IndexError:
+            raise ValueError("No cluster named {} found".format(c))
+        clusters.append(cluster)
+
+    frontend_ip = frontend['NetworkSettings']['IPAddress']
+
+    # Configure the client credentials on all clusters
+    with fab.settings(hosts=frontend_ip):
+        frontend_credentials = fab_execute(tasks.get_frontend_credentials).values()[0]
+
+    for cluster in clusters:
+        num_nodes = len(cluster)-1
+        cluster = cluster[0]  # first node
+        cluster_name = cluster['Config']['Labels']['cluster_name']
+        cluster_ip = cluster['NetworkSettings']['IPAddress']
+        with fab.settings(hosts=cluster_ip):
+            fab_execute(tasks.generate_client_credentials, cluster_name,
+                        frontend_credentials['public_key'],
+                        frontend_credentials['verify_code'])
+            # Get the cluster credentials and jvms list
+            cluster_credentials = fab_execute(tasks.get_client_credentials).values()[0]
+            jvms = fab_execute(tasks.get_client_jvms).values()[0]
+
+        # Link the cluster to the frontend
+        with fab.settings(hosts=frontend_ip):
+            fab_execute(tasks.add_cluster_to_frontend, cluster_name, num_nodes,
+                        cluster_credentials['public_key'])
+            for jvm in jvms:
+                fab_execute(tasks.add_jvm_to_cluster, cluster_name, jvm)
+
+        with fab.settings(hosts=cluster_ip, user="root"):
+            fab_execute(tasks.setup_client_daemon, frontend['Name'])
+            fab_execute(tasks.add_or_update_host_ips, ((frontend['Name'], frontend_ip),))
 
 def __update_node_ip_addresses(cluster_name, static_ips=None):
     """Update node ip addresses
@@ -532,9 +596,18 @@ def __update_node_ip_addresses(cluster_name, static_ips=None):
             json.dump(cluster_config, cfg, indent=2)
             fab.put(cfg, "~/.cstar_perf/cluster_config.json")
         fab_execute(put_cluster_config)
-        
+
+    # Update all /etc/hosts file with latest ips
+    hosts = []
+    clusters = get_clusters('all', all_metadata=True)
+    for cluster_name in clusters.keys():
+        hosts.extend(get_ips(cluster_name))
+    with fab.settings(hosts=[ip for host, ip in hosts], user="root"):
+        fab_execute(tasks.add_or_update_host_ips, hosts)
+        fab_execute(tasks.restart_all_services)
+
 def start(cluster_name):
-    """start clusters"""
+    """start cluster"""
     clusters = get_clusters(cluster_name)
     cluster = clusters[cluster_name]
     for container in cluster:
@@ -543,13 +616,13 @@ def start(cluster_name):
     __update_node_ip_addresses(cluster_name)
 
 def stop(cluster_name):
-    """stop clusters"""
+    """stop cluster"""
     clusters = get_clusters(cluster_name)
     cluster = clusters[cluster_name]
     for container in cluster:
         stop_cmd = shlex.split("docker stop {}".format(container))
         subprocess.call(stop_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
+
 def list_clusters():
     """List clusters"""
     clusters = get_clusters('all', all_metadata=True)
@@ -610,11 +683,14 @@ def execute_cmd(cmd, args):
                       'in your launch command')
             exit(1)            
     elif cmd == 'associate':
-        raise NotImplementedError('todo')
+        associate(args.frontend, args.clusters)
     elif cmd == 'start':
         start(cluster_name=args.name)
     elif cmd == 'stop':
         stop(cluster_name=args.name)
+    elif cmd == 'restart':
+        stop(cluster_name=args.name)
+        start(cluster_name=args.name)
     elif cmd == 'destroy':
         destroy(args.cluster_regex)
     elif cmd == 'list':
@@ -679,7 +755,10 @@ def main():
 
     stop = parser_subparsers.add_parser('stop', description='Stop an existing cluster')
     stop.add_argument('name', help='The name of the cluster to stop')
-    
+
+    restart = parser_subparsers.add_parser('restart', description='Restart an existing cluster')
+    restart.add_argument('name', help='The name of the cluster to restart')
+
     try:
         args = parser.parse_args()
     finally:

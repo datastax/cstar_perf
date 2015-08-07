@@ -4,7 +4,8 @@ from setuptools import setup, find_packages
 requires = (
     'fabric',
     'pyyaml',
-    'sh'
+    'sh',
+    'fexpect'
 )
 
 setup(
