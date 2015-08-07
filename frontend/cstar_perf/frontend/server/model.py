@@ -50,7 +50,7 @@ from cstar_perf.frontend.lib.util import random_token, uuid_to_datetime
 from cstar_perf.frontend.server.email_notifications import TestStatusUpdateEmail
 
 try:
-    import from cassandra.util import OrderedMap
+    from cassandra.util import OrderedMap
 except ImportError:
     OrderedMap = None
 
