@@ -27,12 +27,13 @@ from cluster_config import config as cluster_config
 import re
 import uuid
 from util import random_token
+import json
 
 fab.env.use_ssh_config = True
 fab.env.connection_attempts = 10
 
 # Git repositories
-git_repos = [
+GIT_REPOS = [
     ('apache',        'git://github.com/apache/cassandra.git'),
     ('enigmacurry',   'git://github.com/EnigmaCurry/cassandra.git'),
     ('knifewine',     'git://github.com/knifewine/cassandra.git'),
@@ -53,6 +54,9 @@ git_repos = [
     ('stef1927',      'git://github.com/stef1927/cassandra.git'),
     ('driftx',      'git://github.com/driftx/cassandra.git')
 ]
+
+# Additional git remotes can be specified in this file
+GIT_REMOTES_FILE = os.path.join(os.path.expanduser("~"), ".cstar_perf", "git_remotes.json")
 
 CMD_LINE_HOSTS_SPECIFIED = False
 if len(fab.env.hosts) > 0 :
@@ -227,6 +231,20 @@ setup()
 # for the configured cluster:
 setup(cluster_config)
 
+def get_git_repos():
+    """Returns all static git repos and additional repos"""
+
+    repos = GIT_REPOS
+
+    if os.path.exists(GIT_REMOTES_FILE):
+        with open(GIT_REMOTES_FILE) as f:
+            remotes = json.loads(f.read())
+
+        for remote_name, remote_url in remotes.items():
+            repos.append((remote_name, remote_url))
+
+    return repos
+
 def get_cassandra_config_options():
     """Parse Cassandra's Config class to get all possible config values. 
 
@@ -261,14 +279,29 @@ def bootstrap(git_fetch=True, revision_override=None):
 
     #Fetch latest git changes:
     if git_fetch:
+        repos = get_git_repos()
+        repo_names, _ = zip(*repos)
         git_checkout_status = fab.run('test -d ~/fab/cassandra.git', quiet=True)
         if git_checkout_status.return_code > 0:
             fab.run('git init --bare ~/fab/cassandra.git')
-            for name,url in git_repos:
+
+        # Update remotes
+        git_remotes_status = fab.run('git --git-dir=$HOME/fab/cassandra.git remote')
+        current_remotes = git_remotes_status.split()
+        remotes_to_add = [r for r in repo_names if r not in current_remotes]
+        remotes_to_remove = [r for r in current_remotes if r not in repo_names and r != 'origin']
+        print "Existing remotes: {}".format(current_remotes)
+        print "Remotes to add: {}".format(remotes_to_add)
+        print "Remotes to remote: {}".format(remotes_to_remove)
+        for name in remotes_to_remove:
+            fab.run('git --git-dir=$HOME/fab/cassandra.git remote remove {name}'
+                    .format(name=name), quiet=True)
+
+        for name, url in reversed(repos):
+            if name in remotes_to_add:
                 fab.run('git --git-dir=$HOME/fab/cassandra.git remote add {name} {url}'
                         .format(name=name, url=url), quiet=True)
 
-        for name,url in reversed(git_repos):
             fab.run('git --git-dir=$HOME/fab/cassandra.git fetch {name}'.format(name=name))
             # TODO: What did this used to do? This used to be necessary,
             # but now it appears to delete branches: 
@@ -593,7 +626,8 @@ def whoami():
 
 @fab.parallel
 def add_git_remotes():
-    for name,url in git_repos:
+    repos = get_git_repos()
+    for name, url in repos:
         fab.run('git --git-dir=$HOME/fab/cassandra.git remote add {name} {url}'
                 .format(name=name, url=url), quiet=True)
 
