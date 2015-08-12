@@ -9,13 +9,13 @@ var addRevisionDiv = function(animate){
     var template = "<div id='{revision_id}' class='revision'><legend>Test Revisions<a id='remove-{revision_id}' class='pull-right remove-revision'><span class='glyphicon" +
         "                  glyphicon-remove'></span></a></legend>" +
 
-        "      <div class='form-group'>" +
+        "      <div class='form-group product-select-div' style='display:block'>" +
         "        <label class='col-md-4 control-label' for='{revision_id}-product'>Product</label>" +
         "        <div class='col-md-8'>" +
         "          <select id='{revision_id}-product' " +
         "                  class='product-select form-control' required>" +
-        "            <option value='cassandra'>Cassandra</option>" +
-        "            <option value='dse'>DSE</option>" +
+        "            <option value='cassandra'>cassandra</option>" +
+        "            <option value='dse'>dse</option>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
@@ -286,7 +286,7 @@ var cloneExistingJob = function(job_id) {
                 revision['options'] = {};
             }
             $("#revision-"+rev+"-options-vnodes").prop("checked", revision['options']['use_vnodes'])
-            update_jvm_selections(function(){
+            update_cluster_options(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);
             });
 
@@ -304,9 +304,10 @@ var cloneExistingJob = function(job_id) {
    });
 }
 
-var update_jvm_selections = function(callback) {
+var update_cluster_options = function(callback) {
     var cluster = $('#cluster').val();
     $.get('/api/clusters/'+cluster, function(data) {
+
         //Remember the current jvm selections:
         var current_jvm_selections = [];
         $(".jvm-select").each(function(i, e) {
@@ -331,6 +332,34 @@ var update_jvm_selections = function(callback) {
                 alert("Warning - cluster JVM selection changed")
             }
         });
+
+        // Update the product selections
+        var current_product_selections = [];
+        $(".product-select").each(function(i, e) {
+            current_product_selections[i] = $(e).val();
+        });
+        // cassandra is always present in the selection
+        $(".product-select").empty();
+        $(".product-select").append($("<option value='cassandra'>cassandra</option>"));
+        $(".product-select").val($("<option value='cassandra'>cassandra</option>"));
+        if(data.additional_products==null) {
+            $(".product-select-div").css("display", "none");
+            return;
+        }
+        $(".product-select-div").css("display", "block");
+        $.each(data.additional_products, function(product) {
+            $(".product-select").append($("<option value='"+product+"'>"+product+"</option>"));
+        });
+        $(".product-select").each(function(i, e) {
+            if (current_product_selections[i] != null) {
+                $(e).val(current_product_selections[i]);
+            }
+            if ($(e).val() == null) {
+                $(e).find("option:first-child").attr("selected", "selected");
+                alert("Warning - Product selection changed")
+            }
+        });
+
         if (callback != null)
             callback();
     });
@@ -357,7 +386,7 @@ $(document).ready(function() {
 
     //Refresh jvm list on cluster selection
     $('#cluster').change(function(e) {
-        update_jvm_selections();
+        update_cluster_options();
     });
 
     query = parseUri(location).queryKey;

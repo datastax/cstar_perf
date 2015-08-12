@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import yaml
@@ -34,10 +35,10 @@ GIT_REPOS = [
 GIT_REMOTES_FILE = os.path.join(os.path.expanduser("~"), ".cstar_perf", "git_remotes.json")
 
 def get_cassandra_path():
-    return 'fab/cassandra'
+    return os.path.expanduser('~/fab/cassandra')
 
 def get_bin_path():
-    return 'fab/cassandra/bin'
+    return os.path.expanduser('~/fab/cassandra/bin')
 
 def get_git_repos():
     """Returns all static git repos and additional repos"""
