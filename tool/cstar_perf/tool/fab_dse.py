@@ -37,9 +37,6 @@ def download_binaries():
     # TODO since this is done locally on the cperf tool server, is there any possible concurrency
     # issue .. Or maybe we should simply keep a cache on each host? (Comment to remove)
     filename = os.path.join(dse_cache, dse_tarball)
-    if os.path.exists(filename):
-        print("Already in cache: {}".format(filename))
-        return
 
     dse_url = config['dse_url']
     username = config['dse_username'] if 'dse_username' in config else None
@@ -49,13 +46,24 @@ def download_binaries():
     # Fetch the SHA of the tarball:
     correct_sha = download_file_contents(url+'.sha', username, password).split(" ")[0]
     assert(len(correct_sha) == 64, 'Failed to download sha file: {}'.format(correct_sha))
+
+    if os.path.exists(filename):
+        print("Already in cache: {}".format(filename))
+        real_sha = digest_file(filename)
+        if real_sha != correct_sha:
+            print("Invalid SHA for '{}'. It will be removed".format(filename))
+            os.remove(filename)
+        else:
+            return
+
     # Fetch the tarball:
     request = download_file(url, filename, username, password)
     real_sha = digest_file(filename)
     # Verify the SHA of the tarball:
     if real_sha != correct_sha:
-        raise AssertionError('SHA of DSE tarball was not verified. should have been: {correct_sha} but saw {real_sha}'.format(
-            correct_sha=correct_sha, real_sha=real_sha))
+        raise AssertionError(
+            ('SHA of DSE tarball was not verified. should have been: '
+             '{correct_sha} but saw {real_sha}').format(correct_sha=correct_sha, real_sha=real_sha))
 
 def get_dse_path():
     return "~/fab/dse"

@@ -25,6 +25,8 @@ import itertools
 # Import the default config first:r
 import fab_common as common
 import fab_dse as dse
+import fab_cassandra as cstar
+
 # Then import our cluster specific config:
 from cluster_config import config
 
