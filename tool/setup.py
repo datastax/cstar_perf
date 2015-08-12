@@ -5,7 +5,8 @@ requires = (
     'fabric',
     'pyyaml',
     'sh',
-    'fexpect'
+    'fexpect',
+    'requests'
 )
 
 setup(

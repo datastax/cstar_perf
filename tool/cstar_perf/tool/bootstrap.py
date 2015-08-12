@@ -1,5 +1,5 @@
-from benchmark import (bootstrap, stress, nodetool, teardown, 
-                       log_stats, log_set_title, retrieve_logs, cstar, config)
+from benchmark import (bootstrap, stress, nodetool, teardown,
+                       log_stats, log_set_title, retrieve_logs, config)
 from fabric.tasks import execute
 import argparse
 import sys
