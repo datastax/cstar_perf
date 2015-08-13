@@ -15,7 +15,6 @@ var addRevisionDiv = function(animate){
         "          <select id='{revision_id}-product' " +
         "                  class='product-select form-control' required>" +
         "            <option value='cassandra'>cassandra</option>" +
-        "            <option value='dse'>dse</option>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
@@ -82,13 +81,8 @@ var addRevisionDiv = function(animate){
     if (animate)
         newDiv.slideDown();
 
-    //Populate JVMs per the previous revision:
-    if (schedule.n_revisions > 1) {
-        $("#revision-"+(schedule.n_revisions-1)+"-jvm option").clone().appendTo("#"+revision_id+"-jvm");
-        $("#"+revision_id+"-jvm").val($("#revision-"+(schedule.n_revisions-1)+"-jvm").val());
-    } else {
-        $("#cluster").change();
-    }
+    // Update cluster options. Will update all revisions.
+    update_cluster_options();
 
     //Remove revision handler:
     $("#remove-"+revision_id).click(function() {
@@ -308,60 +302,20 @@ var update_cluster_options = function(callback) {
     var cluster = $('#cluster').val();
     $.get('/api/clusters/'+cluster, function(data) {
 
-        //Remember the current jvm selections:
-        var current_jvm_selections = [];
-        $(".jvm-select").each(function(i, e) {
-            current_jvm_selections[i] = $(e).val();
-        });
-        //Clear out the jvm lists and fetch new one:
-        $(".jvm-select").empty();
-        if(data.jvms==null) {
-            alert("Warning: cluster '"+ cluster+ "' has no JVMs defined.");
-            return;
-        }
-        $.each(data.jvms, function(jvm, path) {
-            $(".jvm-select").append($("<option value='"+path+"'>"+jvm+"</option>"));
-        });
-        //Try to set the one we had from before:
-        $(".jvm-select").each(function(i, e) {
-            if (current_jvm_selections[i] != null) {
-                $(e).val(current_jvm_selections[i]);
-            }
-            if ($(e).val() == null) {
-                $(e).find("option:first-child").attr("selected", "selected");
-                alert("Warning - cluster JVM selection changed")
-            }
-        });
+        $('#numnodes').val(data.num_nodes);
 
-        // Update the product selections
-        var current_product_selections = [];
-        $(".product-select").each(function(i, e) {
-            current_product_selections[i] = $(e).val();
-        });
-        // cassandra is always present in the selection
-        $(".product-select").empty();
-        $(".product-select").append($("<option value='cassandra'>cassandra</option>"));
-        $(".product-select").val($("<option value='cassandra'>cassandra</option>"));
-        if(data.additional_products==null) {
-            $(".product-select-div").css("display", "none");
-            return;
-        }
-        $(".product-select-div").css("display", "block");
-        $.each(data.additional_products, function(product) {
-            $(".product-select").append($("<option value='"+product+"'>"+product+"</option>"));
-        });
-        $(".product-select").each(function(i, e) {
-            if (current_product_selections[i] != null) {
-                $(e).val(current_product_selections[i]);
-            }
-            if ($(e).val() == null) {
-                $(e).find("option:first-child").attr("selected", "selected");
-                alert("Warning - Product selection changed")
-            }
-        });
+        update_select_with_values(".jvm-select", data.jvms, "JVM");
 
-        if (callback != null)
-            callback();
+        var product_options = {"cassandra": "cassandra"};
+        $.each(data.additional_products, function(_, product) {
+            product_options[product] = product
+        });
+        update_select_with_values(".product-select", product_options, "Product");
+        if (data.additional_products.length == 0) {
+            $(".product-select-div").hide();
+        } else {
+            $(".product-select-div").show();
+        }
     });
 }
 

@@ -385,11 +385,16 @@ class Model(object):
                 for jvm in row[2]:
                     jvms[jvm] =  row[2][jvm]
 
+            products = []
+            if row[4]:
+                for product in row[4]:
+                    products.append(product)
+
             clusters[row[0]] = {'name': row[0],
                                 'description': row[1],
                                 'jvms': jvms,
                                 'num_nodes' : row[3],
-                                'additional_products' : row[4]}
+                                'additional_products' : products}
         return clusters
 
     def add_cluster_jvm(self, cluster, version, path):

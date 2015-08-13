@@ -52,6 +52,36 @@ parseUri.options = {
 };
 
 
+function update_select_with_values(element, values, context) {
+    var el = $(element);
+
+    //Remember the current jvm selections:
+    var current_selections = [];
+    el.each(function(i, e) {
+        current_selections[i] = $(e).val();
+    });
+
+    //Clear out the lists and fetch new one:
+    el.empty();
+    if(values==null || values.length == 0) {
+        alert("Warning: cluster has no "+context+" defined.");
+    }
+
+    $.each(values, function(key, val) {
+        el.append($("<option value='"+val+"'>"+key+"</option>"));
+    });
+
+    //Try to set the one we had from before:
+    el.each(function(i, e) {
+        if (current_selections[i] != null) {
+            $(e).val(current_selections[i]);
+        }
+        if ($(e).val() == null) {
+            $(e).find("option:first-child").attr("selected", "selected");
+            alert("Warning - cluster "+context+" selection changed from '"+current_selections[i]+"' to '"+$(e).val()+"'");
+        }
+    });
+}
 
 $(document).ready(function() {
     setupCSRFAjax();
