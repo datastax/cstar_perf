@@ -81,6 +81,7 @@ function update_select_with_values(element, values, context) {
             alert("Warning - cluster "+context+" selection changed from '"+current_selections[i]+"' to '"+$(e).val()+"'");
         }
     });
+
 }
 
 $(document).ready(function() {

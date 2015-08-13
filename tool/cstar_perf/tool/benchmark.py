@@ -109,10 +109,12 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
         execute(common.stop)
         execute(common.ensure_stopped)
 
-    # dse setup and binaries download (local)
-    dse.setup(common.config)
-
     product = dse if common.config['product'] == 'dse' else cstar
+
+    # dse setup and binaries download (local)
+    if product == dse:
+        dse.setup(common.config)
+
     set_nodetool_path(os.path.join(product.get_bin_path(), 'nodetool'))
     set_cqlsh_path(os.path.join(product.get_bin_path(), 'cqlsh'))
 

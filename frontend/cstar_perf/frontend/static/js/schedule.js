@@ -316,6 +316,11 @@ var update_cluster_options = function(callback) {
         } else {
             $(".product-select-div").show();
         }
+
+        if (callback) {
+            callback();
+        }
+
     });
 }
 
