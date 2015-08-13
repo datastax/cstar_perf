@@ -164,4 +164,5 @@ def add_or_update_host_ips(hosts):
 
 def restart_all_services():
     fab.run("test -f /supervisord.conf && supervisorctl -c /supervisord.conf reread")
+    fab.run("test -f /supervisord.conf && supervisorctl -c /supervisord.conf update")
     fab.run("test -f /supervisord.conf && supervisorctl -c /supervisord.conf restart all")
