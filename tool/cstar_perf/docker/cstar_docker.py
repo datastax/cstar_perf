@@ -426,7 +426,7 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
 
         # Generate and save the credentials
         with fab.settings(hosts=ip):
-            fab_execute(tasks.generate_frontend_credentials)
+            fab_execute(fab_deploy.generate_frontend_credentials)
 
         # Restart the container so all the auto boot stuff is applied:
         subprocess.call(shlex.split("docker restart {}".format(host)))
@@ -434,7 +434,7 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
         # Post Restart setup
         frontend_name, frontend_ip = get_ips(cluster_name)[0]
         with fab.settings(hosts=frontend_ip):
-            fab_execute(tasks.create_default_users)
+            fab_execute(fab_deploy.create_default_frontend_users)
 
         log.info("cstar_perf service started, opening in your browser: http://localhost:8000")
         webbrowser.open("http://localhost:8000")
@@ -533,7 +533,7 @@ def associate(frontend_name, cluster_names):
 
     # Configure the client credentials on all clusters
     with fab.settings(hosts=frontend_ip):
-        frontend_credentials = fab_execute(tasks.get_frontend_credentials).values()[0]
+        frontend_credentials = fab_execute(fab_deploy.get_frontend_credentials).values()[0]
 
     for cluster in clusters:
         num_nodes = len(cluster)-1
@@ -541,19 +541,19 @@ def associate(frontend_name, cluster_names):
         cluster_name = cluster['Config']['Labels']['cluster_name']
         cluster_ip = cluster['NetworkSettings']['IPAddress']
         with fab.settings(hosts=cluster_ip):
-            fab_execute(tasks.generate_client_credentials, cluster_name,
+            fab_execute(fab_deploy.generate_client_credentials, cluster_name,
                         frontend_credentials['public_key'],
                         frontend_credentials['verify_code'])
             # Get the cluster credentials and jvms list
-            cluster_credentials = fab_execute(tasks.get_client_credentials).values()[0]
-            jvms = fab_execute(tasks.get_client_jvms).values()[0]
+            cluster_credentials = fab_execute(fab_deploy.get_client_credentials).values()[0]
+            jvms = fab_execute(fab_deploy.get_client_jvms).values()[0]
 
         # Link the cluster to the frontend
         with fab.settings(hosts=frontend_ip):
-            fab_execute(tasks.add_cluster_to_frontend, cluster_name, num_nodes,
+            fab_execute(fab_deploy.add_cluster_to_frontend, cluster_name, num_nodes,
                         cluster_credentials['public_key'])
             for jvm in jvms:
-                fab_execute(tasks.add_jvm_to_cluster, cluster_name, jvm)
+                fab_execute(fab_deploy.add_jvm_to_cluster, cluster_name, jvm)
 
         with fab.settings(hosts=cluster_ip, user="root"):
             fab_execute(tasks.setup_client_daemon, frontend['Name'])

@@ -7,8 +7,11 @@ This is currently only used by cstar_docker, but should remain useful
 for other deployment types in the future.
 """
 
+import textwrap
 from fabric import api as fab
+from fabric.contrib.files import append as fab_append
 from fabric.tasks import execute as fab_execute
+from ilogue.fexpect import expect, expecting, run
 from StringIO import StringIO
 import json
 import re
@@ -16,6 +19,13 @@ import operator
 
 fab.env.use_ssh_config = True
 fab.env.connection_attempts = 10
+
+def run_python_script(script):
+    fab.run("rm -f ~/pyscript.py")
+    fab_append("pyscript.py", textwrap.dedent(script))
+    output = fab.run("python pyscript.py")
+    fab.run("rm ~/pyscript.py")
+    return output
 
 def setup_hosts_file(hosts):
     """Setup /etc/hosts
@@ -105,3 +115,87 @@ def copy_cluster_config(config):
     fab.run('mkdir -p ~/.cstar_perf')
     fab.put(config_file, '~/.cstar_perf/cluster_config.json')
 
+def generate_frontend_credentials():
+    """Create the server keys and application config"""
+
+    # Save the credentials in a file, so we can use it to associate a cluster
+    fab.run("cstar_perf_server --get-credentials > ~/credentials.txt")
+
+def create_default_frontend_users():
+    """Create a default admin and normal users"""
+
+    create_users_script = """
+    from cstar_perf.frontend.server.model import Model
+    db = Model()
+    admin = db.create_user('admin@admin.com', 'Admin Full Name', ['user','admin'])
+    db.set_user_passphrase('admin@admin.com', 'admin')
+    user = db.create_user('user@user.com', 'User Full Name', ['user'])
+    db.set_user_passphrase('user@user.com', 'user')
+    """
+    run_python_script(create_users_script)
+
+def add_cluster_to_frontend(cluster_name, num_nodes, public_key):
+    """Add the cluster to the frontend configuration"""
+
+    add_cluster_script = """
+    from cstar_perf.frontend.server.model import Model
+    db = Model()
+    db.add_cluster('{name}', {num_nodes}, '{name}')
+    db.add_pub_key('{name}', 'cluster', '{key}', replace=True)
+    """.format(name=cluster_name, num_nodes=num_nodes, key=public_key)
+    run_python_script(add_cluster_script)
+
+def add_jvm_to_cluster(cluster_name, jvm):
+    """Add a jvm to the frontend cluster configuration"""
+
+    path = "~/fab/jvms/{jvm}".format(jvm=jvm)
+    add_jvm_script = """
+    from cstar_perf.frontend.server.model import Model
+    db = Model()
+    db.add_cluster_jvm('{name}', '{jvm}', '{path}')
+    """.format(name=cluster_name, path=path, jvm=jvm)
+    run_python_script(add_jvm_script)
+
+def get_frontend_credentials():
+    """Get the frontend server keys"""
+
+    # Read the credentials file and return a dict
+    output = fab.run("cat ~/credentials.txt")
+    if 'Server public key' not in output:
+        raise ValueError("credentials.txt doesn't contain proper keys")
+    lines = output.split('\n')
+    public_key = lines[1].split(': ')[1].strip()
+    verify_code = lines[2].split(': ')[1].strip()
+
+    return {'public_key': public_key, 'verify_code': verify_code}
+
+def generate_client_credentials(cluster_name, public_key, verify_code):
+    """Generate the client credentials"""
+
+    prompts = []
+    prompts += expect('Enter a name for this cluster:', cluster_name)
+    prompts += expect("Input the server's public key:", public_key)
+    prompts += expect("Input the server verify code: ", verify_code)
+
+    with expecting(prompts):
+        output = run('cstar_perf_client --get-credentials')
+
+    lines = output.split('\n')
+    client_public_key = [line for line in lines if line.startswith("Your public key is")][0]
+    fab.run("echo '{}' > ~/credentials.txt".format(client_public_key))
+
+def get_client_credentials():
+    """Get the client server key"""
+
+    # Read the credentials file and return a dict
+    output = fab.run("cat ~/credentials.txt")
+    public_key = output.split(': ')[1].strip()
+
+    return {'public_key': public_key}
+
+def get_client_jvms():
+    """Get a list of all jvms of the client"""
+
+    output = fab.run("ls ~/fab/jvms")
+    jvms = [jvm for jvm in output.split(' ') if jvm]
+    return jvms
