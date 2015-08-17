@@ -403,7 +403,7 @@ class Model(object):
 
     def add_cluster_product(self, cluster, product):
         session = self.get_session()
-        session.execute(self.__prepared_statements['add_cluster_product'], (product, cluster))
+        session.execute(self.__prepared_statements['add_cluster_product'], ([product], cluster))
 
     ################################################################################
     #### API Keys:

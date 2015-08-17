@@ -520,7 +520,7 @@ def destroy(cluster_regex):
             destroy_cmd = shlex.split("docker rm -f {}".format(container))
             subprocess.call(destroy_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-def associate(frontend_name, cluster_names):
+def associate(frontend_name, cluster_names, with_dse=False):
 
     try:
         frontend = get_clusters(frontend_name, all_metadata=True)[frontend_name][0]
@@ -561,9 +561,26 @@ def associate(frontend_name, cluster_names):
             for jvm in jvms:
                 fab_execute(fab_deploy.add_jvm_to_cluster, cluster_name, jvm)
 
+            if with_dse:
+                fab_execute(fab_deploy.add_product_to_cluster, cluster_name, 'dse')
+
         with fab.settings(hosts=cluster_ip, user="root"):
             fab_execute(tasks.setup_client_daemon, frontend['Name'])
             fab_execute(tasks.add_or_update_host_ips, ((frontend['Name'], frontend_ip),))
+
+def enable_dse(cluster_name, dse_url, dse_username, dse_password):
+
+    try:
+        cluster = get_clusters(cluster_name, all_metadata=True)[cluster_name][0]
+    except IndexError:
+        raise ValueError("No cluster named {} found".format(cluster_name))
+
+    cluster_ip = cluster['NetworkSettings']['IPAddress']
+    with fab.settings(hosts=cluster_ip):
+        fab_execute(fab_deploy.enable_dse, dse_url, dse_username, dse_password)
+
+    with fab.settings(hosts=cluster_ip, user="root"):
+        fab_execute(tasks.restart_all_services)
 
 def __update_node_ip_addresses(cluster_name, static_ips=None):
     """Update node ip addresses
@@ -689,7 +706,7 @@ def execute_cmd(cmd, args):
                       'in your launch command')
             exit(1)            
     elif cmd == 'associate':
-        associate(args.frontend, args.clusters)
+        associate(args.frontend, args.clusters, with_dse=args.with_dse)
     elif cmd == 'start':
         start(cluster_name=args.name)
     elif cmd == 'stop':
@@ -707,6 +724,8 @@ def execute_cmd(cmd, args):
         ssh(args.cluster_name, args.node, user=args.login_name)
     elif cmd == 'build':
         build_docker_image(force=args.force)
+    elif cmd == 'enable_dse':
+        enable_dse(args.frontend, args.dse_repo_url, args.dse_repo_username, args.dse_repo_password)
     else:
         raise AssertionError('Unknown command: {cmd}'.format(cmd=cmd))
 
@@ -735,10 +754,11 @@ def main():
     frontend.add_argument(
         '--destroy-existing', help='Destroy any existing cluster with the same name before launching', action="store_true")
 
-    associate = parser_subparsers.add_parser('associate', description="Hook up one or more clusters to a frontend")
-    associate.add_argument('frontend', help='The name of the frontend node')
-    associate.add_argument('clusters', help='The names of the clusters to hook up to the frontend', nargs='+')    
-    
+    associate = parser_subparsers.add_parser('associate', description="Hook up one or more clusters to a cluster")
+    associate.add_argument('cluster', help='The name of the cluster')
+    associate.add_argument('clusters', help='The names of the clusters to hook up to the frontend', nargs='+')
+    associate.add_argument('--with-dse', help='Enable DSE product for this cluster', action='store_true', default=False)
+
     destroy = parser_subparsers.add_parser('destroy', description='Destroy clusters - specify a regex of cluster names to destroy, or specify \'all\' to destroy all clusters created')
     destroy.add_argument('cluster_regex', help='The regex of the names of clusters to destroy')
 
@@ -764,6 +784,12 @@ def main():
 
     restart = parser_subparsers.add_parser('restart', description='Restart an existing cluster')
     restart.add_argument('name', help='The name of the cluster to restart')
+
+    enable_dse = parser_subparsers.add_parser('enable_dse', description="Enable DSE support")
+    enable_dse.add_argument('frontend', help='The name of the frontend node')
+    enable_dse.add_argument('dse_repo_url', help='DSE Repo url')
+    enable_dse.add_argument('dse_repo_username', nargs='?', default=None, help='DSE Repo username')
+    enable_dse.add_argument('dse_repo_password', nargs='?', default=None, help='DSE Repo password')
 
     try:
         args = parser.parse_args()

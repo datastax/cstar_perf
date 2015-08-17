@@ -282,6 +282,7 @@ var cloneExistingJob = function(job_id) {
             $("#revision-"+rev+"-options-vnodes").prop("checked", revision['options']['use_vnodes'])
             update_cluster_options(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);
+                $("#revision-"+rev+"-product").val(revision['product']);
             });
 
         });
