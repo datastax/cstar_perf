@@ -25,6 +25,7 @@ Contents
 .. toctree::
   :maxdepth: 2
 
+  setup_dev_environment
   setup_cstar_perf_tool
   setup_cstar_perf_frontend
   running_tests

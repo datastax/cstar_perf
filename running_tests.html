@@ -27,8 +27,8 @@
     <link rel="next" title="Architecture" href="architecture.html" />
     <link rel="prev" title="Setup cstar_perf.frontend" href="setup_cstar_perf_frontend.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -40,10 +40,10 @@
         <li class="right" >
           <a href="setup_cstar_perf_frontend.html" title="Setup cstar_perf.frontend"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
@@ -72,12 +72,14 @@
   <h4>Next topic</h4>
   <p class="topless"><a href="architecture.html"
                         title="next chapter">Architecture</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/running_tests.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/running_tests.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
@@ -96,7 +98,7 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="running-tests">
 <h1>Running Tests<a class="headerlink" href="#running-tests" title="Permalink to this headline">¶</a></h1>
@@ -129,8 +131,8 @@ input, here&#8217;s a sample:</p>
 <p>This is a hypothetical test for comparing the difference in
 performance of two different memtable allocation types in Cassandra
 2.1. The first test is just using Cassandra&#8217;s default configuration,
-while the second introduces the <tt class="docutils literal"><span class="pre">memtable_allocation_type:</span>
-<span class="pre">offheap_objects</span></tt> setting. Both tests will run the same three stress
+while the second introduces the <code class="docutils literal"><span class="pre">memtable_allocation_type:</span>
+<span class="pre">offheap_objects</span></code> setting. Both tests will run the same three stress
 commands listed.</p>
 <p>You run this scenario on the command line by specifying the JSON file:</p>
 <div class="highlight-python"><div class="highlight"><pre>cstar_perf_stress cassandra-2.1.offheap_memtables.json
@@ -168,7 +170,7 @@ want to run on <em>each</em> revision specified.</p>
 <li>command - the parameters to pass to cassandra-stress</li>
 <li>wait_for_compaction - boolean value specifying whether to wait for
 compactions to finish at the end of the opration, defaults to
-<tt class="docutils literal"><span class="pre">true</span></tt>.</li>
+<code class="docutils literal"><span class="pre">true</span></code>.</li>
 </ul>
 <p>Example:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span><span class="s">&quot;stress&quot;</span><span class="p">,</span><span class="s">&quot;command&quot;</span><span class="p">:</span><span class="s">&quot;read n=65000000 -rate threads=40 -mode cql3 native prepared&quot;</span><span class="p">}</span>
@@ -226,7 +228,7 @@ it will be run on all nodes.</li>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -238,12 +240,12 @@ it will be run on all nodes.</li>
         <li class="right" >
           <a href="setup_cstar_perf_frontend.html" title="Setup cstar_perf.frontend"
              >previous</a> |</li>
-        <li><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
+    <div class="footer" role="contentinfo">
         &copy; Copyright 2014, DataStax.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>

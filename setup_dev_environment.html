@@ -1,0 +1,219 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Setting up a cstar_perf development environment &mdash; cstar_perf 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="cstar_perf 1.0 documentation" href="index.html" />
+    <link rel="next" title="Setup cstar_perf.tool" href="setup_cstar_perf_tool.html" />
+    <link rel="prev" title="cstar_perf" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="setup_cstar_perf_tool.html" title="Setup cstar_perf.tool"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="cstar_perf"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Setting up a cstar_perf development environment</a><ul>
+<li><a class="reference internal" href="#setup-from-scratch-on-ubuntu-14-04">Setup from scratch on Ubuntu 14.04</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">cstar_perf</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="setup_cstar_perf_tool.html"
+                        title="next chapter">Setup cstar_perf.tool</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/setup_dev_environment.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="setting-up-a-cstar-perf-development-environment">
+<h1>Setting up a cstar_perf development environment<a class="headerlink" href="#setting-up-a-cstar-perf-development-environment" title="Permalink to this headline">¶</a></h1>
+<p>If you want to start hacking on cstar_perf, the best way to do that is
+with the built-in <code class="docutils literal"><span class="pre">cstar_docker</span></code> command. This will setup a cluster,
+client node, and frontend node automatically for you in separate
+Docker containers. This means you can setup an entire cstar_perf
+environment for development or testing, all on a single machine.</p>
+<p><strong>NOTE: This tutorial is only good for development or demoing of
+cstar_perf. Any real-world benchmarks should not be done from
+within docker.</strong></p>
+<div class="section" id="setup-from-scratch-on-ubuntu-14-04">
+<h2>Setup from scratch on Ubuntu 14.04<a class="headerlink" href="#setup-from-scratch-on-ubuntu-14-04" title="Permalink to this headline">¶</a></h2>
+<p>This document will go through all the steps necessary to setup your
+environment on a fresh Ubuntu 14.04 machine.</p>
+<p>Install docker as per <a class="reference external" href="http://docs.docker.com/linux/step_one">the Docker instructions</a></p>
+<div class="highlight-python"><div class="highlight"><pre>wget -qO- https://get.docker.com/ | sh
+</pre></div>
+</div>
+<p>Add your normal user account to the docker group:</p>
+<div class="highlight-python"><div class="highlight"><pre>sudo usermod -aG docker $USER
+newgrp docker
+</pre></div>
+</div>
+<p>Checkout cstar_perf source code someplace:</p>
+<div class="highlight-python"><div class="highlight"><pre>export CSTAR_PERF_HOME=~/git/cstar_perf
+git clone https://github.com/datastax/cstar_perf $CSTAR_PERF_HOME
+</pre></div>
+</div>
+<p>Create a Python virtual environment and install the code there:</p>
+<div class="highlight-python"><div class="highlight"><pre>sudo apt-get install python-virtualenv
+virtualenv $CSTAR_PERF_HOME/env
+source $CSTAR_PERF_HOME/env/bin/activate
+pip install -e $CSTAR_PERF_HOME/tool
+</pre></div>
+</div>
+<p>If you close your shell, or open a new one, remember to re-activate
+the virtualenv. The rest of these instructions assume you are running
+with the virtualenv activated:</p>
+<div class="highlight-python"><div class="highlight"><pre>source $CSTAR_PERF_HOME/env/bin/activate
+</pre></div>
+</div>
+<p>Build the cstar_perf docker base image:</p>
+<div class="highlight-python"><div class="highlight"><pre>cstar_docker build
+</pre></div>
+</div>
+<p>Launch a cluster to run the client and Cassandra nodes:</p>
+<div class="highlight-python"><div class="highlight"><pre>cstar_docker launch test_cluster 1 -m
+</pre></div>
+</div>
+<p>The above command launches a single node to act as a Cassandra
+cluster, and an additional node for the cstar_perf client. For
+development purposes, a single node Cassandra cluster is usually
+suffient, but you can increase this if you are running on a powerful
+box that can handle more than one node at a time. As another example,
+if you specified 3 (instead of 1) you would get a total of 4 nodes, 1
+to run the client, and 3 to run Cassandra.</p>
+<p>The -m is useful for development, as your local cstar_perf checkout
+($CSTAR_PERF_HOME in our example here) will be mounted inside the
+docker containers directly, so any changes you make to the cstar_perf
+source code will immediately be available in the docker containers as
+well. (Without the -m, fresh cstar_perf code will be cloned from
+<a class="reference external" href="http://github.com/datastax/cstar_perf">http://github.com/datastax/cstar_perf</a>)</p>
+<p>Launch a node for the frontend:</p>
+<div class="highlight-python"><div class="highlight"><pre>cstar_docker frontend test_frontend -m
+</pre></div>
+</div>
+<p>If you are running on a machine with a webbrowser installed, the home
+page of the frontend should automatically load to
+<a class="reference external" href="http://localhost:8000">http://localhost:8000</a>. The frontend container is only bound to the
+loopback device for security reasons. If you are running cstar_perf on
+a headless box, you will need to create a port map on your own. One
+way to do that is with ssh. From your personal machine, connect to the
+machine running cstar_perf:</p>
+<div class="highlight-python"><div class="highlight"><pre>## Use this only if you need to access a remote cstar_perf instance:
+ssh your_cstar_perf_server -L 8000:localhost:8000 -N &amp;
+</pre></div>
+</div>
+<p>Then you should be able to load <a class="reference external" href="http://localhost:8000">http://localhost:8000</a> normally.</p>
+<p>At this point, the frontend can&#8217;t run any tests because it still
+doesn&#8217;t know about the test cluster. To link the frontend to the test
+cluster, use the associate command:</p>
+<div class="highlight-python"><div class="highlight"><pre>cstar_docker associate test_frontend test_cluster
+</pre></div>
+</div>
+<p>Now you are ready to run tests directly from the frontend web page.
+Click Login in the upper right hand corner and enter the default
+credentials:</p>
+<ul class="simple">
+<li>email: <a class="reference external" href="mailto:admin&#37;&#52;&#48;example&#46;com">admin<span>&#64;</span>example<span>&#46;</span>com</a></li>
+<li>password: admin</li>
+</ul>
+<p>To see what other commands cstar_docker includes, run it without any
+arguments:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">cstar_docker</span>
+</pre></div>
+</div>
+<p>For example, you can ssh directly to any of the nodes, or start, stop,
+or destroy them.</p>
+<p>If you make useful modifications to cstar_perf, please consider
+opening a pull-request on the <a class="reference external" href="https://github.com/datastax/cstar_perf/pulls">cstar_perf github page</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="setup_cstar_perf_tool.html" title="Setup cstar_perf.tool"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="cstar_perf"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2014, DataStax.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>
