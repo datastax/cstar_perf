@@ -212,6 +212,10 @@ def get_ssh_key_pair():
     key_path = os.path.join(os.path.expanduser("~"), ".cstar_perf","cstar_docker_key")
     pub_key_path = key_path + '.pub'
     if not (os.path.exists(key_path) and os.path.exists(pub_key_path)):
+        try:
+            os.mkdir(os.path.join(os.path.expanduser("~"), ".cstar_perf"))
+        except IOError:
+            pass
         key = paramiko.rsakey.RSAKey.generate(2048)
         with open(key_path, 'w') as f:
             key.write_private_key(f)
