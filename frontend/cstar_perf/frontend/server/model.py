@@ -1,4 +1,4 @@
-### Queries this app has to answer:
+## Queries this app has to answer:
 ###
 ### Tests:
 ###  * Schedule a test to run
@@ -45,6 +45,9 @@ import logging
 import datetime
 import zmq
 from collections import namedtuple
+import base64
+
+from flask.ext.scrypt import generate_password_hash, generate_random_salt, check_password_hash
 
 from cstar_perf.frontend.lib.util import random_token, uuid_to_datetime
 from cstar_perf.frontend.server.email_notifications import TestStatusUpdateEmail
@@ -93,6 +96,8 @@ class Model(object):
         'add_cluster_jvm': "UPDATE clusters SET jvms[?]=? WHERE name = ?",
         'insert_user': "INSERT INTO users (user_id, full_name, roles) VALUES (?, ?, ?);",
         'select_user': "SELECT * FROM users WHERE user_id = ?;",
+        'select_user_passphrase_hash': "SELECT hash, salt FROM user_passphrase WHERE user_id = ?;",
+        'update_user_passphrase_hash': "UPDATE user_passphrase SET hash = ?, salt = ? WHERE user_id = ?",
         'select_user_roles': "SELECT roles FROM users WHERE user_id = ?;",
         'update_test_artifact': "UPDATE test_artifacts SET description = ?, artifact = ? WHERE test_id = ? AND artifact_type = ?;",
         'select_test_artifacts_by_type': "SELECT artifact_type, description FROM test_artifacts WHERE test_id = ? AND artifact_type = ?",
@@ -112,7 +117,7 @@ class Model(object):
         email_notifications - if True, perform email notifications for some actions. Defaults to False.
         """
         log.info("Initializing Model...")
-        self.cluster = cluster
+        self.cluster = cluster if type(cluster) == Cluster else Cluster(cluster)
         self.keyspace = keyspace
         self.email_notifications = email_notifications
         self.__shared_session = self.get_session()
@@ -178,6 +183,7 @@ class Model(object):
         
         #Users
         session.execute("CREATE TABLE users (user_id text PRIMARY KEY, full_name text, roles set <text>);")
+        session.execute("CREATE TABLE user_passphrase (user_id text PRIMARY KEY, hash text, salt text);")
         #session.execute("INSERT INTO users (user_id, full_name, roles) VALUES ('ryan@datastax.com', 'Ryan McGuire', {'user','admin'});")
 
         # API keys
@@ -391,14 +397,15 @@ class Model(object):
     ################################################################################
     #### API Keys:
     ################################################################################
-    def add_pub_key(self, name, user_type, pubkey):
+    def add_pub_key(self, name, user_type, pubkey, replace=False):
         """Add an API pubkey with the given name and user_type (cluster, user)"""
         session = self.get_session()
-        try:
-            existing_key = self.get_pub_key(name)
-            raise APIKeyExistsError('API key already exists for {name}'.format(name=name))
-        except UnknownAPIKeyError:
-            pass
+        if not replace:
+            try:
+                existing_key = self.get_pub_key(name)
+                raise APIKeyExistsError('API key already exists for {name}'.format(name=name))
+            except UnknownAPIKeyError:
+                pass
         session.execute(self.__prepared_statements['insert_api_pubkey'], (name, user_type, pubkey))
 
     def get_pub_key(self, name):
@@ -424,6 +431,27 @@ class Model(object):
         except IndexError:
             raise UnknownUserError('Unknown User {user_id}'.format(user_id=user_id))
 
+    def set_user_passphrase(self, user_id, passphrase):
+        """Hash the user's passphrase and update into the database"""
+        passphrase = base64.b64encode(passphrase.encode("utf-8"))
+        session = self.get_session()
+        salt = generate_random_salt()
+        pw_hash = generate_password_hash(passphrase, salt)
+        session.execute(self.__prepared_statements['update_user_passphrase_hash'], (pw_hash, salt, user_id))
+        
+    def get_user_passphrase_hash(self, user_id):
+        session = self.get_session()
+        try:
+            return [s.encode("utf-8") for s in session.execute(self.__prepared_statements['select_user_passphrase_hash'], (user_id,))[0]]
+        except IndexError:
+            raise UnknownUserError('Unknown User {user_id}'.format(user_id=user_id))
+
+    def validate_user_passphrase(self, user_id, passphrase):
+        passphrase = base64.b64encode(passphrase.encode("utf-8"))
+        res = self.get_user_passphrase_hash(user_id)
+        pw_hash, salt = res
+        return check_password_hash(passphrase, pw_hash, salt)
+        
     def get_user_roles(self, user_id):
         session = self.get_session()
         try:

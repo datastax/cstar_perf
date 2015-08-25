@@ -4,7 +4,8 @@ from setuptools import setup, find_packages
 requires = (
     'fabric',
     'pyyaml',
-    'sh'
+    'sh',
+    'fexpect'
 )
 
 setup(
@@ -25,6 +26,7 @@ setup(
     ],
     entry_points = {'console_scripts': 
                     ['cstar_perf_stress = cstar_perf.tool.stress_compare:main',
-                     'cstar_perf_bootstrap = cstar_perf.tool.bootstrap:main']},
+                     'cstar_perf_bootstrap = cstar_perf.tool.bootstrap:main',
+                     'cstar_docker = cstar_perf.docker.cstar_docker:main']},
 )
 

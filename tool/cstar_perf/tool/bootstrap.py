@@ -2,6 +2,7 @@ from benchmark import (bootstrap, stress, nodetool, teardown,
                        log_stats, log_set_title, retrieve_logs, cstar, config)
 from fabric.tasks import execute
 import argparse
+import sys
 import json
 import copy
 
@@ -24,24 +25,26 @@ def main():
     parser.add_argument('-v', metavar="GIT_REFSPEC",
                         help='The version of Cassandra to install, specified by git refspec (eg \'apache/cassandra-2.1\') - uses the default C* config. Use JSON_CONFIG file instead to change this.', dest="version")
     parser.add_argument('config', metavar="JSON_CONFIG",
-                        help='The revision config JSON file', nargs='?')
+                        help='The revision config JSON file', nargs='?', default=sys.stdin)
     args = parser.parse_args()
 
-    if not args.config and not args.version:
-        parser.print_help()
-        print("\nYou must specify a config file or a --version")
-        exit(1)
-    elif args.config and args.version:
+    if (not sys.stdin.isatty() and args.version):
         parser.print_help()
         print("\nYou can only specify a config file or a --version")
         exit(1)
-    
+        
     if args.version:
         bootstrap_cluster({'revision':args.version})
     else:
-        with open(args.config) as f:
-            bootstrap_cluster(json.loads(f.read()))
-        
+        if args.config == sys.stdin:
+            if sys.stdin.isatty():
+                print("You must specify a config file, a --version, or pipe a config to stdin")
+                exit(1)
+            cfg = json.load(sys.stdin)
+        else:
+            with open(args.config) as f:
+                cfg = json.load(f)
+        bootstrap_cluster(cfg)
 
 if __name__ == "__main__":
     main()

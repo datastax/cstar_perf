@@ -8,15 +8,19 @@ from functools import partial
 
 import zmq
 import json
+import ConfigParser
 from flask import ( Flask, render_template, request, redirect, abort, Response,
                     jsonify, make_response, session)
+
+from flask.ext.scrypt import generate_random_salt, generate_password_hash, check_password_hash
+
 from apiclient.discovery import build
 from oauth2client.client import ( AccessTokenRefreshError,
                                   AccessTokenCredentials,
                                   flow_from_clientsecrets,
                                   FlowExchangeError)
 
-from app import app, db, sockets
+from app import app, app_config, db, sockets
 from model import Model, UnknownUserError, UnknownTestError
 from notifications import console_subscribe
 from cstar_perf.frontend.lib.util import random_token
@@ -27,11 +31,21 @@ import logging
 log = logging.getLogger('cstar_perf.controllers')
 
 
-### Google+ API:
-gplus = build('plus', 'v1')
-google_client_secrets = os.path.join(os.path.expanduser("~"),'.cstar_perf','client_secrets.json')
-with open(google_client_secrets) as f:
-    google_client_id = json.load(f)['web']['client_id']
+### Setup authentication method configured in server.conf:
+try:
+    authentication_type = app_config.get("server", "authentication_type")
+except ConfigParser.NoOptionError:
+    authentication_type = 'local'
+if authentication_type == 'local':
+    pass
+elif authentication_type == 'google':
+    ### Google+ API:
+    gplus = build('plus', 'v1')
+    google_client_secrets = os.path.join(os.path.expanduser("~"),'.cstar_perf','client_secrets.json')
+    with open(google_client_secrets) as f:
+        google_client_id = json.load(f)['web']['client_id']
+else:
+    raise AssertionError('Invalid authentication type configured in server.conf: {}'.format(authentication_type))
 
 server_key = APIKey.load(SERVER_KEY_PATH)
 
@@ -79,8 +93,12 @@ def requires_auth(role):
 @app.context_processor
 def inject_template_variables():
     """Common variables available to all templates"""
-    return dict(clusters = db.get_cluster_names(),
-                google_client_id=google_client_id)
+    d = {'clusters': db.get_cluster_names(),
+         'authentication_type': authentication_type,
+         'google_client_id': None}
+    if authentication_type == 'google':
+        d['google_client_id'] = google_client_id
+    return d
 
 ################################################################################
 #### Page Controllers
@@ -90,11 +108,10 @@ def inject_template_variables():
 def index():
     return render_template('index.jinja2.html')
 
-@app.route('/login', methods=['POST'])
-def login():
+def login_with_google():
     """Login via Google+"""
+    log.info("Initiating login with Google+")
     code = request.data
-
     try:
         # Upgrade the authorization code into a credentials object
         oauth_flow = flow_from_clientsecrets(google_client_secrets, scope='')
@@ -143,6 +160,30 @@ def login():
     session['user_id'] = email
     return make_response(jsonify({'success':'Successfully connected user.'}), 
                          200)
+
+def login_with_passphrase():
+    data = request.get_json(force=True)
+    log.info("Initiating login with passphrase")
+
+    try:
+        if db.validate_user_passphrase(data['email'], data['passphrase']): 
+            session['logged_in'] = True
+            session['user_id'] = data['email']
+            return make_response(jsonify({'success':'Successfully connected user.'}), 
+                                 200)
+    except UnknownUserError:
+        pass
+    return make_response(jsonify({'error':'Unauthorized - did you enter the user right user / passphrase?'}), 401)
+
+@app.route('/login', methods=['POST'])
+def login():
+    """Login via digest authentication, or Google+"""
+    if authentication_type == 'local':
+        return login_with_passphrase()
+    elif authentication_type == 'google':
+        return login_with_google()
+    else:
+        raise AssertionError('Invalid authentication type configured in server.conf: {}'.format(authentication_type))
 
 @app.route('/logout', methods=['GET','POST'])
 def logout():

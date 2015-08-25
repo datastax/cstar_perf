@@ -10,7 +10,7 @@ function signinCallback(authResult) {
             url: '/login',
             contentType: 'application/octet-stream; charset=utf-8',
             success: function(result) {
-                window.location.reload();
+                window.location.href="/tests";
             },
             processData: false,
             data: authResult['code']
@@ -45,11 +45,52 @@ function signinReady() {
     }
 }
 
-$(document).ready(function() {
-    $.getScript('https://apis.google.com/js/client:plusone.js?onload=signinReady');
-    //Assign a temporary signin button callback. This get's unbound in signinReady():
-    $('#signinButton').click(function() {
-        alert("Google+ javascript hasn't loaded yet. Perhaps you need to whitelist this site in your adblocker or privacy filter?");
+function signInLocal() {
+    $.ajax({
+        type: 'POST',
+        url: '/login',
+        contentType: 'application/octet-stream; charset=utf-8',
+        success: function(result) {
+            window.location.href="/tests";
+        },
+        error: function(xhr, status) {
+            result = JSON.parse(xhr.responseText);
+            alert(result.error);
+        },
+        processData: false,
+        dataType: 'json',
+        data: JSON.stringify({email: $('#signin_form_email_input').val(),
+                              passphrase: $('#signin_form_passphrase_input').val()})
     });
+}
 
+
+$(document).ready(function() {
+    if ($("meta[name=authentication-type]").attr('content') == 'google') {
+        $.getScript('https://apis.google.com/js/client:plusone.js?onload=signinReady');
+        //Assign a temporary signin button callback. This get's unbound in signinReady():
+        $('#signinButton').click(function() {
+            alert("Google+ javascript hasn't loaded yet. Perhaps you need to whitelist this site in your adblocker or privacy filter?");
+        });
+    } else {
+        $('#signinButton').click(function() {
+            $("#signin_form").modal();
+        });
+        $('#signin_form').on('shown.bs.modal', function(e) {
+            $("#signin_form_email_input").focus();            
+        });
+        $('#signin_form').on('hidden.bs.modal', function (e) {
+            $('#signin_form input').val('');
+        });
+        $('#signin_form_login_btn').click(function() {
+            signInLocal();
+            $('#signin_form').modal('hide');            
+        });
+        $("#signin_form input").keyup(function(event){
+            if(event.keyCode == 13){
+                $('#signin_form_login_btn').click();
+            }
+        });
+
+    }
 });

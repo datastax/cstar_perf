@@ -26,7 +26,8 @@ csrf_protect_app(app)
 sockets = Sockets(app)
 
 ### Cassandra backend model:
-db = Model(email_notifications=app_config.has_section('smtp'))
+cassandra_hosts = [h.strip() for h in app_config.get('server','cassandra_hosts').split(",")]
+db = Model(cassandra_hosts, email_notifications=app_config.has_section('smtp'))
 
 ### Main application controllers:
 import controllers

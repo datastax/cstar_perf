@@ -26,6 +26,7 @@
 
         <meta name="csrf_token" content="{{csrf_token()}}" />
 
+        <meta name="authentication-type" content="{{authentication_type}}" />
         <meta name="google-signin-clientid" content="{{google_client_id}}" />
         <meta name="google-signin-scope" content="https://www.googleapis.com/auth/plus.profile.emails.read" />
         <meta name="google-signin-requestvisibleactions" content="http://schemas.google.com/AddActivity" />
@@ -77,6 +78,7 @@
               {% endif %}
             </ul>
             <ul class="nav navbar-nav navbar-right">
+              {% include 'login_with_passphrase.jinja2.html' %}
               {% if user_is_authenticated() %}
                 <li class="dropdown"> 
                   <a href="#" class="dropdown-toggle" 
@@ -92,7 +94,7 @@
                 <li></li>
               {% else %}
                 <li><button class="btn" id="signinButton">Sign in</button></li>
-              {% endif %}
+                {% endif %}
             </ul>
           </div><!-- /.navbar-collapse -->
         </div><!-- /.container-fluid -->

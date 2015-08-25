@@ -330,9 +330,9 @@ def bootstrap(git_fetch=True, revision_override=None):
 
         fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml clean'.format(java_home=config['java_home']))
         if config['override_version'] is not None:
-            fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml -Dversion={version}'.format(java_home=config['java_home'], version=config['override_version']))
+            fab.run('JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml -Dversion={version}'.format(java_home=config['java_home'], version=config['override_version']))
         else:
-            fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml'.format(java_home=config['java_home']))
+            fab.run('JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml'.format(java_home=config['java_home']))
 
         # Archive this build for future runs:
         fab.run('cp -a ~/fab/cassandra ~/fab/cassandra_builds/{git_id}'.format(git_id=git_id))
@@ -466,6 +466,13 @@ def destroy(leave_data=False):
     fab.run('rm -rf fab/cassandra')
     fab.run('rm -rf fab/scripts')
     fab.run('rm -f fab/nohup.log')
+
+    # Ensure directory configurations look sane
+    assert type(config['data_file_directories']) == list
+    for t in [config['saved_caches_directory'], config['commitlog_directory'],
+              config['flush_directory'], config['log_dir']] + config['data_file_directories']:
+        assert type(t) in (str, unicode) and len(t) > 1, '{t} doesn\'t look like a directory'.format(t=t)
+    
     if not leave_data:
         for d in config['data_file_directories']:
             fab.run('rm -rf {data}/*'.format(data=d))
@@ -639,6 +646,8 @@ def copy_root_setup():
 def set_device_read_ahead(read_ahead, devices):
     with fab.settings(user='root'):
         for device in devices:
+            if 'docker' in device:
+                continue # Docker has no device handle, so we can't set any parameters on it
             fab.run('blockdev --setra {read_ahead} {device}'.format(read_ahead=read_ahead,device=device))
 
 @fab.parallel

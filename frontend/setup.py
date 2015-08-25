@@ -1,26 +1,9 @@
 import sys
 from setuptools import setup, find_packages
+from pip.req import parse_requirements
+from pip.download import PipSession
 
-requires = (
-    'flask',
-    'Flask-Script',
-    'flask_sockets',
-    'gunicorn',
-    'cassandra-driver',
-    'google-api-python-client',
-    'ecdsa',
-    'daemonize',
-    'websocket-client',
-    'pyzmq',
-    'fabric',
-    'pyyaml',
-    'supervisor',
-    'pexpect',
-    'blist',
-    'superlance',
-    'requests',
-    'psutil'
-)
+requires = [str(ir.req) for ir in parse_requirements('requirements.txt',session=PipSession())]
 
 setup(
     name = 'cstar_perf.frontend',
@@ -41,5 +24,5 @@ setup(
                      'cstar_perf_schedule = cstar_perf.frontend.client.schedule:main']},
 )
 
-from cstar_perf.frontend.lib.crypto import generate_server_keys
-generate_server_keys()
+# from cstar_perf.frontend.lib.crypto import generate_server_keys
+# generate_server_keys()
