@@ -125,10 +125,10 @@ def create_default_frontend_users():
     create_users_script = """
     from cstar_perf.frontend.server.model import Model
     db = Model()
-    admin = db.create_user('admin@admin.com', 'Admin Full Name', ['user','admin'])
-    db.set_user_passphrase('admin@admin.com', 'admin')
-    user = db.create_user('user@user.com', 'User Full Name', ['user'])
-    db.set_user_passphrase('user@user.com', 'user')
+    admin = db.create_user('admin@example.com', 'Admin Full Name', ['user','admin'])
+    db.set_user_passphrase('admin@example.com', 'admin')
+    user = db.create_user('user@example.com', 'User Full Name', ['user'])
+    db.set_user_passphrase('user@example.com', 'user')
     """
     run_python_script(create_users_script)
 

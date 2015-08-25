@@ -442,7 +442,7 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
 
         log.info("cstar_perf service started, opening in your browser: http://localhost:8000")
         webbrowser.open("http://localhost:8000")
-        log.info("Log in with email: admin@admin.com and password: admin")
+        log.info("Log in with email: admin@example.com and password: admin")
         log.info("You will need to use the 'cstar_docker associate' command to link up a cluster")
         
 def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False, first_cassandra_node=None):
