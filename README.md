@@ -20,6 +20,7 @@ It handles the following:
 
 The evolving documentation is [available online here](https://datastax.github.io/cstar_perf).
 
+* [Setup a cstar_perf development/demo environment](http://datastax.github.io/cstar_perf/setup_dev_environment.html)
 * [Setup cstar_perf.tool](http://datastax.github.io/cstar_perf/setup_cstar_perf_tool.html)
 * [Setup cstar_perf.frontend](http://datastax.github.io/cstar_perf/setup_cstar_perf_frontend.html)
 * [Running Tests](http://datastax.github.io/cstar_perf/running_tests.html)
