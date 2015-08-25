@@ -112,3 +112,6 @@ If you make useful modifications to cstar_perf, please consider
 opening a pull-request on the `cstar_perf github page`_
 
 .. _cstar_perf github page: https://github.com/datastax/cstar_perf/pulls
+
+The rest of this guide is geared toward setting up a real-world test
+environment using real hardware.
