@@ -422,7 +422,7 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
             fab_execute(setup_boot_items)
 
         # Install the frontend as well as Cassandra to hold the frontend DB
-        fab_execute(fab_deploy.install_cstar_perf_frontend, existing_checkout=mount_host_src)
+        fab_execute(fab_deploy.install_cstar_perf_frontend)
 
         # Generate and save the credentials
         with fab.settings(hosts=ip):
@@ -438,7 +438,9 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
 
         log.info("cstar_perf service started, opening in your browser: http://localhost:8000")
         webbrowser.open("http://localhost:8000")
-
+        log.info("Log in with email: admin@admin.com and password: admin")
+        log.info("You will need to use the 'cstar_docker associate' command to link up a cluster")
+        
 def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False, first_cassandra_node=None):
     first_node = hosts.values()[0]
     other_nodes = hosts.values()[1:]
@@ -481,9 +483,9 @@ def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False, first_c
     with fab.settings(hosts=first_node):
         fab_execute(fab_deploy.setup_fab_dir)
         # Install cstar_perf
-        fab_execute(fab_deploy.install_cstar_perf_tool, existing_checkout=mount_host_src)
+        fab_execute(fab_deploy.install_cstar_perf_tool)
         # Install cstar_perf.frontend
-        fab_execute(fab_deploy.install_cstar_perf_frontend, existing_checkout=mount_host_src)
+        fab_execute(fab_deploy.install_cstar_perf_frontend)
     # rsync ~/fab to the other nodes:
     if len(other_nodes) > 0:
         with fab.settings(hosts=other_nodes):

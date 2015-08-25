@@ -86,10 +86,9 @@ def copy_fab_dir(from_node):
     fab.run("rsync -a {from_node}:fab ~/".format(from_node=from_node))
     fab.run("rsync -a {from_node}:.m2 ~/".format(from_node=from_node))
     
-def install_cstar_perf_tool(existing_checkout=False):
-    if not existing_checkout:
-        fab.run("mkdir -p ~/git")
-        fab.run("git -C ~/git clone http://github.com/datastax/cstar_perf.git")
+def install_cstar_perf_tool():
+    fab.run("mkdir -p ~/git")
+    fab.run("test ! -f ~/git/cstar_perf/tool/setup.py && git -C ~/git clone http://github.com/datastax/cstar_perf.git; true")
     with fab.settings(user='root'):
         fab.run("pip install -e /home/cstar/git/cstar_perf/tool")
 
@@ -98,14 +97,13 @@ def install_cstar_perf_tool(existing_checkout=False):
         hosts=",".join([fab.env.hosts] if isinstance(fab.env.hosts, basestring) else fab.env.hosts)))
     fab.run('git -C ~/fab/cassandra.git fetch --all')
 
-def install_cstar_perf_frontend(existing_checkout=False):
+def install_cstar_perf_frontend():
     """Install the frontend
 
     This method assumes that Cassandra is already installed and running on the frontend node
     """
-    if not existing_checkout:
-        fab.run("mkdir -p ~/git")
-        fab.run("git -C ~/git clone http://github.com/datastax/cstar_perf.git")
+    fab.run("mkdir -p ~/git")
+    fab.run("test ! -f ~/git/cstar_perf/frontend/setup.py && git -C ~/git clone http://github.com/datastax/cstar_perf.git; true")
     with fab.settings(user='root'):
         fab.run("pip install -e /home/cstar/git/cstar_perf/frontend")
 
