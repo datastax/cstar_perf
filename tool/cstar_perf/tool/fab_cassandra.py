@@ -152,7 +152,7 @@ def bootstrap(config, git_fetch=True):
 
 @fab.parallel
 def add_git_remotes():
-    for name,url in git_repos:
+    for name,url in get_git_repos():
         fab.run('git --git-dir=$HOME/fab/cassandra.git remote add {name} {url}'
                 .format(name=name, url=url), quiet=True)
 

@@ -525,12 +525,12 @@ def associate(frontend_name, cluster_names, with_dse=False):
     try:
         frontend = get_clusters(frontend_name, all_metadata=True)[frontend_name][0]
     except IndexError:
-        raise ValueError("No cluster named {} found".format(frontend_name))
+        raise ValueError("No frontend cluster named {} found".format(frontend_name))
 
     clusters = []
     for c in cluster_names:
         try:
-            cluster = get_clusters(c, all_metadata=True)[c]
+            cluster = get_clusters(c, all_metadata=True)[c][0]
         except IndexError:
             raise ValueError("No cluster named {} found".format(c))
         clusters.append(cluster)
@@ -543,7 +543,7 @@ def associate(frontend_name, cluster_names, with_dse=False):
 
     for cluster in clusters:
         num_nodes = len(cluster)-1
-        cluster = cluster[0]  # first node
+        cluster = cluster
         cluster_name = cluster['Config']['Labels']['cluster_name']
         cluster_ip = cluster['NetworkSettings']['IPAddress']
         with fab.settings(hosts=cluster_ip):
@@ -755,7 +755,7 @@ def main():
         '--destroy-existing', help='Destroy any existing cluster with the same name before launching', action="store_true")
 
     associate = parser_subparsers.add_parser('associate', description="Hook up one or more clusters to a cluster")
-    associate.add_argument('cluster', help='The name of the cluster')
+    associate.add_argument('frontend', help='The name of the frontend cluster')
     associate.add_argument('clusters', help='The names of the clusters to hook up to the frontend', nargs='+')
     associate.add_argument('--with-dse', help='Enable DSE product for this cluster', action='store_true', default=False)
 
