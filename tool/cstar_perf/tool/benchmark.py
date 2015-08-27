@@ -348,7 +348,8 @@ def setup_stress(stress_revision):
             'x', '-C', path
         )
         antcmd('-Dbasedir={}'.format(path), '-f', '{}/build.xml'.format(path),
-               'realclean', 'jar', _env={"JAVA_HOME":JAVA_HOME})
+               'realclean', 'jar', _env={"JAVA_TOOL_OPTIONS": "-Dfile.encoding=UTF8",
+                                         "JAVA_HOME": JAVA_HOME})
 
     stress_path = os.path.join(path, 'tools/bin/cassandra-stress')
 
