@@ -1,4 +1,4 @@
-from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash, teardown, 
+from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash, teardown,
                        log_stats, log_set_title, log_add_data, retrieve_logs, cstar, restart,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
                        drop_page_cache, wait_for_compaction, CASSANDRA_STRESS_PATH)
@@ -48,9 +48,9 @@ def validate_operations_list(operations):
             assert op.has_key('node'), "Cqlsh operation missing node to run on"
         elif op['type'] == 'bash':
             assert op.has_key('script'), "Bash operation missing script"
-    
 
-def stress_compare(revisions, 
+
+def stress_compare(revisions,
                    title,
                    log,
                    operations = [],
@@ -62,7 +62,7 @@ def stress_compare(revisions,
                ):
     """
     Run Stress on multiple C* branches and compare them.
-    
+
     revisions - List of dictionaries that contain cluster configurations
                 to trial. This is combined with the default config.
     title - The title of the comparison
@@ -71,7 +71,7 @@ def stress_compare(revisions,
     operations - List of dictionaries indicating the operations. Example:
        [# cassandra-stress command, node defaults to cluster defined 'stress_node'
         {'type': 'stress',
-         'command': 'write n=19000000 -rate threads=50',
+         'command': 'write n=19M -rate threads=50',
          'node': 'node1',
          'wait_for_compaction': True},
         # nodetool command to run in parallel on nodes:
@@ -101,7 +101,7 @@ def stress_compare(revisions,
         raise ValueError('setting for initial_destroy conflicts in job config and stress_compare() call')
     else:
         initial_destroy = pristine_config.get('initial_destroy', initial_destroy)
-        
+
     if initial_destroy:
         logger.info("Cleaning up from prior runs of stress_compare ...")
         teardown(destroy=True, leave_data=False)
@@ -130,39 +130,39 @@ def stress_compare(revisions,
             raise ValueError('setting for leave_data conflicts in job config and stress_compare() call')
         else:
             leave_data = revision_config.get('leave_data', leave_data)
-                
+
         logger.info("Bringing up {revision} cluster...".format(revision=revision))
-        
-        # Drop the page cache between each revision, especially 
-        # important when leave_data=True : 
+
+        # Drop the page cache between each revision, especially
+        # important when leave_data=True :
         if not keep_page_cache:
             drop_page_cache()
 
         #Only fetch from git on the first run:
         git_fetch = True if rev_num == 0 else False
         revision_config['git_id'] = git_id = bootstrap(config, destroy=True, leave_data=leave_data, git_fetch=git_fetch)
-    
+
         if capture_fincore:
             start_fincore_capture(interval=10)
 
         for operation_i, operation in enumerate(operations, 1):
             start = datetime.datetime.now()
-            stats = {"id":str(uuid.uuid1()), "type":operation['type'], 
+            stats = {"id":str(uuid.uuid1()), "type":operation['type'],
                      "revision": revision, "git_id": git_id, "start_date":start.isoformat(),
                      "label":revision_config.get('label', revision_config['revision'])}
 
             if operation['type'] == 'stress':
-                # Default to all the nodes of the cluster if no 
+                # Default to all the nodes of the cluster if no
                 # nodes were specified in the command:
                 if operation.has_key('nodes'):
                     cmd = "{command} -node {hosts}".format(
-                        command=operation['command'], 
+                        command=operation['command'],
                         hosts=",".join(host=operation['nodes']))
                 elif '-node' in operation['command']:
                     cmd = operation['command']
                 else:
                     cmd = "{command} -node {hosts}".format(
-                        command=operation['command'], 
+                        command=operation['command'],
                         hosts=",".join([n for n in fab_config['hosts']]))
                 stats['command'] = cmd
                 stats['intervals'] = []
@@ -241,7 +241,7 @@ def stress_compare(revisions,
 def main():
     parser = argparse.ArgumentParser(description='stress_compare')
     parser.add_argument('configs', metavar="CONFIG",
-                        help='JSON config file(s) containing stress_compare() arguments, use - to read from stdin', 
+                        help='JSON config file(s) containing stress_compare() arguments, use - to read from stdin',
                         nargs="+")
     args = parser.parse_args()
 

@@ -64,7 +64,7 @@ var addRevisionDiv = function(animate){
         "      </div>" +
         "    </div>";
     var newDiv = $(template.format({revision:schedule.n_revisions, revision_id:revision_id}));
-    if (animate) 
+    if (animate)
         newDiv.hide();
     $("#schedule-revisions").append(newDiv);
     if (animate)
@@ -91,7 +91,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
     schedule.n_operations++;
     var operation_id = 'operation-'+schedule.n_operations;
     if (!cmd)
-        cmd = 'write n=19000000 -rate threads=50';
+        cmd = 'write n=19M -rate threads=50';
     var template = "<div id='{operation_id}' class='operation'><legend>Operation<a class='pull-right' id='remove-{operation_id}'><span class='glyphicon" +
         "                  glyphicon-remove'></span></a></legend>" +
         "      <div class='form-group'>" +
@@ -210,7 +210,7 @@ var createJob = function() {
         cluster: $("#cluster").val(),
         num_nodes: $("#numnodes").val(),
     }
-    
+
     //Revisions:
     job.revisions = [];
     $("#schedule-revisions div.revision").each(function(i, revision) {
@@ -256,7 +256,7 @@ var show_job_json = function() {
 var cloneExistingJob = function(job_id) {
     $.get("/api/tests/id/" + job_id, function(job) {
         test = job['test_definition'];
-        $("input#testname").val(test['title']); 
+        $("input#testname").val(test['title']);
         $("textarea#description").val(test['description']);
         $("select#cluster").val(test['cluster']);
         $("select#numnodes").val(test['num_nodes']);
@@ -317,7 +317,7 @@ var update_jvm_selections = function(callback) {
                 alert("Warning - cluster JVM selection changed")
             }
         });
-        if (callback != null) 
+        if (callback != null)
             callback();
     });
 }
@@ -353,10 +353,10 @@ $(document).ready(function() {
     } else {
         //Create a new job from scratch:
         addRevisionDiv(false);
-        addOperationDiv(false, 'stress', 'write n=19000000 -rate threads=50');
-        addOperationDiv(false, 'stress', 'read n=19000000 -rate threads=50');
+        addOperationDiv(false, 'stress', 'write n=19M -rate threads=50');
+        addOperationDiv(false, 'stress', 'read n=19M -rate threads=50');
     }
-    
+
     //Validate form and submit:
     $("form#schedule-test").submit(function(e) {
         var job = createJob();
