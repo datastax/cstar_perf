@@ -381,6 +381,8 @@ def destroy(leave_data=False):
     """Uninstall Cassandra and clean up data and logs"""
     # We used to have a better pattern match for the Cassandra
     # process, but it got fragile if you put too many JVM params.
+    if leave_data:
+        fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool drain'.format(java_home=config['java_home']), quiet=True)
     fab.run('killall -9 java', quiet=True)
     fab.run('pkill -f "python.*fincore_capture"', quiet=True)
     fab.run('rm -rf fab/cassandra')
@@ -447,9 +449,14 @@ def stop(clean=True):
     product = dse if config['product'] == 'dse' else cstar
     product.stop(clean)
 
+@fab.parallel
+def multi_nodetool(cmd):
+    """run node tool command on all nodes in parallel"""
+    return fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool {cmd}'.format(java_home=config['java_home'], cmd=cmd), quiet=True)
+
 def ensure_running(retries=15, wait=10):
     """Ensure cassandra is running on all nodes.
-    Runs 'nodetool ring' on a single node continuously until it
+    Runs 'nodetool status' on a single node continuously until it
     reaches the specified number of retries.
 
     INTENDED TO BE RUN ON ONE NODE, NOT ALL.
@@ -459,13 +466,13 @@ def ensure_running(retries=15, wait=10):
     nodetool_bin = os.path.join(bin_path, 'nodetool')
     time.sleep(15)
     for attempt in range(retries):
-        ring = StringIO(fab.run('JAVA_HOME={java_home} {nodetool_bin} ring'.format(
+        ring = StringIO(fab.run('JAVA_HOME={java_home} {nodetool_bin} status'.format(
             java_home=config['java_home'], nodetool_bin=nodetool_bin)))
         broadcast_ips = [x.get('external_ip', x['internal_ip']) for x in config['hosts'].values()]
         nodes_up = dict((host,False) for host in broadcast_ips)
         for line in ring:
             for host in broadcast_ips:
-                if host in line and " Up " in line:
+                if host in line and "UN " in line:
                     nodes_up[host] = True
         for node,up in nodes_up.items():
             if not up:
