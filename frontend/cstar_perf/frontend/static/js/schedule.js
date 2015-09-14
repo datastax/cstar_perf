@@ -162,8 +162,8 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction, str
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-command'>CQL script</label>  " +
         "        <div class='col-md-9'>" +
-        "          <input id='{operation_id}-script' type='text'" +
-        "                 class='form-control input-md script-cqlsh' required='' value='{script_cqlsh}'>" +
+        "          <textarea id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-cqlsh' required=''>{script_cqlsh}</textarea>" +
         "        </div>" +
         "      </div>" +
         "      <div class='form-group nodes cqlsh'>" +
@@ -180,8 +180,8 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction, str
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-command'>Bash script</label>  " +
         "        <div class='col-md-9'>" +
-        "          <input id='{operation_id}-script' type='text'" +
-        "                 class='form-control input-md script-bash' required='' value='{script_bash}'>" +
+        "          <textarea id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-bash' required=''>{script_bash}</textarea>" +
         "        </div>" +
         "      </div>" +
         "      <div class='form-group nodes bash'>" +
