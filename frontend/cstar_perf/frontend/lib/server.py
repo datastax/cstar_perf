@@ -53,6 +53,7 @@ def main():
         create_app_config()
 
     if args.gen_credentials:
+        generate_client_credentials()
         return
 
     run_server()
