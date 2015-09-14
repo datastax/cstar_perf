@@ -517,8 +517,8 @@ $(document).ready(function() {
     } else {
         //Create a new job from scratch:
         addRevisionDiv(false);
-        addOperationDiv(false, {operation: 'stress', command_stress: 'write n=19M -rate threads=50'});
-        addOperationDiv(false, {operation: 'stress', command_stress: 'read n=19M -rate threads=50'});
+        addOperationDiv(false, {operation: 'stress', command: 'write n=19M -rate threads=50'});
+        addOperationDiv(false, {operation: 'stress', command: 'read n=19M -rate threads=50'});
     }
 
     //Validate form and submit:
