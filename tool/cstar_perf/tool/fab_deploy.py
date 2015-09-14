@@ -197,3 +197,37 @@ def get_client_jvms():
     output = fab.run("ls ~/fab/jvms")
     jvms = [jvm for jvm in output.split(' ') if jvm]
     return jvms
+
+def enable_dse(dse_repo_url, dse_repo_username=None, dse_repo_password=None):
+    """Enable DSE"""
+
+    enable_dse_script = """
+    import json
+    from cstar_perf.tool.cluster_config import cluster_config_file, config
+    config['dse_url'] = '{url}'
+    username = '{username}'
+    pw = '{pw}'
+    if username:
+        config['dse_username'] = username
+    elif 'dse_username' in config:
+        del config['dse_username']
+
+    if pw:
+        config['dse_password'] = pw
+    elif 'dse_password' in config:
+        del config['dse_password']
+
+    with open(cluster_config_file, 'w') as f:
+        f.write(json.dumps(config, sort_keys=True, indent=4, separators=(',', ': ')))
+    """.format(url=dse_repo_url, username=dse_repo_username, pw=dse_repo_password)
+    print run_python_script(enable_dse_script)
+
+def add_product_to_cluster(cluster_name, product):
+    """Add a product to a cluster configuration"""
+
+    add_cluster_product = """
+    from cstar_perf.frontend.server.model import Model
+    db = Model()
+    db.add_cluster_product('{name}', '{product}')
+    """.format(name=cluster_name, product=product)
+    run_python_script(add_cluster_product)

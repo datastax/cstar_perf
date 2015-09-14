@@ -8,10 +8,21 @@ var addRevisionDiv = function(animate){
     var revision_id = 'revision-'+schedule.n_revisions;
     var template = "<div id='{revision_id}' class='revision'><legend>Test Revisions<a id='remove-{revision_id}' class='pull-right remove-revision'><span class='glyphicon" +
         "                  glyphicon-remove'></span></a></legend>" +
+
+        "      <div class='form-group product-select-div' style='display:block'>" +
+        "        <label class='col-md-4 control-label' for='{revision_id}-product'>Product</label>" +
+        "        <div class='col-md-8'>" +
+        "          <select id='{revision_id}-product' " +
+        "                  class='product-select form-control' required>" +
+        "            <option value='cassandra'>cassandra</option>" +
+        "          </select>" +
+        "        </div>" +
+        "      </div>" +
+
         "      <div class='form-group'>" +
         "        <label class='col-md-4 control-label' for='{revision_id}-refspec'>Revision</label>  " +
         "        <div class='col-md-8'>" +"" +
-        "          <input id='{revision_id}-refspec' type='text' placeholder='Git branch, tag, or commit id' class='refspec form-control input-md' required>" +
+        "          <input id='{revision_id}-refspec' type='text' placeholder='Git branch, tag, commit id or DSE version' class='refspec form-control input-md' required>" +
         "        </div>" +
         "      </div>" +
         "" +
@@ -70,13 +81,8 @@ var addRevisionDiv = function(animate){
     if (animate)
         newDiv.slideDown();
 
-    //Populate JVMs per the previous revision:
-    if (schedule.n_revisions > 1) {
-        $("#revision-"+(schedule.n_revisions-1)+"-jvm option").clone().appendTo("#"+revision_id+"-jvm");
-        $("#"+revision_id+"-jvm").val($("#revision-"+(schedule.n_revisions-1)+"-jvm").val());
-    } else {
-        $("#cluster").change();
-    }
+    // Update cluster options. Will update all revisions.
+    update_cluster_options();
 
     //Remove revision handler:
     $("#remove-"+revision_id).click(function() {
@@ -216,6 +222,7 @@ var createJob = function() {
     $("#schedule-revisions div.revision").each(function(i, revision) {
         revision = $(revision);
         job.revisions[i] = {
+            product: revision.find(".product-select").val(),
             revision: revision.find(".refspec").val(),
             label: revision.find(".revision-label").val() ? revision.find(".revision-label").val() : null,
             yaml: revision.find(".yaml").val(),
@@ -265,6 +272,7 @@ var cloneExistingJob = function(job_id) {
             addRevisionDiv(false);
             var rev = i + 1;
             $("#revision-"+rev+"-refspec").val(revision['revision']);
+            $("#revision-"+rev+"-product").val(revision['product']);
             $("#revision-"+rev+"-label").val(revision['label']);
             $("#revision-"+rev+"-yaml").val(revision['yaml']);
             $("#revision-"+rev+"-env-vars").val(revision['env']);
@@ -272,8 +280,9 @@ var cloneExistingJob = function(job_id) {
                 revision['options'] = {};
             }
             $("#revision-"+rev+"-options-vnodes").prop("checked", revision['options']['use_vnodes'])
-            update_jvm_selections(function(){
+            update_cluster_options(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);
+                $("#revision-"+rev+"-product").val(revision['product']);
             });
 
         });
@@ -290,19 +299,23 @@ var cloneExistingJob = function(job_id) {
    });
 }
 
-var update_jvm_selections = function(callback) {
+var update_cluster_options = function(callback) {
     var cluster = $('#cluster').val();
     $.get('/api/clusters/'+cluster, function(data) {
-        //Remember the current jvm selections:
-        var current_jvm_selections = [];
-        $(".jvm-select").each(function(i, e) {
-            current_jvm_selections[i] = $(e).val();
+
+        $('#numnodes').val(data.num_nodes);
+
+        update_select_with_values(".jvm-select", data.jvms, "JVM");
+
+        var product_options = {"cassandra": "cassandra"};
+        $.each(data.additional_products, function(_, product) {
+            product_options[product] = product
         });
-        //Clear out the jvm lists and fetch new one:
-        $(".jvm-select").empty();
-        if(data.jvms==null) {
-            alert("Warning: cluster '"+ cluster+ "' has no JVMs defined.");
-            return;
+        update_select_with_values(".product-select", product_options, "Product");
+        if (data.additional_products.length == 0) {
+            $(".product-select-div").hide();
+        } else {
+            $(".product-select-div").show();
         }
         $.each(data.jvms, function(jvm, path) {
             $(".jvm-select").append($("<option value='"+path+"'>"+jvm+"</option>"));
@@ -319,6 +332,8 @@ var update_jvm_selections = function(callback) {
         });
         if (callback != null)
             callback();
+        }
+
     });
 }
 
@@ -343,7 +358,7 @@ $(document).ready(function() {
 
     //Refresh jvm list on cluster selection
     $('#cluster').change(function(e) {
-        update_jvm_selections();
+        update_cluster_options();
     });
 
     query = parseUri(location).queryKey;
