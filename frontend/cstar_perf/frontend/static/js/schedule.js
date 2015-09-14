@@ -263,7 +263,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction, str
     if (newOperation.operationType === 'stress' && operationDefaults.command) {
         newOperation.command_stress = operationDefaults.command
     } else {
-        newOperation.command_stress = "write n=19000000 -rate threads=50";
+        newOperation.command_stress = "write n=19M -rate threads=50";
     }
     if (newOperation.operationType === 'nodetool' && operationDefaults.command) {
         newOperation.command_nodetool = operationDefaults.command;
@@ -313,7 +313,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction, str
     if (operationDefaults.wait_for_compaction === false) {
         $("#"+operation_id+"-wait-for-compaction").prop("checked", false);
     }
-    update_node_selections(operation_id, operationDefaults)
+    update_cluster_options(operation_id, operationDefaults)
 };
 
 var createJob = function() {
@@ -423,7 +423,7 @@ var cloneExistingJob = function(job_id) {
    });
 }
 
-var update_node_selections = function(operation_id, operation_defaults, callback) {
+var update_cluster_options = function(operation_id, operation_defaults, callback) {
     operation_defaults = operation_defaults || {};
     var defaultNodeSpec = operation_defaults.nodes;
     if (!defaultNodeSpec) {
@@ -438,6 +438,7 @@ var update_node_selections = function(operation_id, operation_defaults, callback
     } else {
         changeDivs = $("div#" + operation_id).find(".node-select");
     }
+    
     var cluster = $('#cluster').val();
     $.get('/api/clusters/'+cluster, function(data) {
         //Clear out the node lists and fetch new one:
@@ -527,7 +528,7 @@ $(document).ready(function() {
     //Refresh jvm list on cluster selection
     $('#cluster').change(function(e) {
         update_jvm_selections();
-        update_node_selections();
+        update_cluster_options();
     });
 
     query = parseUri(location).queryKey;
