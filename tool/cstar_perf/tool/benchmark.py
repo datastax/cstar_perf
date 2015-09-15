@@ -265,7 +265,7 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
         pattern = re.compile("(^|\n)pending tasks: 0")
         nodes = set(nodes)
         while True:
-            results = execute(cstar.multi_nodetool, cmd="compactionstats")
+            results = execute(common.multi_nodetool, cmd="compactionstats")
             for node, output in results.iteritems():
                 if pattern.search(output.strip()):
                     nodes.discard(node)
@@ -288,7 +288,7 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
 
         nodes = set(nodes)
         while True:
-            results = execute(cstar.multi_nodetool, cmd="tpstats")
+            results = execute(common.multi_nodetool, cmd="tpstats")
             for node, output in results.iteritems():
                 if stat_exists_pattern.search(output):
                     if no_compactions_pattern.search(output):
@@ -312,7 +312,7 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
         nodes = set(nodes)
 
     # Disable compaction throttling to speed things up:
-    execute(cstar.multi_nodetool, cmd="setcompactionthroughput 0")
+    execute(common.multi_nodetool, cmd="setcompactionthroughput 0")
 
     # Perform checks multiple times to ensure compactions are really done:
     start = time.time()
@@ -323,7 +323,7 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
     duration = time.time() - start
 
     # Re-enable compaction throttling:
-    execute(cstar.multi_nodetool, cmd='setcompactionthroughput {compaction_throughput}'.format(**locals()))
+    execute(common.multi_nodetool, cmd='setcompactionthroughput {compaction_throughput}'.format(**locals()))
 
     logger.info("Compactions finished on all nodes. Duration of checks: {duration}".format(**locals()))
 
