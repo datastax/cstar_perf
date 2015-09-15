@@ -81,7 +81,9 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
         if cfg['options'] is not None:
             common.config.update(cfg['options'])
             del common.config['options']
-
+        # Rerun setup now that additional options have been added:
+        common.setup(common.config)
+            
     logger.info("### Config: ###")
     pprint(common.config)
 
