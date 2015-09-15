@@ -9,7 +9,6 @@ import logging
 from cstar_perf.frontend.server.util import create_app_config, load_app_config
 from cstar_perf.frontend.lib.crypto import generate_server_keys, SERVER_KEY_PATH
 from cstar_perf.frontend.server.notifications import console_publish
-from cstar_perf.tool.fab_deploy import get_client_credentials
 
 log = logging.getLogger('cstar_perf.frontend.lib.server')
 
@@ -44,7 +43,7 @@ def run_server():
 
 def main():
     parser = argparse.ArgumentParser(description='cstar_perf_server')
-    parser.add_argument('--get-credentials', dest='gen_credentials',
+    parser.add_argument('--get-credentials', dest='get_credentials',
                         action='store_true', help='Get and/or create ECDSA key for signing requests.')
 
     args = parser.parse_args()
@@ -53,8 +52,7 @@ def main():
         generate_server_keys()
         create_app_config()
 
-    if args.gen_credentials:
-        get_client_credentials()
+    if args.get_credentials:
         return
 
     run_server()
