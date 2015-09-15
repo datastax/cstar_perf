@@ -330,7 +330,7 @@ var update_cluster_options = function(callback) {
                 alert("Warning - cluster JVM selection changed")
             }
         });
-        if (callback != null)
+        if (callback != null) {
             callback();
         }
 
