@@ -9,6 +9,7 @@ import logging
 from cstar_perf.frontend.server.util import create_app_config, load_app_config
 from cstar_perf.frontend.lib.crypto import generate_server_keys, SERVER_KEY_PATH
 from cstar_perf.frontend.server.notifications import console_publish
+from cstar_perf.tool.fab_deploy import generate_client_credentials
 
 log = logging.getLogger('cstar_perf.frontend.lib.server')
 
