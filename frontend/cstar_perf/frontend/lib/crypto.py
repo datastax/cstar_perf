@@ -111,7 +111,8 @@ class APIKey(object):
 
         return apikey
 
-def generate_server_keys():
+
+def get_or_generate_server_keys():
     """One time function to create and store server side keys"""
     try:
         apikey = APIKey.load(SERVER_KEY_PATH,

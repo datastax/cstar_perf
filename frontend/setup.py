@@ -24,5 +24,5 @@ setup(
                      'cstar_perf_schedule = cstar_perf.frontend.client.schedule:main']},
 )
 
-# from cstar_perf.frontend.lib.crypto import generate_server_keys
-# generate_server_keys()
+# from cstar_perf.frontend.lib.crypto import get_or_generate_server_keys
+# get_or_generate_server_keys()

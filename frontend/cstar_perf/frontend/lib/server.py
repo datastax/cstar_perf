@@ -7,7 +7,7 @@ import argparse
 import logging
 
 from cstar_perf.frontend.server.util import create_app_config, load_app_config
-from cstar_perf.frontend.lib.crypto import generate_server_keys, SERVER_KEY_PATH
+from cstar_perf.frontend.lib.crypto import get_or_generate_server_keys, SERVER_KEY_PATH
 from cstar_perf.frontend.server.notifications import console_publish
 
 log = logging.getLogger('cstar_perf.frontend.lib.server')
@@ -47,12 +47,16 @@ def main():
                         action='store_true', help='Get and/or create ECDSA key for signing requests.')
 
     args = parser.parse_args()
-    
+
     if not os.path.exists(SERVER_KEY_PATH):
-        generate_server_keys()
+        get_or_generate_server_keys()
         create_app_config()
+        # keys are already printed, return
+        if args.get_credentials:
+            return
 
     if args.get_credentials:
+        get_or_generate_server_keys()
         return
 
     run_server()
