@@ -134,15 +134,15 @@ def create_default_frontend_users():
     """
     run_python_script(create_users_script)
 
-def add_cluster_to_frontend(cluster_name, num_nodes, public_key):
+def add_cluster_to_frontend(cluster_name, nodes, public_key):
     """Add the cluster to the frontend configuration"""
 
     add_cluster_script = """
     from cstar_perf.frontend.server.model import Model
     db = Model()
-    db.add_cluster('{name}', {num_nodes}, '{name}')
+    db.add_cluster('{name}', {nodes}, '{name}')
     db.add_pub_key('{name}', 'cluster', '{key}', replace=True)
-    """.format(name=cluster_name, num_nodes=num_nodes, key=public_key)
+    """.format(name=cluster_name, nodes=nodes, key=public_key)
     run_python_script(add_cluster_script)
 
 def add_jvm_to_cluster(cluster_name, jvm):

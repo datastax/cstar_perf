@@ -71,10 +71,14 @@ function update_select_with_values(element, values, context) {
         el.append($("<option value='"+val+"'>"+key+"</option>"));
     });
 
+    var default_selections = [];
+
     //Try to set the one we had from before:
     el.each(function(i, e) {
+        default_selections[i] = true;
         if (current_selections[i] != null) {
             $(e).val(current_selections[i]);
+            default_selections[i] = false;
         }
         if ($(e).val() == null) {
             $(e).find("option:first-child").attr("selected", "selected");
@@ -82,6 +86,7 @@ function update_select_with_values(element, values, context) {
         }
     });
 
+    return default_selections;
 }
 
 $(document).ready(function() {
