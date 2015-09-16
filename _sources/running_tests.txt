@@ -42,22 +42,6 @@ You run this scenario on the command line by specifying the JSON file::
     cstar_perf_stress cassandra-2.1.offheap_memtables.json
 
 
-If DSE support is available, you can compare dse products as well. Here's a sample comparing cassandra-2.1 and DSE 4.6.0::
-
-    {
-     "revisions":[
-        {"product": "dse", "revision":"4.6.0"},
-        {"product": "cassandra", "revision":"apache/cassandra-2.1"}
-     ],
-     "title":"Test DSE 4.6.0 ans Cassandra 2.1",
-     "log":"stats.dse-4.6.0.cassandra-2.1.json",
-     "operations": [
-        {"type":"stress","command":"write n=65000000 -rate threads=40 -mode cql3 native prepared"},
-        {"type":"stress","command":"read n=65000000 -rate threads=40 -mode cql3 native prepared"},
-        {"type":"stress","command":"read n=65000000 -rate threads=40 -mode cql3 native prepared"}]
-    }
-
-
 Log
 ^^^
 
