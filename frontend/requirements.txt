@@ -17,3 +17,5 @@ superlance
 requests
 psutil
 flask-scrypt
+selenium
+Pillow

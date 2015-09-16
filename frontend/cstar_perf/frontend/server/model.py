@@ -49,7 +49,9 @@ import base64
 
 from flask.ext.scrypt import generate_password_hash, generate_random_salt, check_password_hash
 
-from cstar_perf.frontend.lib.util import random_token, uuid_to_datetime
+from flask.ext.scrypt import generate_password_hash, generate_random_salt, check_password_hash
+
+from cstar_perf.frontend.lib.util import random_token, uuid_to_datetime, uuid_from_time
 from cstar_perf.frontend.server.email_notifications import TestStatusUpdateEmail
 
 try:
@@ -80,6 +82,8 @@ class Model(object):
     statements = {
         'insert_test': "INSERT INTO tests (test_id, user, cluster, status, test_definition) VALUES (?, ?, ?, ?, ?);",
         'select_test': "SELECT * FROM tests WHERE test_id = ?;",
+        'insert_series': "INSERT INTO test_series (series, test_id) VALUES ( ?, ?);",
+        'select_series' : "SELECT test_id from test_series where series = ? AND test_id > ? AND test_id < ?",
         'get_test_status': "SELECT status FROM tests WHERE test_id = ?;",
         'update_test_set_status': "UPDATE tests SET status = ? WHERE test_id = ?",
         'update_test_set_status_completed': "UPDATE tests SET status = ?, completed_date = ? WHERE test_id = ?",
@@ -165,6 +169,10 @@ class Model(object):
 
         # All test tests indexed by id:
         session.execute("CREATE TABLE tests (test_id timeuuid PRIMARY KEY, user text, cluster text, status text, test_definition text, completed_date timeuuid);")
+
+        # Index series by series name and then the tests by uuid
+        session.execute("CREATE TABLE test_series (series text, test_id timeuuid, PRIMARY KEY (series, test_id));")
+
         # Tests listed by status, sorted by timestamp, in descending
         # order. Descending order because the completed status will have
         # the largest number. 'scheduled' status will want to be queried
@@ -194,11 +202,12 @@ class Model(object):
     ################################################################################
     #### Test Management:
     ################################################################################
-    def schedule_test(self, test_id, user, cluster, test_definition):
+    def schedule_test(self, test_id, test_series, user, cluster, test_definition):
         session = self.get_session()
         test_definition['test_id'] = str(test_id)
         test_json = json.dumps(test_definition)
         session.execute(self.__prepared_statements['insert_test'], (test_id, user, cluster, 'scheduled', test_json))
+        session.execute(self.__prepared_statements['insert_series'], (test_series, test_id))
         session.execute(self.__prepared_statements['insert_test_status'], ('scheduled', cluster, test_id, user, test_definition['title']))
         self.zmq_socket.send_string("scheduled {cluster} {test_id}".format(**locals()))
         return test_id
@@ -213,6 +222,13 @@ class Model(object):
             raise UnknownTestError('Unknown test {test_id}'.format(test_id=test_id))
         test = self.__test_row_to_dict(test)
         return test
+
+    def get_series(self, series, start_timestamp, end_timestamp):
+        start_timestamp = int(start_timestamp)
+        end_timestamp = int(end_timestamp)
+        session = self.get_session()
+        series = session.execute(self.__prepared_statements['select_series'], (series, uuid_from_time(start_timestamp), uuid_from_time(end_timestamp)))
+        return [str(row.__dict__['test_id']) for row in series]
 
     def get_test_status(self, test_id):
         session = self.get_session()
@@ -295,7 +311,9 @@ class Model(object):
         if not isinstance(test_id, uuid.UUID):
             test_id = uuid.UUID(test_id)
         rows = session.execute(self.__prepared_statements['select_test_artifact_data'], (test_id, artifact_type))
-        return namedtuple('Artifact', 'artifact description')(rows[0].artifact.decode("hex"), rows[0].description)
+        if rows:
+            return namedtuple('Artifact', 'artifact description')(rows[0].artifact.decode("hex"), rows[0].description)
+        return None
 
     ################################################################################
     ####  Retrieve tests by status:

@@ -3,6 +3,8 @@ import functools
 import httplib2
 import os.path
 import uuid
+import socket
+from collections import OrderedDict
 import time
 from functools import partial
 
@@ -24,12 +26,12 @@ from app import app, app_config, db, sockets
 from model import Model, UnknownUserError, UnknownTestError
 from notifications import console_subscribe
 from cstar_perf.frontend.lib.util import random_token
+from cstar_perf.frontend.lib import screenshot, stupid_cache
 from cstar_perf.frontend import SERVER_KEY_PATH
 from cstar_perf.frontend.lib.crypto import APIKey
 
 import logging
 log = logging.getLogger('cstar_perf.controllers')
-
 
 ### Setup authentication method configured in server.conf:
 try:
@@ -249,7 +251,7 @@ def view_test(test_id):
 @app.route('/tests/artifacts/<test_id>/<artifact_type>')
 def get_artifact(test_id, artifact_type):
     if artifact_type == 'graph':
-        return redirect("/graph?stats={test_id}".format(test_id=test_id))
+        return redirect("/graph?command=one_job&stats={test_id}".format(test_id=test_id))
     artifact, description = db.get_test_artifact_data(test_id, artifact_type)
     if description.endswith(".tar.gz"):
         mimetype = 'application/gzip'
@@ -325,7 +327,10 @@ def schedule_test():
     job_id = uuid.uuid1()
     job['test_id'] = str(job_id)
     job['user'] = get_user_id()
-    db.schedule_test(test_id=job_id, user=job['user'], 
+    test_series = job.get('testseries', 'no_series')
+    if not test_series: 
+        test_series = 'no_series'
+    db.schedule_test(test_id=job_id, test_series=test_series, user=job['user'], 
                      cluster=job['cluster'], test_definition=job)
     return jsonify({'success':True, 'url':'/tests/id/{test_id}'.format(test_id=job['test_id'])})
 
@@ -363,6 +368,121 @@ def get_test(test_id):
         return jsonify(test)
     except UnknownTestError:
         return make_response(jsonify({'error':'Unknown Test {test_id}.'.format(test_id=test_id)}), 404)
+
+@app.route('/api/series/<series>/<start_timestamp>/<end_timestamp>')
+def get_series( series, start_timestamp, end_timestamp):
+    series = db.get_series( series, start_timestamp, end_timestamp)
+    jsobj = { 'series' : series }
+    if 'true' == request.args.get('pretty', 'True').lower():
+        response = json.dumps(obj=jsobj, sort_keys=True, indent=4, separators=(',', ': '))
+    else:
+        response = json.dumps(obj=jsobj)
+    return Response(response=response,
+                    status=200,
+                    mimetype= 'application/json')
+
+def get_series_summaries_impl(series, start_timestamp, end_timestamp):
+    series = db.get_series( series, start_timestamp, end_timestamp)
+    summaries = []
+    for test_id in series:
+        artifact = db.get_test_artifact_data(test_id, 'stats_summary')
+        if artifact:
+            summary = db.get_test_artifact_data(test_id, 'stats_summary')[0]
+            if summary:
+                summaries.append(json.loads(summary))
+    return summaries
+
+@app.route('/api/series/<series>/<start_timestamp>/<end_timestamp>/summaries')
+def get_series_summaries( series, start_timestamp, end_timestamp):
+    summaries = get_series_summaries_impl( series, start_timestamp, end_timestamp)
+    #Construct the response in two passes, first sort the data points on the UUID
+    #Then denormalize to arrays for each metric
+    #Operation -> revision -> uuid (for ordering) -> metrics as a bloc
+    #Then do Operation -> revision -> metrics as arrays (already sorted)
+    byOperation = {}
+
+    for summary in summaries:
+        #First get everything sorted by operation, revision, test id
+        for stat in summary['stats']:
+            operationStats = byOperation.setdefault(stat['test'], {})
+            revisionStats = operationStats.setdefault(stat['revision'], OrderedDict())
+            revisionStats[uuid.UUID(stat['id'])] = stat
+            del stat['test']
+            del stat['revision']
+
+    #Now flatten the entire thing to arrays for each operation -> revision
+    summaries = {}
+    for operation in byOperation:
+        newOperation = summaries.setdefault(operation, {})
+
+        for revision in byOperation[operation]:
+            newRevision = newOperation.setdefault(revision, {})
+
+            for stats in byOperation[operation][revision].itervalues():
+                for key, value in stats.iteritems():
+                    statsArray = newRevision.setdefault(key, [])
+                    if isinstance(value, basestring):
+                        statsArray.append(value.split()[0])
+                    else:
+                        statsArray.append(value)
+
+    #Wrapper object of facilitate adding fields later
+    jsobj = { 'summaries' : summaries }
+
+    if 'true' == request.args.get('pretty', 'True').lower():
+        response = json.dumps(obj=jsobj, sort_keys=True, indent=4, separators=(',', ': '))
+    else:
+        response = json.dumps(obj=jsobj)
+    return Response(response=response,
+                    status=200,
+                    mimetype= 'application/json')
+
+def construct_series_graph_url( series, start_timestamp, end_timestamp, operation, metric ):
+    redirectURL = "/graph?"
+    redirectURL += "command=series"
+    redirectURL += "&series={series}"
+    redirectURL += "&start_timestamp={start_timestamp}"
+    redirectURL += "&end_timestamp={end_timestamp}"
+    redirectURL += "&metric={metric}"
+    redirectURL += "&show_aggregates=false"
+    redirectURL += "&operation={operation}"
+    return redirectURL.format( series=series, start_timestamp=start_timestamp, end_timestamp=end_timestamp, operation=operation, metric=metric)
+
+@app.route('/api/series/<series>/<start_timestamp>/<end_timestamp>/graph/<operation>/<metric>')
+def get_series_graph( series, start_timestamp, end_timestamp, operation, metric):
+    redirectURL = construct_series_graph_url( series, start_timestamp, end_timestamp, operation, metric)
+    return redirect(redirectURL)
+
+@app.route('/api/series/<series>/<start_timestamp>/<end_timestamp>/graph/<operation>/<metric>.png')
+def get_series_graph_png( series, start_timestamp, end_timestamp, operation, metric):
+    host = socket.gethostname()
+    graphURL = "http://" + host + ":8000" + construct_series_graph_url( series, start_timestamp, end_timestamp, operation, metric )
+    return Response(response=screenshot.get_graph_png(graphURL, x_crop=846, y_crop=523),
+                    status=200,
+                    mimetype='application/png')
+
+def get_series_graph_png_cached( series, age, operation, metric, expires, invalidate):
+    host = socket.gethostname()
+    end_timestamp = int(time.time())
+    start_timestamp = max(0, end_timestamp - int(age))
+    graphURL = "http://" + host + ":8000" + construct_series_graph_url( series, start_timestamp, end_timestamp, operation, metric )
+    def loader():
+        return screenshot.get_graph_png(graphURL, x_crop=846, y_crop=523)
+
+    cache_key = series + "/" + age + "/" + operation + "/" + metric
+    return stupid_cache.stupid_cache_get("/tmp", cache_key, loader, expires, invalidate)
+
+@app.route('/api/series/<series>/<age>/graph/cached/<operation>/<metric>.png')
+def get_series_graph_png_cached_caching( series, age, operation, metric):
+    return Response(response=get_series_graph_png_cached( series, age, operation, metric, 0, False),
+                    status=200,
+                    mimetype='application/png')
+
+@app.route('/api/series/<series>/<age>/graph/<operation>/<metric>.png')
+def get_series_graph_png_cached_invalidating( series, age, operation, metric):
+    return Response(response=get_series_graph_png_cached( series, age, operation, metric, 0, True),
+                    status=200,
+                    mimetype='application/png')
 
 @app.route('/api/tests/status/id/<test_id>')
 @requires_auth('user')
