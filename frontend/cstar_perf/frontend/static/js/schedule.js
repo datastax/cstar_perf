@@ -81,7 +81,8 @@ var addRevisionDiv = function(animate){
     if (animate)
         newDiv.slideDown();
 
-    // Update cluster options. Will update all revisions.
+    // Update cluster. Will update all revisions.
+    update_cluster_selections();
     update_cluster_options();
 
     //Remove revision handler:
@@ -93,11 +94,9 @@ var addRevisionDiv = function(animate){
 
 };
 
-var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
+var addOperationDiv = function(animate, operationDefaults){
     schedule.n_operations++;
     var operation_id = 'operation-'+schedule.n_operations;
-    if (!cmd)
-        cmd = 'write n=19M -rate threads=50';
     var template = "<div id='{operation_id}' class='operation'><legend>Operation<a class='pull-right' id='remove-{operation_id}'><span class='glyphicon" +
         "                  glyphicon-remove'></span></a></legend>" +
         "      <div class='form-group'>" +
@@ -107,18 +106,73 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "          <select id='{operation_id}-type'" +
         "                  class='form-control type'>" +
         "            <option value='stress'>stress</option>" +
-        "            <option value='flush'>flush</option>" +
-        "            <option value='compact'>compact</option>" +
+        "            <option value='nodetool'>nodetool</option>" +
+        "            <option value='cqlsh'>cqlsh</option>" +
+        "            <option value='bash'>bash</option>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
         "      " +
-        "      <div class='form-group stress'>" +
+        "      <div class='form-group type stress'>" +
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-command'>Stress Command</label>  " +
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-command' type='text'" +
-        "                 class='form-control input-md command' value='{cmd}' required=''></input>" +
+        "                 class='form-control input-md command-stress' value='{command_stress}' required=''>" +
+        "        </div>" +
+        "      </div>" +
+        "      " +
+        "      <div class='form-group type nodetool'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>Nodetool Command</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <input id='{operation_id}-command' type='text'" +
+        "                 class='form-control input-md command-nodetool' value='{command_nodetool}' required=''>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes nodetool'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Nodes</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select multiple id='{operation_id}-nodes' type='text'" +
+        "                 class='form-control input-md nodes-nodetool node-select'>" +
+        "          </select>" +
+        "        </div>" +
+        "      </div>" +
+        "      " +
+        "      <div class='form-group type cqlsh'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>CQL script</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <textarea id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-cqlsh' required=''>{script_cqlsh}</textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes cqlsh'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Nodes</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select id='{operation_id}-nodes' type='text'" +
+        "                 class='form-control input-md node-cqlsh node-select'>" +
+        "          </select>" +
+        "        </div>" +
+        "      </div>" +
+        "            " +
+        "      <div class='form-group type bash'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>Bash script</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <textarea id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-bash' required=''>{script_bash}</textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes bash'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Nodes</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select multiple id='{operation_id}-nodes' type='text'" +
+        "                 class='form-control input-md nodes-bash node-select'>" +
+        "          </select>" +
         "        </div>" +
         "      </div>" +
         "            " +
@@ -131,7 +185,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "            <label for='{operation_id}-wait-for-compaction'>" +
         "              Wait for compactions before next operation" +
         "            </label>" +
-        "	  </div>" +
+        "   </div>" +
         "        </div>" +
         "      </div>" +
         "            " +
@@ -175,23 +229,58 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "                 <input disabled=disabled id='{revision_id}-kill-nodes-delay' class='kill-nodes-delay' value='300'/> seconds" +
         "              </td></tr>" +
         "           </table>" +
-        "	    </div>" +
+        "     </div>" +
         "        </div>" +
 
         "      </div>" +
         "     </div>";
 
-    var newDiv = $(template.format({operation:schedule.n_operations, operation_id:operation_id, cmd:cmd}));
+    operationDefaults = operationDefaults || {};
+    newOperation = {
+        operationType: operationDefaults.operation || "stress",
+        operation: schedule.n_operations,
+        operation_id: operation_id,
+    };
+    if (newOperation.operationType === 'stress' && operationDefaults.command) {
+        newOperation.command_stress = operationDefaults.command
+    } else {
+        newOperation.command_stress = "write n=19M -rate threads=50";
+    }
+    if (newOperation.operationType === 'nodetool' && operationDefaults.command) {
+        newOperation.command_nodetool = operationDefaults.command;
+    } else {
+        newOperation.command_nodetool = "status";
+    }
+    if (newOperation.operationType === 'cqlsh' && operationDefaults.script) {
+        newOperation.script_cqlsh = operationDefaults.script;
+    } else {
+        newOperation.script_cqlsh = "DESCRIBE TABLES;";
+    }
+    if (newOperation.operationType === 'bash' && operationDefaults.script) {
+        newOperation.script_bash = operationDefaults.script;
+    } else {
+        newOperation.script_bash = "ls";
+    }
+
+    var newDiv = $(template.format(newOperation));
     if (animate)
         newDiv.hide();
     $("#schedule-operations").append(newDiv);
     $("#"+operation_id+"-type").change(function(){
-        if (this.value == 'stress') {
-            $("#"+operation_id+" div.stress").show();
-        } else {
-            $("#"+operation_id+" div.stress").hide();
+        var validOperations = ['stress', 'nodetool', 'cqlsh', 'bash'];
+        if (validOperations.indexOf(this.value) < 0) {
+            console.log(this.value + ' not a valid selection')
         }
-    }).val(operation).change();
+        for (var i = 0; i < validOperations.length; i++) {
+            var op = validOperations[i];
+            var selected = $("#"+operation_id+" div."+op);
+            if (op === this.value) {
+                selected.show();
+            } else {
+                selected.hide();
+            }
+        }
+    }).val(newOperation.operationType).change();
     if (animate)
         newDiv.slideDown();
 
@@ -203,9 +292,10 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
     });
 
     //Check wait_for_compaction box:
-    if (wait_for_compaction === false) {
+    if (operationDefaults.wait_for_compaction === false) {
         $("#"+operation_id+"-wait-for-compaction").prop("checked", false);
     }
+    update_cluster_options(operation_id, operationDefaults)
 };
 
 var createJob = function() {
@@ -236,13 +326,27 @@ var createJob = function() {
     job.operations = [];
     $("#schedule-operations div.operation").each(function(i, operation) {
         operation = $(operation);
-        job.operations[i] = {
-            operation: operation.find(".type").val(),
+        var op = operation.find(".type").val()
+        var jobSpec = {
+            operation: op,
         };
-        if (job.operations[i]['operation'] === 'stress') {
-            job.operations[i]['command'] = operation.find(".command").val();
+        if (op === 'stress') {
+            jobSpec['command'] = operation.find(".command-stress").val();
         }
-        job.operations[i]['wait_for_compaction'] = operation.find(".wait-for-compaction").is(":checked");
+        if (op === "nodetool") {
+            jobSpec['command'] = operation.find(".command-nodetool").val();
+            jobSpec['nodes'] = operation.find(".nodes-nodetool").val() || [];
+        }
+        if (op === "cqlsh") {
+            jobSpec['script'] = operation.find(".script-cqlsh").val();
+            jobSpec['node'] = operation.find(".node-cqlsh").val() || [];
+        }
+        if (op === "bash") {
+            jobSpec['script'] = operation.find(".script-bash").val();
+            jobSpec['nodes'] = operation.find(".nodes-bash").val();
+        }
+        jobSpec['wait_for_compaction'] = operation.find(".wait-for-compaction").is(":checked");
+        job.operations[i] = jobSpec;
     });
 
     return JSON.stringify(job);
@@ -280,7 +384,8 @@ var cloneExistingJob = function(job_id) {
                 revision['options'] = {};
             }
             $("#revision-"+rev+"-options-vnodes").prop("checked", revision['options']['use_vnodes'])
-            update_cluster_options(function(){
+            update_cluster_options();
+            update_cluster_selections(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);
                 $("#revision-"+rev+"-product").val(revision['product']);
             });
@@ -288,7 +393,7 @@ var cloneExistingJob = function(job_id) {
         });
         //Operations:
         $.each(test['operations'], function(i, operation) {
-            addOperationDiv(false, operation['operation'], operation['command'], operation['wait_for_compaction']);
+            addOperationDiv(false, operation);
         });
 
         query = parseUri(location).queryKey;
@@ -299,17 +404,72 @@ var cloneExistingJob = function(job_id) {
    });
 }
 
-var update_cluster_options = function(callback) {
+var update_cluster_options = function(operation_id, operation_defaults, callback) {
+    operation_defaults = operation_defaults || {};
+    var defaultNodeSpec = operation_defaults.nodes;
+    if (!defaultNodeSpec) {
+        if (operation_defaults.node) {
+            var defaultNodeSpec = [operation_defaults.node];
+        }
+    }
+
+    var changeDivs;
+    if (operation_id == null) {
+        changeDivs = $(".node-select");
+    } else {
+        changeDivs = $("div#" + operation_id).find(".node-select");
+    }
+
+    var cluster = $('#cluster').val();
+    $.get('/api/clusters/'+cluster, function(data) {
+        //Clear out the node lists and fetch new one:
+        changeDivs.empty();
+        if(data.nodes==null) {
+            alert("Warning: cluster '"+ cluster+ "' has no nodes defined.");
+            return;
+        }
+        $.each(data.nodes, function(node, path) {
+            var newNodeOption = "<option value='"+path+"'";
+            // if the node's name was selected in the default operation, select it here
+            if (defaultNodeSpec) {
+                for (i = 0; i < defaultNodeSpec.length; i++) {
+                    if (defaultNodeSpec[i] === path) {
+                        newNodeOption += " selected";
+                        break;
+                    }
+                }
+            } else {
+                newNodeOption += " selected";
+            }
+            newNodeOption += ">"+path+"</option>";
+            changeDivs.append($(newNodeOption));
+        });
+        if (callback != null)
+            callback();
+    });
+}
+
+var update_cluster_selections = function(callback) {
     var cluster = $('#cluster').val();
     $.get('/api/clusters/'+cluster, function(data) {
 
-        $('#numnodes').val(data.num_nodes);
+        $('#numnodes').val(data.nodes.length);
 
-        update_select_with_values(".jvm-select", data.jvms, "JVM");
+        var default_selections = update_select_with_values(".jvm-select", data.jvms, "JVM");
+         // try to select jvm 1.8 for all default selections
+        $(".jvm-select").each(function(i, jvm) {
+            if (default_selections[i]) {
+                $("option", jvm).each(function(i, e) {
+                    if ($(e).text().lastIndexOf("1.8.", 0) === 0) {
+                        $(jvm).val($(e).val());
+                    }
+                });
+            }
+        });
 
         var product_options = {"cassandra": "cassandra"};
         $.each(data.additional_products, function(_, product) {
-            product_options[product] = product
+            product_options[product] = product;
         });
         update_select_with_values(".product-select", product_options, "Product");
         if (data.additional_products.length == 0) {
@@ -317,23 +477,10 @@ var update_cluster_options = function(callback) {
         } else {
             $(".product-select-div").show();
         }
-        $.each(data.jvms, function(jvm, path) {
-            $(".jvm-select").append($("<option value='"+path+"'>"+jvm+"</option>"));
-        });
-        //Try to set the one we had from before:
-        $(".jvm-select").each(function(i, e) {
-            if (current_jvm_selections[i] != null) {
-                $(e).val(current_jvm_selections[i]);
-            }
-            if ($(e).val() == null) {
-                $(e).find("option:first-child").attr("selected", "selected");
-                alert("Warning - cluster JVM selection changed")
-            }
-        });
+
         if (callback != null) {
             callback();
         }
-
     });
 }
 
@@ -346,18 +493,19 @@ var updateURLBar = function(query) {
 $(document).ready(function() {
     //Add revision button callback:
     $('button#add-revision').click(function(e) {
-        addRevisionDiv(true);
         e.preventDefault();
+        addRevisionDiv(true);
     });
 
     //Add operation button callback:
     $('button#add-operation').click(function(e) {
-        addOperationDiv(true, 'stress');
         e.preventDefault();
+        addOperationDiv(true);
     });
 
     //Refresh jvm list on cluster selection
     $('#cluster').change(function(e) {
+        update_cluster_selections();
         update_cluster_options();
     });
 
@@ -368,12 +516,13 @@ $(document).ready(function() {
     } else {
         //Create a new job from scratch:
         addRevisionDiv(false);
-        addOperationDiv(false, 'stress', 'write n=19M -rate threads=50');
-        addOperationDiv(false, 'stress', 'read n=19M -rate threads=50');
+        addOperationDiv(false, {operation: 'stress', command: 'write n=19M -rate threads=50'});
+        addOperationDiv(false, {operation: 'stress', command: 'read n=19M -rate threads=50'});
     }
 
     //Validate form and submit:
     $("form#schedule-test").submit(function(e) {
+        e.preventDefault();
         var job = createJob();
         console.log(job);
         $.ajax({
@@ -390,7 +539,6 @@ $(document).ready(function() {
             console.log(data);
             alert("error: "+data.status+" "+data.statusText+" "+data.responseText);
         });
-        e.preventDefault();
     });
 
 
