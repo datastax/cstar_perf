@@ -383,6 +383,7 @@ def destroy(leave_data=False):
     # process, but it got fragile if you put too many JVM params.
     if leave_data:
         fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool drain'.format(java_home=config['java_home']), quiet=True)
+        fab.run('rm -rf {commitlog}/*'.format(commitlog=config['commitlog_directory']))
     fab.run('killall -9 java', quiet=True)
     fab.run('pkill -f "python.*fincore_capture"', quiet=True)
     fab.run('rm -rf fab/cassandra')
@@ -447,7 +448,7 @@ def start():
 @fab.parallel
 def stop(clean=True):
     product = dse if config['product'] == 'dse' else cstar
-    product.stop(clean)
+    product.stop(clean, config)
 
 @fab.parallel
 def multi_nodetool(cmd):
@@ -456,7 +457,7 @@ def multi_nodetool(cmd):
 
 def ensure_running(retries=15, wait=10):
     """Ensure cassandra is running on all nodes.
-    Runs 'nodetool status' on a single node continuously until it
+    Runs 'nodetool ring' on a single node continuously until it
     reaches the specified number of retries.
 
     INTENDED TO BE RUN ON ONE NODE, NOT ALL.
@@ -466,13 +467,13 @@ def ensure_running(retries=15, wait=10):
     nodetool_bin = os.path.join(bin_path, 'nodetool')
     time.sleep(15)
     for attempt in range(retries):
-        ring = StringIO(fab.run('JAVA_HOME={java_home} {nodetool_bin} status'.format(
+        ring = StringIO(fab.run('JAVA_HOME={java_home} {nodetool_bin} ring'.format(
             java_home=config['java_home'], nodetool_bin=nodetool_bin)))
         broadcast_ips = [x.get('external_ip', x['internal_ip']) for x in config['hosts'].values()]
         nodes_up = dict((host,False) for host in broadcast_ips)
         for line in ring:
             for host in broadcast_ips:
-                if host in line and "UN " in line:
+                if host in line and " Up " in line:
                     nodes_up[host] = True
         for node,up in nodes_up.items():
             if not up:

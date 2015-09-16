@@ -162,8 +162,9 @@ def start(config):
     cmd = 'JAVA_HOME={java_home} nohup ~/fab/cassandra/bin/cassandra'.format(java_home=config['java_home'])
     fab.run(cmd)
 
-def stop(clean):
+def stop(clean, config):
     if clean:
+        fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool drain'.format(java_home=config['java_home']), quiet=True)
         fab.run('pkill -f "java.*org.apache.*.CassandraDaemon"', quiet=True)
     else:
         fab.run('pkill -9 -f "java.*org.apache.*.CassandraDaemon"', quiet=True)
