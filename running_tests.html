@@ -138,6 +138,21 @@ commands listed.</p>
 <div class="highlight-python"><div class="highlight"><pre>cstar_perf_stress cassandra-2.1.offheap_memtables.json
 </pre></div>
 </div>
+<p>If DSE support is available, you can compare dse products as well. Here&#8217;s a sample comparing cassandra-2.1 and DSE 4.6.0:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span>
+<span class="s">&quot;revisions&quot;</span><span class="p">:[</span>
+<span class="p">{</span><span class="s">&quot;product&quot;</span><span class="p">:</span> <span class="s">&quot;dse&quot;</span><span class="p">,</span> <span class="s">&quot;revision&quot;</span><span class="p">:</span><span class="s">&quot;4.6.0&quot;</span><span class="p">},</span>
+<span class="p">{</span><span class="s">&quot;product&quot;</span><span class="p">:</span> <span class="s">&quot;cassandra&quot;</span><span class="p">,</span> <span class="s">&quot;revision&quot;</span><span class="p">:</span><span class="s">&quot;apache/cassandra-2.1&quot;</span><span class="p">}</span>
+<span class="p">],</span>
+<span class="s">&quot;title&quot;</span><span class="p">:</span><span class="s">&quot;Test DSE 4.6.0 ans Cassandra 2.1&quot;</span><span class="p">,</span>
+<span class="s">&quot;log&quot;</span><span class="p">:</span><span class="s">&quot;stats.dse-4.6.0.cassandra-2.1.json&quot;</span><span class="p">,</span>
+<span class="s">&quot;operations&quot;</span><span class="p">:</span> <span class="p">[</span>
+<span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span><span class="s">&quot;stress&quot;</span><span class="p">,</span><span class="s">&quot;command&quot;</span><span class="p">:</span><span class="s">&quot;write n=65000000 -rate threads=40 -mode cql3 native prepared&quot;</span><span class="p">},</span>
+<span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span><span class="s">&quot;stress&quot;</span><span class="p">,</span><span class="s">&quot;command&quot;</span><span class="p">:</span><span class="s">&quot;read n=65000000 -rate threads=40 -mode cql3 native prepared&quot;</span><span class="p">},</span>
+<span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span><span class="s">&quot;stress&quot;</span><span class="p">,</span><span class="s">&quot;command&quot;</span><span class="p">:</span><span class="s">&quot;read n=65000000 -rate threads=40 -mode cql3 native prepared&quot;</span><span class="p">}]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
 <div class="section" id="log">
 <h3>Log<a class="headerlink" href="#log" title="Permalink to this headline">¶</a></h3>
 <p>The path where to save the test results</p>

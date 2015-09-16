@@ -179,6 +179,12 @@ Here's the config for our example cluster::
         "saved_caches_directory": "/mnt/d2/saved_caches"
     }
 
+If using DSE, you can add the following keys::
+
+    "dse_url": "http://my-dse-repo/tar/",
+    "dse_username": "XXXX",
+    "dse_password": "YYYY"
+    
 The required settings :
 
 * **hosts** - all of your Cassandra nodes need to be listed here, including hostname and IP address.
@@ -186,6 +192,7 @@ The required settings :
 * **block_devices** - The physical block devices that Cassandra is using to store data and commitlogs.
 * **blockdev_readahead** - The default block device readhead setting for your drives (get it from running ``blockdev --getra /dev/DEVICE``)
 * **user** - The user account that you use on the Cassandra nodes.
+* **dse_**** - Only if you want DSE support.
 
 If you're familiar with Cassandra's ``cassandra.yaml``, you'll
 recognize the rest of these settings because they are from there. You

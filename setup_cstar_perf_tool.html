@@ -259,6 +259,12 @@ Here&#8217;s the config for our example cluster:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>If using DSE, you can add the following keys:</p>
+<div class="highlight-python"><div class="highlight"><pre>&quot;dse_url&quot;: &quot;http://my-dse-repo/tar/&quot;,
+&quot;dse_username&quot;: &quot;XXXX&quot;,
+&quot;dse_password&quot;: &quot;YYYY&quot;
+</pre></div>
+</div>
 <p>The required settings :</p>
 <ul class="simple">
 <li><strong>hosts</strong> - all of your Cassandra nodes need to be listed here, including hostname and IP address.</li>
@@ -266,6 +272,7 @@ Here&#8217;s the config for our example cluster:</p>
 <li><strong>block_devices</strong> - The physical block devices that Cassandra is using to store data and commitlogs.</li>
 <li><strong>blockdev_readahead</strong> - The default block device readhead setting for your drives (get it from running <code class="docutils literal"><span class="pre">blockdev</span> <span class="pre">--getra</span> <span class="pre">/dev/DEVICE</span></code>)</li>
 <li><strong>user</strong> - The user account that you use on the Cassandra nodes.</li>
+<li><strong>dse_**</strong> - Only if you want DSE support.</li>
 </ul>
 <p>If you&#8217;re familiar with Cassandra&#8217;s <code class="docutils literal"><span class="pre">cassandra.yaml</span></code>, you&#8217;ll
 recognize the rest of these settings because they are from there. You
