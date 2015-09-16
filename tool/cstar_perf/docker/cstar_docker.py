@@ -542,9 +542,9 @@ def associate(frontend_name, cluster_names, with_dse=False):
         frontend_credentials = fab_execute(fab_deploy.get_frontend_credentials).values()[0]
 
     for cluster in clusters:
-        num_nodes = len(cluster)-1
         cluster = cluster
         cluster_name = cluster['Config']['Labels']['cluster_name']
+        nodes = get_clusters(c)[cluster_name][1:]
         cluster_ip = cluster['NetworkSettings']['IPAddress']
         with fab.settings(hosts=cluster_ip):
             fab_execute(fab_deploy.generate_client_credentials, cluster_name,
@@ -556,7 +556,7 @@ def associate(frontend_name, cluster_names, with_dse=False):
 
         # Link the cluster to the frontend
         with fab.settings(hosts=frontend_ip):
-            fab_execute(fab_deploy.add_cluster_to_frontend, cluster_name, num_nodes,
+            fab_execute(fab_deploy.add_cluster_to_frontend, cluster_name, nodes,
                         cluster_credentials['public_key'])
             for jvm in jvms:
                 fab_execute(fab_deploy.add_jvm_to_cluster, cluster_name, jvm)
