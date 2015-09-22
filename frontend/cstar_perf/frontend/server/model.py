@@ -230,6 +230,7 @@ class Model(object):
         if not isinstance(test_id, uuid.UUID):
             test_id = uuid.UUID(test_id)
         test = self.get_test(test_id)
+        original_status = self.get_test_status(test_id)
         # Update tests table:
         if status == "completed":
             completed_date = uuid.uuid1()
@@ -246,7 +247,7 @@ class Model(object):
         log.info("test status is: {status}".format(status=status))
 
         # Send the user an email when the status updates:
-        if self.email_notifications and status not in ('scheduled','in_progress'):
+        if self.email_notifications and status not in ('scheduled','in_progress') and status != original_status:
             TestStatusUpdateEmail([test['user']], status=status, name=test['test_definition']['title'], 
                                   test_id=test_id).send()
         return namedtuple('TestStatus', 'test_id status')(test_id, status)
