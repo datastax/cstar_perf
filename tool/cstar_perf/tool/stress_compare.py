@@ -107,7 +107,7 @@ def stress_compare(revisions,
         teardown(destroy=True, leave_data=False)
 
     clean_stress()
-    stress_revisions = [operation['stress_revision'] for operation in operations if 'stress_revision' in operation]
+    stress_revisions = set([operation['stress_revision'] for operation in operations if 'stress_revision' in operation])
     stress_shas = setup_stress(stress_revisions)
 
     for rev_num, revision_config in enumerate(revisions):
