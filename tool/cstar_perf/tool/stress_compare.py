@@ -1,7 +1,7 @@
 from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash, teardown,
                        log_stats, log_set_title, log_add_data, retrieve_logs, restart,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
-                       drop_page_cache, wait_for_compaction, CASSANDRA_STRESS_PATH)
+                       drop_page_cache, wait_for_compaction, setup_stress, clean_stress)
 from benchmark import config as fab_config
 from fabric.tasks import execute
 import os
@@ -106,13 +106,9 @@ def stress_compare(revisions,
         logger.info("Cleaning up from prior runs of stress_compare ...")
         teardown(destroy=True, leave_data=False)
 
-    # Clean stress builds
-    stress_builds = [b for b in os.listdir(CASSANDRA_STRESS_PATH)
-                     if b not in ['default', 'trunk']]
-    for stress_build in stress_builds:
-        path = os.path.join(CASSANDRA_STRESS_PATH, stress_build)
-        logger.info("Removing stress build '{}'".format(path))
-        shutil.rmtree(path)
+    clean_stress()
+    stress_revisions = [revision['stress_revision'] for revision in revisions if 'stress_revision' in revision]
+    stress_shas = setup_stress(stress_revisions)
 
     for rev_num, revision_config in enumerate(revisions):
         config = copy.copy(pristine_config)
@@ -172,7 +168,8 @@ def stress_compare(revisions,
                 # Run stress:
                 # (stress takes the stats as a parameter, and adds
                 #  more as it runs):
-                stats = stress(cmd, revision, stats, stress_revision=revision_config.get('stress_revision', None))
+                stress_sha = stress_shas[revision_config.get('stress_revision', 'default')]
+                stats = stress(cmd, revision, stress_sha, stats=stats)
                 # Wait for all compactions to finish (unless disabled):
                 if operation.get('wait_for_compaction', True):
                     compaction_throughput = revision_config.get("compaction_throughput_mb_per_sec", 16)
