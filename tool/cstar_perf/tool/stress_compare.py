@@ -107,7 +107,7 @@ def stress_compare(revisions,
         teardown(destroy=True, leave_data=False)
 
     clean_stress()
-    stress_revisions = [revision['stress_revision'] for revision in revisions if 'stress_revision' in revision]
+    stress_revisions = [operation['stress_revision'] for operation in operations if 'stress_revision' in operation]
     stress_shas = setup_stress(stress_revisions)
 
     for rev_num, revision_config in enumerate(revisions):
@@ -168,7 +168,7 @@ def stress_compare(revisions,
                 # Run stress:
                 # (stress takes the stats as a parameter, and adds
                 #  more as it runs):
-                stress_sha = stress_shas[revision_config.get('stress_revision', 'default')]
+                stress_sha = stress_shas[operation.get('stress_revision', 'default')]
                 stats = stress(cmd, revision, stress_sha, stats=stats)
                 # Wait for all compactions to finish (unless disabled):
                 if operation.get('wait_for_compaction', True):

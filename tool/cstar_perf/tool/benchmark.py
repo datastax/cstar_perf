@@ -435,7 +435,7 @@ def stress(cmd, revision_tag, stress_sha, stats=None):
             "test": operation,
             "revision": revision_tag,
             "date": datetime.datetime.now().isoformat(),
-            "stress_revision": stress_revision
+            "stress_revision": stress_sha
         }
 
     # Run stress:
