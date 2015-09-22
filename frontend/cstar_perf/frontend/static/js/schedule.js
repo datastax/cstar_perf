@@ -93,11 +93,13 @@ var addRevisionDiv = function(animate){
 
 };
 
-var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
+var addOperationDiv = function(animate, operation, cmd, wait_for_compaction, stress_revision){
     schedule.n_operations++;
     var operation_id = 'operation-'+schedule.n_operations;
     if (!cmd)
         cmd = 'write n=19M -rate threads=50';
+    if (!stress_revision)
+        stress_revision = 'apache/trunk';
     var template = "<div id='{operation_id}' class='operation'><legend>Operation<a class='pull-right' id='remove-{operation_id}'><span class='glyphicon" +
         "                  glyphicon-remove'></span></a></legend>" +
         "      <div class='form-group'>" +
@@ -117,8 +119,16 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-command'>Stress Command</label>  " +
         "        <div class='col-md-9'>" +
-        "          <input id='{operation_id}-command' type='text'" +
-        "                 class='form-control input-md command' value='{cmd}' required=''></input>" +
+        "          <textarea id='{operation_id}-command' type='text'" +
+        "                 class='form-control input-md command' required=''>{cmd}</textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group stress'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-stress-revision'>Stress Revision</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <input id='{operation_id}-stress-revision' type='text'" +
+        "                 class='form-control input-md stress-revision' value='{stress_revision}' required=''></input>" +
         "        </div>" +
         "      </div>" +
         "            " +
@@ -135,53 +145,9 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction){
         "        </div>" +
         "      </div>" +
         "            " +
-        "      <div class='panel-group stress' id='{operation_id}-stress-variations'>" +
-        "        <div class='panel col-md-12'>" +
-        "          <div class='panel-heading'>" +
-        "           <a data-toggle='collapse' data-parent='#{operation_id}-stress-variations' href='#{operation_id}-stress-variations-collapse'>Stress Variations </a><span class='glyphicon glyphicon-chevron-down'></span>" +
-        "          </div>" +
-        "          <div id='{operation_id}-stress-variations-collapse' class='panel-collapse collapse'>" +
-        "           <table class='col-md-12'>" +
-        "            <tr><td>" +
-        "              <input disabled=disabled type='checkbox' class='kill-nodes' id='{operation_id}-kill-nodes' value='1'>" +
-        "              Kill</td><td>" +
-        "                <select disabled=disabled id='{revision_id}-kill-nodes-num' class='form-control kill-nodes-dropdown kill-nodes-num'>" +
-        "                  <option value='1'> 1 </option>" +
-        "                  <option value='2'> 2 </option>" +
-        "                  <option value='3'> 3 </option>" +
-        "                  <option value='4'> 4 </option>" +
-        "                </select>" +
-        "              </td><td>nodes after</td><td>" +
-        "                 <input disabled=disabled id='{revision_id}-kill-nodes-delay' class='kill-nodes-delay' value='300'/> seconds" +
-        "              </td>" +
-        "            </tr><tr>" +
-        "             <td>" +
-        "              <input disabled=disabled type='checkbox' class='compact' id='{operation_id}-compact' value='1'>" +
-        "              Major Compaction</td><td>" +
-        "              </td><td>after</td><td>" +
-        "                 <input disabled=disabled id='{revision_id}-kill-nodes-delay' class='kill-nodes-delay' value='300'/> seconds" +
-        "              </td>" +
-        "            </tr><tr>" +
-        "             <td>" +
-        "              <input disabled=disabled type='checkbox' class='bootstrap' id='{operation_id}-bootstrap' value='1'>" +
-        "              Bootstrap</td><td>" +
-        "                <select disabled=disabled id='{revision_id}-kill-nodes'  class='form-control kill-nodes-dropdown kill-nodes'>" +
-        "                  <option value='1'> 1 </option>" +
-        "                  <option value='2'> 2 </option>" +
-        "                  <option value='3'> 3 </option>" +
-        "                  <option value='4'> 4 </option>" +
-        "                </select>" +
-        "              </td><td>nodes after</td><td>" +
-        "                 <input disabled=disabled id='{revision_id}-kill-nodes-delay' class='kill-nodes-delay' value='300'/> seconds" +
-        "              </td></tr>" +
-        "           </table>" +
-        "	    </div>" +
-        "        </div>" +
-
-        "      </div>" +
         "     </div>";
 
-    var newDiv = $(template.format({operation:schedule.n_operations, operation_id:operation_id, cmd:cmd}));
+    var newDiv = $(template.format({operation:schedule.n_operations, operation_id:operation_id, cmd:cmd, stress_revision:stress_revision}));
     if (animate)
         newDiv.hide();
     $("#schedule-operations").append(newDiv);
@@ -241,6 +207,7 @@ var createJob = function() {
         };
         if (job.operations[i]['operation'] === 'stress') {
             job.operations[i]['command'] = operation.find(".command").val();
+            job.operations[i]['stress-revision'] = operation.find(".stress-revision").val();
         }
         job.operations[i]['wait_for_compaction'] = operation.find(".wait-for-compaction").is(":checked");
     });
@@ -288,7 +255,7 @@ var cloneExistingJob = function(job_id) {
         });
         //Operations:
         $.each(test['operations'], function(i, operation) {
-            addOperationDiv(false, operation['operation'], operation['command'], operation['wait_for_compaction']);
+            addOperationDiv(false, operation['operation'], operation['command'], operation['wait_for_compaction'], operation['stress_revision']);
         });
 
         query = parseUri(location).queryKey;
@@ -322,9 +289,9 @@ var update_cluster_options = function(callback) {
         });
         //Try to set the one we had from before:
         $(".jvm-select").each(function(i, e) {
-            if (current_jvm_selections[i] != null) {
-                $(e).val(current_jvm_selections[i]);
-            }
+            // if (current_jvm_selections[i] != null) {
+            //     $(e).val(current_jvm_selections[i]);
+            // }
             if ($(e).val() == null) {
                 $(e).find("option:first-child").attr("selected", "selected");
                 alert("Warning - cluster JVM selection changed")
