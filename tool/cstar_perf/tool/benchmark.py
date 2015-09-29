@@ -133,7 +133,7 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
             git_ids = execute(common.bootstrap, git_fetch=git_fetch)
     else:
         # revision_override is only supported for the product cassandra
-        if product != 'cassandra':
+        if product.name != 'cassandra':
             raise ValueError("Cannot use revision_override for product: {}".format(
                 product.name))
         git_ids = {}
