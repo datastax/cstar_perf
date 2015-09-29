@@ -1,15 +1,17 @@
 from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash, teardown,
                        log_stats, log_set_title, log_add_data, retrieve_logs, restart,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
-                       drop_page_cache, wait_for_compaction, setup_stress, clean_stress)
+                       drop_page_cache, wait_for_compaction, setup_stress, clean_stress,
+                       get_localhost)
 from benchmark import config as fab_config
+import fab_common as common
+import fab_cassandra as cstar
 from fabric.tasks import execute
 import os
 import sys
 import time
 import datetime
 import logging
-import socket
 import copy
 import uuid
 import argparse
@@ -105,6 +107,11 @@ def stress_compare(revisions,
     if initial_destroy:
         logger.info("Cleaning up from prior runs of stress_compare ...")
         teardown(destroy=True, leave_data=False)
+
+    # Update our local cassandra git remotes and branches
+    _, localhost_entry = get_localhost()
+    with common.fab.settings(hosts=[localhost_entry]):
+        execute(cstar.update_cassandra_git)
 
     clean_stress()
     stress_revisions = set([operation['stress_revision'] for operation in operations if 'stress_revision' in operation])
