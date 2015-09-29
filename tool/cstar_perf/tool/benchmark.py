@@ -55,6 +55,21 @@ def set_cqlsh_path(path):
     global cqlsh_path
     cqlsh = path
 
+def get_localhost():
+    ip = socket.gethostname().split(".")[0]
+    return (ip, getpass.getuser() + "@" + ip)
+
+def get_all_hosts(env):
+    # the local host will not be added to the cluster unless
+    # it has a corresponding entry in the cluster config:
+    hosts = list(env['hosts'])
+    localhost_ip, localhost_entry = get_localhost()
+    if localhost_ip not in [host.split(".")[0] for host in hosts]:
+        # Use the local username for this host, as it may be different
+        # than the cluster defined 'user' parameter:
+        hosts += [localhost_entry]
+    return hosts
+
 def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     """Deploy and start cassandra on the cluster
     
@@ -122,15 +137,8 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     set_cqlsh_path(os.path.join(product.get_bin_path(), 'cqlsh'))
 
     # Bootstrap C* onto the cluster nodes, as well as the localhost,
-    # so we have access to nodetool, stress etc - the local host will
-    # not be added to the cluster unless it has a corresponding entry
-    # in the cluster config:
-    hosts = list(common.fab.env['hosts'])
-    localhost = socket.gethostname().split(".")[0]
-    if localhost not in [host.split(".")[0] for host in hosts]:
-        # Use the local username for this host, as it may be different
-        # than the cluster defined 'user' parameter:
-        hosts += [getpass.getuser() + "@" + localhost]
+    # so we have access to nodetool, stress etc
+    hosts = get_all_hosts(common.fab.env)
     if not cfg.get('revision_override'):
         with common.fab.settings(hosts=hosts):
             git_ids = execute(common.bootstrap, git_fetch=git_fetch)
@@ -382,15 +390,16 @@ def build_stress(stress_revision, name=None):
         raise AssertionError('Invalid stress_revision: {}'.format(stress_revision))
 
     path = os.path.join(CASSANDRA_STRESS_PATH, git_id)
-    logger.info("Building cassandra-stress '{}' in '{}'.".format(stress_revision, path))
-    os.makedirs(path)
-    sh.tar(
-        sh.git("--git-dir={home}/fab/cassandra.git".format(home=HOME), "archive", git_id),
-        'x', '-C', path
-    )
-    antcmd('-Dbasedir={}'.format(path), '-f', '{}/build.xml'.format(path),
-           'realclean', 'jar', _env={"JAVA_TOOL_OPTIONS": "-Dfile.encoding=UTF8",
-                                     "JAVA_HOME": JAVA_HOME})
+    if not os.path.exists(path):
+        logger.info("Building cassandra-stress '{}' in '{}'.".format(stress_revision, path))
+        os.makedirs(path)
+        sh.tar(
+            sh.git("--git-dir={home}/fab/cassandra.git".format(home=HOME), "archive", git_id),
+            'x', '-C', path
+        )
+        antcmd('-Dbasedir={}'.format(path), '-f', '{}/build.xml'.format(path),
+               'realclean', 'jar', _env={"JAVA_TOOL_OPTIONS": "-Dfile.encoding=UTF8",
+                                         "JAVA_HOME": JAVA_HOME})
 
     name = name if name else stress_revision
     return {name: git_id}
