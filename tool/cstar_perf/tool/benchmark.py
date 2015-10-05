@@ -21,6 +21,7 @@ import logging
 import yaml
 import sh
 import itertools
+import shutil
 
 # Import the default config first:r
 import fab_common as common
@@ -54,6 +55,21 @@ def set_cqlsh_path(path):
     global cqlsh_path
     cqlsh = path
 
+def get_localhost():
+    ip = socket.gethostname().split(".")[0]
+    return (ip, getpass.getuser() + "@" + ip)
+
+def get_all_hosts(env):
+    # the local host will not be added to the cluster unless
+    # it has a corresponding entry in the cluster config:
+    hosts = list(env['hosts'])
+    localhost_ip, localhost_entry = get_localhost()
+    if localhost_ip not in [host.split(".")[0] for host in hosts]:
+        # Use the local username for this host, as it may be different
+        # than the cluster defined 'user' parameter:
+        hosts += [localhost_entry]
+    return hosts
+
 def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     """Deploy and start cassandra on the cluster
     
@@ -81,7 +97,9 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
         if cfg['options'] is not None:
             common.config.update(cfg['options'])
             del common.config['options']
-
+        # Rerun setup now that additional options have been added:
+        common.setup(common.config)
+            
     logger.info("### Config: ###")
     pprint(common.config)
 
@@ -119,15 +137,8 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     set_cqlsh_path(os.path.join(product.get_bin_path(), 'cqlsh'))
 
     # Bootstrap C* onto the cluster nodes, as well as the localhost,
-    # so we have access to nodetool, stress etc - the local host will
-    # not be added to the cluster unless it has a corresponding entry
-    # in the cluster config:
-    hosts = list(common.fab.env['hosts'])
-    localhost = socket.gethostname().split(".")[0]
-    if localhost not in [host.split(".")[0] for host in hosts]:
-        # Use the local username for this host, as it may be different
-        # than the cluster defined 'user' parameter:
-        hosts += [getpass.getuser() + "@" + localhost]
+    # so we have access to nodetool, stress etc
+    hosts = get_all_hosts(common.fab.env)
     if not cfg.get('revision_override'):
         with common.fab.settings(hosts=hosts):
             git_ids = execute(common.bootstrap, git_fetch=git_fetch)
@@ -342,8 +353,19 @@ def drop_page_cache():
     if not config.get('docker', False):
         bash(['sync', 'echo 3 > /proc/sys/vm/drop_caches'], user='root')
 
-def setup_stress(stress_revision):
-    stress_path = None
+def clean_stress():
+    # Clean all stress builds
+    stress_builds = [b for b in os.listdir(CASSANDRA_STRESS_PATH)]
+    for stress_build in stress_builds:
+        path = os.path.join(CASSANDRA_STRESS_PATH, stress_build)
+        logger.info("Removing stress build '{}'".format(path))
+        if os.path.islink(path):
+            os.unlink(path)
+        else:
+            shutil.rmtree(path)
+
+def build_stress(stress_revision, name=None):
+    # Build a stress revision
 
     try:
         git_id = sh.git('--git-dir={home}/fab/cassandra.git'
@@ -363,12 +385,23 @@ def setup_stress(stress_revision):
                'realclean', 'jar', _env={"JAVA_TOOL_OPTIONS": "-Dfile.encoding=UTF8",
                                          "JAVA_HOME": JAVA_HOME})
 
-    stress_path = os.path.join(path, 'tools/bin/cassandra-stress')
+    name = name if name else stress_revision
+    return {name: git_id}
 
-    return stress_path
+def setup_stress(stress_revisions=[]):
+    revisions = {}
+
+    # first, build the default revision
+    default_stress_revision = config.get('stress_revision', 'apache/trunk')
+    revisions.update(build_stress(default_stress_revision, name='default'))
+
+    for stress_revision in stress_revisions:
+        revisions.update(build_stress(stress_revision))
+
+    return revisions
 
 
-def stress(cmd, revision_tag, stats=None, stress_revision=None):
+def stress(cmd, revision_tag, stress_sha, stats=None):
     """Run stress command and collect average statistics"""
     # Check for compatible stress commands. This doesn't yet have full
     # coverage of every option:
@@ -378,9 +411,7 @@ def stress(cmd, revision_tag, stats=None, stress_revision=None):
     if cmd.strip().startswith("read") and 'threads' not in cmd:
         raise AssertionError('Stress read commands must specify #/threads when used with this tool.')
 
-    stress_path = CASSANDRA_STRESS_DEFAULT
-    if stress_revision:
-        stress_path = setup_stress(stress_revision)
+    stress_path = os.path.join(CASSANDRA_STRESS_PATH, stress_sha, 'tools/bin/cassandra-stress')
 
     temp_log = tempfile.mktemp()
     logger.info("Running stress from '{stress_path}' : {cmd}"
@@ -397,7 +428,7 @@ def stress(cmd, revision_tag, stats=None, stress_revision=None):
             "test": operation,
             "revision": revision_tag,
             "date": datetime.datetime.now().isoformat(),
-            "stress_revision": stress_revision
+            "stress_revision": stress_sha
         }
 
     # Run stress:

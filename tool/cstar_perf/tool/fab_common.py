@@ -246,7 +246,7 @@ def bootstrap(git_fetch=True, revision_override=None):
     if product.name == 'dse':
         rev_id = dse.bootstrap(config)
     else:
-        rev_id = cstar.bootstrap(config, git_fetch, revision_override)
+        rev_id = cstar.bootstrap(config, git_fetch=git_fetch, revision_override=revision_override)
 
     cassandra_path = product.get_cassandra_path()
 

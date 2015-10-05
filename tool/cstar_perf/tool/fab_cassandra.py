@@ -29,7 +29,8 @@ GIT_REPOS = [
     ('blambov',       'git://github.com/blambov/cassandra.git'),
     ('stef1927',      'git://github.com/stef1927/cassandra.git'),
     ('driftx',        'git://github.com/driftx/cassandra.git'),
-    ('jeffjirsa',     'git://github.com/jeffjirsa/cassandra.git')
+    ('jeffjirsa',     'git://github.com/jeffjirsa/cassandra.git'),
+    ('aboudreault',   'git://github.com/aboudreault/cassandra.git')
 ]
 
 # Additional git remotes can be specified in this file
@@ -82,36 +83,8 @@ def bootstrap(config, git_fetch=True, revision_override=None):
     """
     revision = revision_override or config['revision']
 
-    #Fetch latest git changes:
     if git_fetch:
-        repos = get_git_repos()
-        repo_names, _ = zip(*repos)
-        git_checkout_status = fab.run('test -d ~/fab/cassandra.git', quiet=True)
-        if git_checkout_status.return_code > 0:
-            fab.run('git init --bare ~/fab/cassandra.git')
-
-        # Update remotes
-        git_remotes_status = fab.run('git --git-dir=$HOME/fab/cassandra.git remote')
-        current_remotes = git_remotes_status.split()
-        remotes_to_add = [r for r in repo_names if r not in current_remotes]
-        remotes_to_remove = [r for r in current_remotes if r not in repo_names and r != 'origin']
-        print "Existing remotes: {}".format(current_remotes)
-        print "Remotes to add: {}".format(remotes_to_add)
-        print "Remotes to remote: {}".format(remotes_to_remove)
-        for name in remotes_to_remove:
-            fab.run('git --git-dir=$HOME/fab/cassandra.git remote remove {name}'
-                    .format(name=name), quiet=True)
-
-        for name, url in reversed(repos):
-            if name in remotes_to_add:
-                fab.run('git --git-dir=$HOME/fab/cassandra.git remote add {name} {url}'
-                        .format(name=name, url=url), quiet=True)
-
-            fab.run('git --git-dir=$HOME/fab/cassandra.git fetch {name}'.format(name=name))
-            # TODO: What did this used to do? This used to be necessary,
-            # but now it appears to delete branches:
-            # fab.run('git --git-dir=$HOME/fab/cassandra.git fetch -fup {name} +refs/*:refs/*'
-            #         .format(name=name))
+        update_cassandra_git()
 
     fab.run('rm -rf ~/fab/cassandra')
 
@@ -149,6 +122,34 @@ def bootstrap(config, git_fetch=True, revision_override=None):
                 num_to_delete=num_builds-MAX_CACHED_BUILDS))
 
     return git_id
+
+@fab.parallel
+def update_cassandra_git():
+    print 'Updating cassandra git'
+    repos = get_git_repos()
+    repo_names, _ = zip(*repos)
+    git_checkout_status = fab.run('test -d ~/fab/cassandra.git', quiet=True)
+    if git_checkout_status.return_code > 0:
+        fab.run('git init --bare ~/fab/cassandra.git')
+
+    # Update remotes
+    git_remotes_status = fab.run('git --git-dir=$HOME/fab/cassandra.git remote')
+    current_remotes = git_remotes_status.split()
+    remotes_to_add = [r for r in repo_names if r not in current_remotes]
+    remotes_to_remove = [r for r in current_remotes if r not in repo_names and r != 'origin']
+    print "Existing remotes: {}".format(current_remotes)
+    print "Remotes to add: {}".format(remotes_to_add)
+    print "Remotes to remote: {}".format(remotes_to_remove)
+    for name in remotes_to_remove:
+        fab.run('git --git-dir=$HOME/fab/cassandra.git remote remove {name}'
+                .format(name=name), quiet=True)
+
+    for name, url in reversed(repos):
+        if name in remotes_to_add:
+            fab.run('git --git-dir=$HOME/fab/cassandra.git remote add {name} {url}'
+                    .format(name=name, url=url), quiet=True)
+
+        fab.run('git --git-dir=$HOME/fab/cassandra.git fetch {name}'.format(name=name))
 
 @fab.parallel
 def add_git_remotes():
