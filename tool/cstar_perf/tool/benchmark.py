@@ -142,7 +142,7 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
         with common.fab.settings(hosts=default_hosts):
             git_ids.update(execute(common.bootstrap, git_fetch=git_fetch))
         for override_revision, hosts_to_override in cfg['revision_override'].items():
-	    print '{revision} on {hosts_to_override}'.format(revision=override_revision, hosts_to_override=hosts_to_override)
+            print '{revision} on {hosts_to_override}'.format(revision=override_revision, hosts_to_override=hosts_to_override)
             with common.fab.settings(hosts=hosts_to_override):
                 git_ids.update(execute(common.bootstrap, git_fetch=git_fetch, revision_override=override_revision))
 

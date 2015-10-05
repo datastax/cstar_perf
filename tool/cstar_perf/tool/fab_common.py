@@ -234,7 +234,6 @@ def bootstrap(git_fetch=True, revision_override=None):
 
     Returns the git id for the version checked out.
     """
-    revision = revision_override or config['revision']
     partitioner = config['partitioner']
 
     fab.run('mkdir -p fab')
@@ -247,7 +246,7 @@ def bootstrap(git_fetch=True, revision_override=None):
     if product.name == 'dse':
         rev_id = dse.bootstrap(config)
     else:
-        rev_id = cstar.bootstrap(config, git_fetch)
+        rev_id = cstar.bootstrap(config, git_fetch, revision_override)
 
     cassandra_path = product.get_cassandra_path()
 

@@ -76,12 +76,11 @@ def get_cassandra_config_options(config):
     p = re.compile("^[a-z][^A-Z]*$")
     return [o for o in opts if p.match(o)]
 
-def bootstrap(config, git_fetch=True):
+def bootstrap(config, git_fetch=True, revision_override=None):
     """Install and configure Cassandra
     Returns the git id or the version checked out.
     """
-
-    revision = config['revision']
+    revision = revision_override or config['revision']
 
     #Fetch latest git changes:
     if git_fetch:
