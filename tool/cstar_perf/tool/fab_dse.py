@@ -96,7 +96,7 @@ def start(config):
         java_home=config['java_home'])
     fab.run(cmd)
 
-def stop(clean):
+def stop(clean, config):
     fab.run('jps | grep DseDaemon | cut -d" " -f1 | xargs kill -9', quiet=True)
 
 def is_running():

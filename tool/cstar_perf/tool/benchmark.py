@@ -144,7 +144,7 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
             git_ids = execute(common.bootstrap, git_fetch=git_fetch)
     else:
         # revision_override is only supported for the product cassandra
-        if product != 'cassandra':
+        if product.name != 'cassandra':
             raise ValueError("Cannot use revision_override for product: {}".format(
                 product.name))
         git_ids = {}
@@ -153,7 +153,7 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
         with common.fab.settings(hosts=default_hosts):
             git_ids.update(execute(common.bootstrap, git_fetch=git_fetch))
         for override_revision, hosts_to_override in cfg['revision_override'].items():
-	    print '{revision} on {hosts_to_override}'.format(revision=override_revision, hosts_to_override=hosts_to_override)
+            print '{revision} on {hosts_to_override}'.format(revision=override_revision, hosts_to_override=hosts_to_override)
             with common.fab.settings(hosts=hosts_to_override):
                 git_ids.update(execute(common.bootstrap, git_fetch=git_fetch, revision_override=override_revision))
 
@@ -273,65 +273,49 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
 
     def compactionstats(nodes, check_interval):
         """Check for compactions via nodetool compactionstats"""
-        consecutive_connection_errors = 0
-        pattern = re.compile("(^|\n)pending tasks: 0\n")
+        pattern = re.compile("(^|\n)pending tasks: 0")
         nodes = set(nodes)
         while True:
-            try:
-                output = nodetool_multi(nodes, 'compactionstats')
-                consecutive_connection_errors = 0
-            except NodetoolException:
-                consecutive_connection_errors += 1
-                if consecutive_connection_errors > allowed_connection_errors:
-                    raise NodetoolException(
-                        "Failed to connect via nodetool {consecutive_connection_errors} times in a row.".format(
-                        consecutive_connection_errors=consecutive_connection_errors))
-            for node in list(nodes):
-                if pattern.search(output[node]):
-                    nodes.remove(node)
+            results = execute(common.multi_nodetool, cmd="compactionstats")
+            for node, output in results.iteritems():
+                if pattern.search(output.strip()):
+                    nodes.discard(node)
+
             if len(nodes) == 0:
                 break
             logger.info("Waiting for compactions (compactionstats) on nodes:")
             for node in nodes:
-                logger.info("{node} - {output}".format(node=node, output=output[node]))
+                logger.info("{node} - {output}".format(node=node, output=results[node]))
             time.sleep(check_interval)
 
         assert len(nodes) == 0, ("Compactions (compactionstats) should have finished, but they didn't"
-                            " on nodes: {nodes}. output: {output}".format(
-                                nodes=nodes, output=output))
+                            " on nodes: {nodes}. output: {results}".format(
+                                nodes=nodes, output=results))
 
     def tpstats(nodes, check_interval):
         """Check for compactions via nodetool tpstats"""
-        consecutive_connection_errors = 0
         stat_exists_pattern = re.compile("^CompactionExecutor", re.MULTILINE)
         no_compactions_pattern = re.compile("CompactionExecutor\W*0\W*0\W*[0-9]*\W*0", re.MULTILINE)
 
         nodes = set(nodes)
         while True:
-            try:
-                output = nodetool_multi(nodes, 'tpstats')
-                consecutive_connection_errors = 0
-            except NodetoolException:
-                consecutive_connection_errors += 1
-                if consecutive_connection_errors > allowed_connection_errors:
-                    raise NodetoolException(
-                        "Failed to connect via nodetool {consecutive_connection_errors} times in a row.".format(
-                        consecutive_connection_errors=consecutive_connection_errors))
-            for node in list(nodes):
-                if stat_exists_pattern.search(output[node]):
-                    if no_compactions_pattern.search(output[node]):
-                        nodes.remove(node)
+            results = execute(common.multi_nodetool, cmd="tpstats")
+            for node, output in results.iteritems():
+                if stat_exists_pattern.search(output):
+                    if no_compactions_pattern.search(output):
+                        nodes.discard(node)
                 else:
                     logger.warn("CompactionExecutor not listed in nodetool tpstats, can't check for compactions this way.")
                     return
+
             if len(nodes) == 0:
                 break
             logger.info("Waiting for compactions (tpstats) on nodes: {nodes}".format(nodes=nodes))
             time.sleep(check_interval)
 
         assert len(nodes) == 0, ("Compactions (tpstats) should have finished, but they didn't"
-                            " on nodes: {nodes}. output: {output}".format(
-                                nodes=nodes, output=output))
+                            " on nodes: {nodes}. output: {results}".format(
+                                nodes=nodes, output=results))
 
     if nodes is None:
         nodes = set(common.fab.env.hosts)
@@ -339,7 +323,7 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
         nodes = set(nodes)
 
     # Disable compaction throttling to speed things up:
-    nodetool_multi(nodes, 'setcompactionthroughput 0')
+    execute(common.multi_nodetool, cmd="setcompactionthroughput 0")
 
     # Perform checks multiple times to ensure compactions are really done:
     start = time.time()
@@ -350,7 +334,7 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
     duration = time.time() - start
 
     # Re-enable compaction throttling:
-    nodetool_multi(nodes, 'setcompactionthroughput {compaction_throughput}'.format(**locals()))
+    execute(common.multi_nodetool, cmd='setcompactionthroughput {compaction_throughput}'.format(**locals()))
 
     logger.info("Compactions finished on all nodes. Duration of checks: {duration}".format(**locals()))
 

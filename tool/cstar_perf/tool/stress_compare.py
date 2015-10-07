@@ -237,7 +237,7 @@ def stress_compare(revisions,
                            'subtitle': subtitle,
                            'revisions': revisions})
 
-        if revisions[-1].get('leave_data', False):
+        if revisions[-1].get('leave_data', leave_data):
             teardown(destroy=False, leave_data=True)
         else:
             teardown(destroy=True, leave_data=False)

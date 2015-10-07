@@ -234,7 +234,6 @@ def bootstrap(git_fetch=True, revision_override=None):
 
     Returns the git id for the version checked out.
     """
-    revision = revision_override or config['revision']
     partitioner = config['partitioner']
 
     fab.run('mkdir -p fab')
@@ -247,7 +246,7 @@ def bootstrap(git_fetch=True, revision_override=None):
     if product.name == 'dse':
         rev_id = dse.bootstrap(config)
     else:
-        rev_id = cstar.bootstrap(config, git_fetch=git_fetch)
+        rev_id = cstar.bootstrap(config, git_fetch=git_fetch, revision_override=revision_override)
 
     cassandra_path = product.get_cassandra_path()
 
@@ -381,6 +380,9 @@ def destroy(leave_data=False):
     """Uninstall Cassandra and clean up data and logs"""
     # We used to have a better pattern match for the Cassandra
     # process, but it got fragile if you put too many JVM params.
+    if leave_data:
+        fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool drain'.format(java_home=config['java_home']), quiet=True)
+        fab.run('rm -rf {commitlog}/*'.format(commitlog=config['commitlog_directory']))
     fab.run('killall -9 java', quiet=True)
     fab.run('pkill -f "python.*fincore_capture"', quiet=True)
     fab.run('rm -rf fab/cassandra')
@@ -445,7 +447,12 @@ def start():
 @fab.parallel
 def stop(clean=True):
     product = dse if config['product'] == 'dse' else cstar
-    product.stop(clean)
+    product.stop(clean, config)
+
+@fab.parallel
+def multi_nodetool(cmd):
+    """run node tool command on all nodes in parallel"""
+    return fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool {cmd}'.format(java_home=config['java_home'], cmd=cmd), quiet=True)
 
 def ensure_running(retries=15, wait=10):
     """Ensure cassandra is running on all nodes.

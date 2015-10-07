@@ -77,12 +77,11 @@ def get_cassandra_config_options(config):
     p = re.compile("^[a-z][^A-Z]*$")
     return [o for o in opts if p.match(o)]
 
-def bootstrap(config, git_fetch=True):
+def bootstrap(config, git_fetch=True, revision_override=None):
     """Install and configure Cassandra
     Returns the git id or the version checked out.
     """
-
-    revision = config['revision']
+    revision = revision_override or config['revision']
 
     if git_fetch:
         update_cassandra_git()
@@ -163,8 +162,9 @@ def start(config):
     cmd = 'JAVA_HOME={java_home} nohup ~/fab/cassandra/bin/cassandra'.format(java_home=config['java_home'])
     fab.run(cmd)
 
-def stop(clean):
+def stop(clean, config):
     if clean:
+        fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool drain'.format(java_home=config['java_home']), quiet=True)
         fab.run('pkill -f "java.*org.apache.*.CassandraDaemon"', quiet=True)
     else:
         fab.run('pkill -9 -f "java.*org.apache.*.CassandraDaemon"', quiet=True)
