@@ -12,6 +12,8 @@ from fabric import api as fab
 from fabric.contrib.files import append as fab_append
 from fabric.tasks import execute as fab_execute
 from ilogue.fexpect import expect, expecting, run
+from fabric import api as fab
+from fabric.tasks import execute as fab_execute
 from StringIO import StringIO
 import json
 import re

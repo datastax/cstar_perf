@@ -178,6 +178,7 @@ var createJob = function() {
     //Parse the form elements and schedule job to run.
     var job = {
         title: $("#testname").val(),
+        testseries: $("#testseries").val(),
         description: $("#description").val(),
         cluster: $("#cluster").val(),
         num_nodes: $("#numnodes").val(),
@@ -230,7 +231,8 @@ var show_job_json = function() {
 var cloneExistingJob = function(job_id) {
     $.get("/api/tests/id/" + job_id, function(job) {
         test = job['test_definition'];
-        $("input#testname").val(test['title']);
+        $("input#testname").val(test['title']); 
+        $("inpur#testseries").val(test['testseries']);
         $("textarea#description").val(test['description']);
         $("select#cluster").val(test['cluster']);
         $("select#numnodes").val(test['num_nodes']);
