@@ -53,7 +53,7 @@ def set_nodetool_path(path):
 
 def set_cqlsh_path(path):
     global cqlsh_path
-    cqlsh = path
+    cqlsh_path = path
 
 def get_localhost():
     ip = socket.gethostname().split(".")[0]
@@ -225,10 +225,11 @@ def bash(script, nodes=None, user=None):
     if user is None:
         user = common.fab.env.user
     with common.fab.settings(user=user, hosts=nodes):
-        execute(common.bash, script)
-
+        return execute(common.bash, script)
+        
 def cqlsh(script, node):
     """Run a cqlsh script on a node"""
+    global cqlsh_path
     cmd = "{cqlsh_path} --no-color {host}".format(cqlsh_path=cqlsh_path, host=node)
     proc = subprocess.Popen(shlex.split(cmd),
                             stdout=subprocess.PIPE,

@@ -3,7 +3,7 @@ from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
                        drop_page_cache, wait_for_compaction, setup_stress, clean_stress,
                        get_localhost)
-from benchmark import config as fab_config
+from benchmark import config as fab_config, cstar, dse, set_cqlsh_path, set_nodetool_path
 import fab_common as common
 import fab_cassandra as cstar
 from fabric.tasks import execute
@@ -24,7 +24,7 @@ logging.basicConfig()
 logger = logging.getLogger('stress_compare')
 logger.setLevel(logging.INFO)
 
-OPERATIONS = ['stress','nodetool','cqlsh']
+OPERATIONS = ['stress','nodetool','cqlsh','bash']
 
 def validate_revisions_list(revisions):
     for rev in revisions:
@@ -124,6 +124,7 @@ def stress_compare(revisions,
         config['log'] = log
         config['title'] = title
         config['subtitle'] = subtitle
+        product = dse if config['product'] == 'dse' else cstar
 
         # leave_data settting can be set in the revision
         # configuration, or manually in the call to this function.
@@ -190,6 +191,7 @@ def stress_compare(revisions,
                 else:
                     nodes = operation['nodes']
 
+                set_nodetool_path(os.path.join(product.get_bin_path(), 'nodetool'))
                 logger.info("Running nodetool on {nodes} with command: {command}".format(nodes=operation['nodes'], command=operation['command']))
                 stats['command'] = operation['command']
                 output = nodetool_multi(nodes, operation['command'])
@@ -198,15 +200,15 @@ def stress_compare(revisions,
 
             elif operation['type'] == 'cqlsh':
                 logger.info("Running cqlsh commands on {node}".format(node=operation['node']))
+                set_cqlsh_path(os.path.join(product.get_bin_path(), 'cqlsh'))
                 output = cqlsh(operation['script'], operation['node'])
                 stats['output'] = output.split("\n")
                 logger.info("Cqlsh commands finished")
 
             elif operation['type'] == 'bash':
                 nodes = operation.get('nodes', [n for n in fab_config['hosts']])
-                logger.info("Running bash commands on {node}".format(nodes=nodes))
-                output = bash(operation['script'], nodes)
-                stats['output'] = output.split("\n")
+                logger.info("Running bash commands on: {nodes}".format(nodes=nodes))
+                stats['output'] = bash(operation['script'], nodes)
                 logger.info("Bash commands finished")
 
 

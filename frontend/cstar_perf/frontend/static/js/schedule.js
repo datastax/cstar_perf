@@ -94,13 +94,9 @@ var addRevisionDiv = function(animate){
 
 };
 
-var addOperationDiv = function(animate, operation, cmd, wait_for_compaction, stress_revision){
+var addOperationDiv = function(animate, operationDefaults){
     schedule.n_operations++;
     var operation_id = 'operation-'+schedule.n_operations;
-    if (!cmd)
-        cmd = 'write n=19M -rate threads=50';
-    if (!stress_revision)
-        stress_revision = 'apache/trunk';
     var template = "<div id='{operation_id}' class='operation'><legend>Operation<a class='pull-right' id='remove-{operation_id}'><span class='glyphicon" +
         "                  glyphicon-remove'></span></a></legend>" +
         "      <div class='form-group'>" +
@@ -122,22 +118,15 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction, str
         "        for='{operation_id}-command'>Stress Command</label>  " +
         "        <div class='col-md-9'>" +
         "          <textarea id='{operation_id}-command' type='text'" +
-        "                 class='form-control input-md command-stress' required=''>{cmd}</textarea>" +
+        "                 class='form-control input-md command-stress' required=''>{command_stress}</textarea>" +
         "        </div>" +
         "      </div>" +
+        "      <div class='form-group type stress'>" +
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-stress-revision'>Stress Revision</label>  " +
         "        <div class='col-md-9'>" +
         "          <input id='{operation_id}-stress-revision' type='text'" +
         "                 class='form-control input-md stress-revision' value='{stress_revision}' required=''></input>" +
-        "        </div>" +
-        "      <div class='form-group nodes stress'>" +
-        "        <label class='col-md-3 control-label'" +
-        "            for='{operation_id}-command'>Nodes</label>  " +
-        "        <div class='col-md-9'>" +
-        "          <select multiple id='{operation_id}-nodes' type='text'" +
-        "                 class='form-control input-md nodes-stress node-select' value='all'>" +
-        "          </select>" +
         "        </div>" +
         "      </div>" +
         "      " +
@@ -254,8 +243,7 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction, str
         "      </div>" +
         "     </div>";
 
-    var newDiv = $(template.format({operation:schedule.n_operations, operation_id:operation_id, cmd:cmd, stress_revision:stress_revision}));
-    operationDefaults = operationDefaults || {};
+    var operationDefaults = operationDefaults || {};
     newOperation = {
         operationType: operationDefaults.operation || "stress",
         operation: schedule.n_operations,
@@ -265,6 +253,11 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction, str
         newOperation.command_stress = operationDefaults.command
     } else {
         newOperation.command_stress = "write n=19M -rate threads=50";
+    }
+    if (newOperation.operationType === 'stress' && operationDefaults.stress_revision) {
+        newOperation.stress_revision = operationDefaults.stress_revision;
+    } else {
+        newOperation.stress_revision = "apache/trunk";
     }
     if (newOperation.operationType === 'nodetool' && operationDefaults.command) {
         newOperation.command_nodetool = operationDefaults.command;
@@ -279,9 +272,10 @@ var addOperationDiv = function(animate, operation, cmd, wait_for_compaction, str
     if (newOperation.operationType === 'bash' && operationDefaults.script) {
         newOperation.script_bash = operationDefaults.script;
     } else {
-        newOperation.script_bash = "ls";
+        newOperation.script_bash = "df -h";
     }
-
+    console.log(newOperation);
+    var newDiv = $(template.format(newOperation));
     if (animate)
         newDiv.hide();
     $("#schedule-operations").append(newDiv);
@@ -414,7 +408,7 @@ var cloneExistingJob = function(job_id) {
         });
         //Operations:
         $.each(test['operations'], function(i, operation) {
-            addOperationDiv(false, operation['operation'], operation['command'], operation['wait_for_compaction'], operation['stress_revision']);
+            addOperationDiv(false, operation);
         });
 
         query = parseUri(location).queryKey;
