@@ -421,12 +421,12 @@ class JobRunner(object):
         try:
             with open(stats_path) as stats:
                 stats = json.loads(stats.read())
-                for rev in job['revisions']:
-                    for op_num, op in enumerate(job['operations']):
-                        assert stats['stats'][op_num]['type'] == op['type']
+                for op_num, op in enumerate(job['operations']):
+                    assert stats['stats'][op_num]['type'] == op['type']
+                    if op['type'] in ('stress', 'nodetool'):
                         assert stats['stats'][op_num]['command'].startswith(op['command'])
-                        if op['type'] == 'stress':
-                            assert len(stats['stats'][op_num]['intervals']) > 0
+                    if op['type'] == 'stress':
+                        assert len(stats['stats'][op_num]['intervals']) > 0
         except Exception, e:
             message = e.message
             stacktrace = traceback.format_exc(e)
