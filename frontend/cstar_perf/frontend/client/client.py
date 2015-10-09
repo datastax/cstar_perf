@@ -261,8 +261,11 @@ class JobRunner(object):
                 for rev in job['revisions']:
                     for op_num, op in enumerate(job['operations']):
                         if op['type'] == 'stress':
-                            del stats['stats'][op_num]['intervals']
-                json.dump(obj=stats, fp=summary, sort_keys=True, indent=4, separators=(',', ': '))
+                            try:
+                                del stats['stats'][op_num]['intervals']
+                            except KeyError:
+                                pass
+                            json.dump(obj=stats, fp=summary, sort_keys=True, indent=4, separators=(',', ': '))
         # Make a new tarball containing all the revision logs:
         tmptardir = tempfile.mkdtemp()
         try:
