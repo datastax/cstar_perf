@@ -124,7 +124,7 @@ def stress_compare(revisions,
         config['log'] = log
         config['title'] = title
         config['subtitle'] = subtitle
-        product = dse if config['product'] == 'dse' else cstar
+        product = dse if config.get('product') == 'dse' else cstar
 
         # leave_data settting can be set in the revision
         # configuration, or manually in the call to this function.
