@@ -21,6 +21,7 @@ def create_baseline_config(title=None, series=None):
     config = {}
 
     config['revisions'] = []
+    config['testseries'] = 'daily_regressions_trunk'
     for days_ago, revision in sorted(dev_revisions.items()):
         label = REVISION if days_ago == 0 else '{REVISION} ~{days_ago} days ago'.format(REVISION=REVISION,
                                                                                         days_ago=days_ago)
@@ -30,7 +31,6 @@ def create_baseline_config(title=None, series=None):
         r['java_home'] = ("~/fab/jvms/jdk1.7.0_71"
                           if 'oldstable' in r['label']
                           else "~/fab/jvms/jdk1.8.0_45")
-        r['testseries'] = 'daily_regressions_trunk'
 
     config['title'] = 'Daily C* regression suite - {}'.format(datetime.datetime.now().strftime("%Y-%m-%d"))
     config['product'] = 'cassandra'
@@ -38,7 +38,7 @@ def create_baseline_config(title=None, series=None):
     if title is not None:
         config['title'] += ' - {title}'.format(title=title)
     if series is not None:
-        config['testseries'] += series
+        config['testseries'] += '-' + series
 
     return config
 

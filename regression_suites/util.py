@@ -4,16 +4,21 @@ import json
 from distutils.version import LooseVersion
 import datetime
 import os
-from uuid import UUID
 import requests
+import time
+from uuid import UUID
 
 
 GITHUB_TAGS = "https://api.github.com/repos/apache/cassandra/git/refs/tags"
 GITHUB_BRANCHES = "https://api.github.com/repos/apache/cassandra/branches"
-
-# highest and lowest UUIDs, as sorted by C*; va pycassa source
-LOWEST_TIME_UUID = UUID('00000000-0000-1000-8080-808080808080')
-HIGHEST_TIME_UUID = UUID('ffffffff-ffff-1fff-bf7f-7f7f7f7f7f7f')
+KNOWN_SERIES = tuple(('no_series',
+                      'daily_regressions_trunk-compaction',
+                      'daily_regressions_trunk-repair_10M',
+                      'daily_regressions_trunk-compaction_stcs',
+                      'daily_regressions_trunk-compaction_dtcs',
+                      'daily_regressions_trunk-compaction_lcs',
+                      'daily_regressions_trunk-commitlog_sync',
+                      ))
 
 
 def get_tagged_releases(series='stable'):
@@ -113,29 +118,33 @@ def uuid_absolute_distance_from_datetime(ref_dt):
 
 
 def get_cstar_jobs_uuids(cstar_server, series=None):
-    # someday, this will make a call to cstar_perf. that day is not today.
-    uuids_file = os.path.join(os.getcwd(), os.path.dirname(__file__), 'all-uuids.txt')
-    with open(uuids_file) as f:
-        uuids = list(line.strip() for line in f.readlines())
-    if series:
+    if series is None:
+        uuids_file = os.path.join(os.getcwd(), os.path.dirname(__file__), 'all-uuids.txt')
+        with open(uuids_file) as f:
+            uuids = list(line.strip() for line in f.readlines())
+    else:
         series_url = '/'.join([cstar_server, 'api', 'series', series,
-                               str(LOWEST_TIME_UUID), str(HIGHEST_TIME_UUID)])
+                               str(1), str(int(time.time()))])
         series_uuids = None
         try:
             series_uuids = requests.get(series_url)
         except requests.exceptions.ConnectionError as e:
             print "Can't get series uuids: {}".format(e)
 
-        if series_uuids:
-            uuids += series_uuids
+        uuids = json.loads(series_uuids.text)['series']
 
     return uuids
 
 
-def get_sha_from_build_days_ago(cstar_server, day_deltas, revision, series=None):
+def get_sha_from_build_days_ago(cstar_server, day_deltas, revision):
     print 'getting sha from {}'.format(revision)
-    test_uuids = [UUID(i) for i in
-                  get_cstar_jobs_uuids(cstar_server=cstar_server, series=series)]
+
+    test_uuids = []
+    for series in [None] + list(KNOWN_SERIES):
+        uuids_from_series = get_cstar_jobs_uuids(cstar_server=cstar_server, series=series)
+        if uuids_from_series:
+            test_uuids.extend(uuids_from_series)
+    test_uuids = list(map(UUID, ['{' + u + '}' for u in test_uuids]))
 
     closest_shas = []
 
