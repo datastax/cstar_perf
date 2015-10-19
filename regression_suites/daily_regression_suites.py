@@ -13,7 +13,7 @@ OLD_SHAS = dict(zip(day_deltas,
 DEFAULT_CLUSTER_NAME = 'blade_11_b'
 
 
-def create_baseline_config(title=None):
+def create_baseline_config(title=None, series=None):
     """Creates a config for testing the latest dev build(s) against stable and oldstable"""
 
     dev_revisions = dict({0: REVISION}, **OLD_SHAS)
@@ -37,13 +37,15 @@ def create_baseline_config(title=None):
 
     if title is not None:
         config['title'] += ' - {title}'.format(title=title)
+    if series is not None:
+        config['testseries'] += series
 
     return config
 
 
-def test_simple_profile(title='Read/Write', cluster=DEFAULT_CLUSTER_NAME, load_rows=65000000, read_rows=65000000, threads=300, yaml=None):
+def test_simple_profile(title='Read/Write', cluster=DEFAULT_CLUSTER_NAME, load_rows=65000000, read_rows=65000000, threads=300, yaml=None, series='read_write'):
     """Test the basic stress profile with default C* settings"""
-    config = create_baseline_config(title)
+    config = create_baseline_config(title, series)
     config['cluster'] = cluster
     config['operations'] = [
         {'operation': 'stress',
@@ -61,7 +63,7 @@ def test_simple_profile(title='Read/Write', cluster=DEFAULT_CLUSTER_NAME, load_r
 
 
 def compaction_profile(title='Compaction', cluster=DEFAULT_CLUSTER_NAME, rows=65000000, threads=300):
-    config = create_baseline_config(title)
+    config = create_baseline_config(title, 'compaction')
     config['cluster'] = cluster
     config['operations'] = [
         {'operation': 'stress',
@@ -83,8 +85,8 @@ def test_compaction_profile():
     compaction_profile(rows='10M')
 
 
-def repair_profile(title='Repair', cluster=DEFAULT_CLUSTER_NAME, rows=65000000, threads=300):
-    config = create_baseline_config(title)
+def repair_profile(title='Repair', cluster=DEFAULT_CLUSTER_NAME, rows=65000000, threads=300, series=None):
+    config = create_baseline_config(title, series)
     config['cluster'] = cluster
     config['operations'] = [
         {'operation': 'stress',
@@ -103,11 +105,11 @@ def repair_profile(title='Repair', cluster=DEFAULT_CLUSTER_NAME, rows=65000000, 
 
 
 def test_repair_profile():
-    repair_profile(rows='10M')
+    repair_profile(rows='10M', series='repair_10M')
 
 
-def compaction_strategies_profile(title='Compaction Strategy', cluster=DEFAULT_CLUSTER_NAME, rows=65000000, threads=300, strategy=None):
-    config = create_baseline_config(title)
+def compaction_strategies_profile(title='Compaction Strategy', cluster=DEFAULT_CLUSTER_NAME, rows=65000000, threads=300, strategy=None, series=None):
+    config = create_baseline_config(title, series)
     config['cluster'] = cluster
 
     schema_options = 'replication\(factor=3\)'
@@ -134,17 +136,17 @@ def compaction_strategies_profile(title='Compaction Strategy', cluster=DEFAULT_C
 
 def test_STCS_profile():
     compaction_strategies_profile(title='STCS', strategy='org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy',
-                                  rows='10M')
+                                  rows='10M', series='compaction_stcs')
 
 
 def test_DTCS_profile():
     compaction_strategies_profile(title='DTCS', strategy='org.apache.cassandra.db.compaction.DateTieredCompactionStrategy',
-                                  rows='10M')
+                                  rows='10M', series='compaction_dtcs')
 
 
 def test_LCS_profile():
     compaction_strategies_profile(title='LCS', strategy='org.apache.cassandra.db.compaction.LeveledCompactionStrategy',
-                                  rows='10M')
+                                  rows='10M', series='compaction_lcs')
 
 
 def test_commitlog_sync_settings():
@@ -153,4 +155,4 @@ def test_commitlog_sync_settings():
                       'commitlog_sync_period_in_ms: null',
                       'concurrent_writes: 64'])
     test_simple_profile(title='Batch Commitlog', yaml=yaml,
-                        load_rows='10M', read_rows='10M')
+                        load_rows='10M', read_rows='10M', series='commitlog_sync')
