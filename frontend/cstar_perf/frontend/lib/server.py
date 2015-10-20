@@ -30,7 +30,8 @@ def run_server():
     # this will block until cstar_perf_notifications is up and running
     console_publish('dummy_cluster', {'job_id': 'startup_check', 'msg': 'checking for notification server'})
 
-    proc = subprocess.Popen(shlex.split("gunicorn -k flask_sockets.worker -t 300 --log-file=- --workers=10 app:app"))
+    proc = subprocess.Popen(shlex.split("gunicorn -k flask_sockets.worker --bind=0.0.0.0:8000"
+                                        " -t 300 --log-file=- --workers=10 app:app"))
 
     # Capture SIGTERM events to shutdown child gunicorn processes..
     def on_terminate(sig, frame):
