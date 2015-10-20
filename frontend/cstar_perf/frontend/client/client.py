@@ -266,14 +266,13 @@ class JobRunner(object):
                     flamegraph_logs.append(fg_path)
             with open(summary_path, 'w') as summary:
                 hadStats = False
-                for rev in job['revisions']:
-                    for op_num, op in enumerate(job['operations']):
-                        if op['type'] == 'stress':
-                            try:
-                                del stats['stats'][op_num]['intervals']
-                                hadStats = True
-                            except KeyError:
-                                pass
+                for op in stats['stats']:
+                    if op['type'] == 'stress':
+                        try:
+                            del op['intervals']
+                            hadStats = True
+                        except KeyError:
+                            pass
                 if hadStats:
                     json.dump(obj=stats, fp=summary, sort_keys=True, indent=4, separators=(',', ': '))
         # Make a new tarball containing all the revision logs:
