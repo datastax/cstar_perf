@@ -446,7 +446,6 @@ def stress(cmd, revision_tag, stress_sha, stats=None):
     
     # Regex for trunk cassandra-stress
     start_of_intervals_re = re.compile('type,.*total ops,.*op/s,.*pk/s')
-    
     for line in log:
         if line.startswith("Results:"):
             collecting_aggregates = True
@@ -465,7 +464,7 @@ def stress(cmd, revision_tag, stress_sha, stats=None):
                         pass
                 continue
             continue
-        if line.startswith("END") or line == "":
+        if line.startswith("END") or line.strip() == "":
             continue
         # Collect aggregates:
         stat, value  = line.split(":", 1)
