@@ -346,6 +346,7 @@ var createJob = function() {
         };
         if (op === 'stress') {
             jobSpec['command'] = operation.find(".command-stress").val();
+            jobSpec['stress_revision'] = operation.find(".stress-revision").val();
         }
         if (op === "nodetool") {
             jobSpec['command'] = operation.find(".command-nodetool").val();
@@ -381,7 +382,7 @@ var show_job_json = function() {
 var cloneExistingJob = function(job_id) {
     $.get("/api/tests/id/" + job_id, function(job) {
         test = job['test_definition'];
-        $("input#testname").val(test['title']); 
+        $("input#testname").val(test['title']);
         $("inpur#testseries").val(test['testseries']);
         $("textarea#description").val(test['description']);
         $("select#cluster").val(test['cluster']);
