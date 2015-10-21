@@ -469,7 +469,7 @@ def stress(cmd, revision_tag, stress_sha, stats=None):
                         pass
                 continue
             continue
-        if line.startswith("END") or line == "":
+        if line.startswith("END") or line.strip() == "":
             continue
         # Collect aggregates:
         try:
