@@ -149,6 +149,7 @@ def update_cassandra_git():
             fab.run('git --git-dir=$HOME/fab/cassandra.git remote add {name} {url}'
                     .format(name=name, url=url), quiet=True)
 
+        fab.run('git --git-dir=$HOME/fab/cassandra.git remote prune {name}'.format(name=name))
         fab.run('git --git-dir=$HOME/fab/cassandra.git fetch {name}'.format(name=name))
 
 @fab.parallel
