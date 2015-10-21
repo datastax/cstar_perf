@@ -30,6 +30,7 @@ def run_server():
     # this will block until cstar_perf_notifications is up and running
     console_publish('dummy_cluster', {'job_id': 'startup_check', 'msg': 'checking for notification server'})
 
+    # TODO when refactoring how the app is started, do not listen on all interfaces
     proc = subprocess.Popen(shlex.split("gunicorn -k flask_sockets.worker --bind=0.0.0.0:8000"
                                         " -t 300 --log-file=- --workers=10 app:app"))
 
