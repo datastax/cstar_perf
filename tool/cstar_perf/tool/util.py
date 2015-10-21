@@ -2,6 +2,7 @@ import string
 import random
 import requests
 import hashlib
+from static_vnode_tokens import get_token_group
 
 def random_token(length=10):
     return ''.join(random.choice(string.ascii_uppercase + string.digits)
@@ -41,3 +42,13 @@ def digest_file(path, blocksize=2**20, hash_method='sha1'):
                 break
             m.update(buf)
     return m.hexdigest()
+
+
+def get_static_vnode_tokens(host, hosts, partitioner='murmur3', group='static'):
+    host_position = sorted(hosts).index(host)
+    host_ct = len(hosts)
+
+    if host_ct > 12:
+        raise NotImplementedError("static vnode tokens are only available for node counts <= 12")
+
+    return get_token_group(partitioner, group)[host_position]

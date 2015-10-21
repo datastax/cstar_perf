@@ -70,15 +70,15 @@ var addRevisionDiv = function(animate){
         "      </div>" +
         "" +
         "      <div class='form-group'>" +
-        "        <label class='col-md-4 control-label'" +
-        "        for='{revision_id}-options'>Other Options</label>" +
+        "        <label class='col-md-4 control-label' for='{revision_id}-token-allocation'>Token Allocation</label>" +
         "        <div class='col-md-8'>" +
-        "          <div class='checkbox'>" +
-        "            <input type='checkbox' class='options-vnodes' id='{revision_id}-options-vnodes' checked='checked'>" +
-        "            <label for='{revision_id}-options'>" +
-        "              Use Virtual Nodes" +
-        "            </label>" +
-        "	  </div>" +
+        "          <select id='{revision_id}-token-allocation' " +
+        "                  class='token-allocation-select form-control' required>" +
+        "             <option value='non-vnodes'>non-vnodes</option>"+
+        "             <option value='random' selected='selected'>vnodes (random)</option>"+
+        "             <option value='static-random'>vnodes (static-random)</option>"+
+        "             <option value='static-algorithmic'>vnodes (static-algorithmic)</option>"+
+        "          </select>" +
         "        </div>" +
         "      </div>" +
         "    </div>";
@@ -102,7 +102,6 @@ var addRevisionDiv = function(animate){
             this.remove();
         });
     });
-
 };
 
 var addOperationDiv = function(animate, operationDefaults){
@@ -338,8 +337,8 @@ var createJob = function() {
         testseries: $("#testseries").val(),
         description: $("#description").val(),
         cluster: $("#cluster").val(),
-        num_nodes: $("#numnodes").val(),
-    }
+        num_nodes: $("#numnodes").val()
+    };
 
     //Revisions:
     job.revisions = [];
@@ -353,7 +352,10 @@ var createJob = function() {
             dse_yaml: revision.find(".dse_yaml").val(),
             env: revision.find(".env-vars").val(),
             java_home: revision.find(".jvm-select").val(),
-            options: {'use_vnodes': revision.find(".options-vnodes").is(":checked") }
+            options: {
+                'use_vnodes': revision.find(".token-allocation-select").val() != 'non-vnodes',
+                'token_allocation': revision.find(".token-allocation-select").val()
+            }
         };
     });
 
@@ -386,7 +388,7 @@ var createJob = function() {
     });
 
     return JSON.stringify(job);
-}
+};
 
 //Get test definition link:
 var show_job_json = function() {
@@ -398,7 +400,7 @@ var show_job_json = function() {
         query.show_json = true;
         updateURLBar(query);
     }
-}
+};
 
 var cloneExistingJob = function(job_id) {
     $.get("/api/tests/id/" + job_id, function(job) {
@@ -421,11 +423,11 @@ var cloneExistingJob = function(job_id) {
             if (revision['options'] == undefined) {
                 revision['options'] = {};
             }
-            $("#revision-"+rev+"-options-vnodes").prop("checked", revision['options']['use_vnodes'])
             update_cluster_options();
             update_cluster_selections(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);
                 $("#revision-"+rev+"-product").val(revision['product']);
+                $("#revision-"+rev+"-token-allocation").val(revision['options']['token_allocation']);
                 if (revision['product'] == 'dse') {
                     $("#revision-"+rev+"-dse_yaml_div").show();
                 }
@@ -443,7 +445,7 @@ var cloneExistingJob = function(job_id) {
         }
 
    });
-}
+};
 
 var update_cluster_options = function(operation_id, operation_defaults, callback) {
     operation_defaults = operation_defaults || {};
@@ -488,7 +490,7 @@ var update_cluster_options = function(operation_id, operation_defaults, callback
         if (callback != null)
             callback();
     });
-}
+};
 
 var update_cluster_selections = function(callback) {
     var cluster = $('#cluster').val();
@@ -535,7 +537,7 @@ var update_cluster_selections = function(callback) {
             callback();
         }
     });
-}
+};
 
 var updateURLBar = function(query) {
     //Update the URL bar with the current parameters:
