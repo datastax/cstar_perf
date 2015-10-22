@@ -448,6 +448,7 @@ def stress(cmd, revision_tag, stress_sha, stats=None):
     start_of_intervals_re = re.compile('type,.*total ops,.*op/s,.*pk/s')
     
     for line in log:
+        line = line.strip()
         if line.startswith("Results:"):
             collecting_aggregates = True
             continue
@@ -468,8 +469,11 @@ def stress(cmd, revision_tag, stress_sha, stats=None):
         if line.startswith("END") or line == "":
             continue
         # Collect aggregates:
-        stat, value  = line.split(":", 1)
-        stats[stat.strip()] = value.strip()
+        try:
+            stat, value  = line.split(":", 1)
+            stats[stat.strip()] = value.strip()
+        except ValueError:
+            logger.info("Unable to parse aggregate line: '{}'".format(line))
     log.close()
     os.remove(temp_log)
     return stats
