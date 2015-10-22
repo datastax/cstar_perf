@@ -6,13 +6,14 @@ import uuid
 import socket
 from collections import OrderedDict
 import time
+from datetime import datetime
 from functools import partial
 
 import zmq
 import json
 import ConfigParser
 from flask import ( Flask, render_template, request, redirect, abort, Response,
-                    jsonify, make_response, session)
+                    jsonify, make_response, session, url_for)
 
 from flask.ext.scrypt import generate_random_salt, generate_password_hash, check_password_hash
 
@@ -358,7 +359,37 @@ def cancel_test():
             return make_response(jsonify({'error':'Access Denied to modify test {test_id}'
                             .format(test_id=test_id)}), 401)
     return jsonify({'success':'Test cancelled'})
-    
+
+@app.route('/api/tests')
+def get_tests():
+    """Retreive all completed tests"""
+
+    completed_tests = db.get_completed_tests()
+
+    # Apply filters
+    try:
+        param_from = request.args.get('date_from', None)
+        param_to = request.args.get('date_to', None)
+        date_from = datetime.fromtimestamp(float(param_from)) if param_from else None
+        date_to = datetime.fromtimestamp(float(param_to)) if param_to else None
+    except:
+        return make_response(jsonify({'error':'Invalid date parameters.'}), 400)
+
+    if date_from:
+        completed_tests = [t for t in completed_tests if t['scheduled_date'] >= date_from]
+    if date_to:
+        completed_tests = [t for t in completed_tests if t['scheduled_date'] <= date_to]
+
+    tests = map(lambda t: {
+        'test_id': t['test_id'],
+        'href': url_for('get_test', test_id=t['test_id'])
+    }, completed_tests)
+
+    response = json.dumps(obj=tests)
+    return Response(response=response,
+                    status=200,
+                    mimetype= 'application/json')
+
 @app.route('/api/tests/id/<test_id>')
 @requires_auth('user')
 def get_test(test_id):
