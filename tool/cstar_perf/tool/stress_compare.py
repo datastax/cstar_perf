@@ -150,82 +150,82 @@ def stress_compare(revisions,
             start_fincore_capture(interval=10)
 
         for operation_i, operation in enumerate(operations, 1):
-            start = datetime.datetime.now()
-            stats = {"id":str(uuid.uuid1()), "type":operation['type'],
-                     "revision": revision, "git_id": git_id, "start_date":start.isoformat(),
-                     "label":revision_config.get('label', revision_config['revision'])}
+            try:
+                start = datetime.datetime.now()
+                stats = {"id":str(uuid.uuid1()), "type":operation['type'],
+                         "revision": revision, "git_id": git_id, "start_date":start.isoformat(),
+                         "label":revision_config.get('label', revision_config['revision'])}
 
-            if operation['type'] == 'stress':
-                # Default to all the nodes of the cluster if no
-                # nodes were specified in the command:
-                if operation.has_key('nodes'):
-                    cmd = "{command} -node {hosts}".format(
-                        command=operation['command'],
-                        hosts=",".join(host=operation['nodes']))
-                elif '-node' in operation['command']:
-                    cmd = operation['command']
-                else:
-                    cmd = "{command} -node {hosts}".format(
-                        command=operation['command'],
-                        hosts=",".join([n for n in fab_config['hosts']]))
-                stats['command'] = cmd
-                stats['intervals'] = []
-                stats['test'] = '{operation_i}_{operation}'.format(
-                    operation_i=operation_i, operation=cmd.strip().split(' ')[0]).replace(" ","_")
-                logger.info('Running stress operation : {cmd}  ...'.format(cmd=cmd))
-                # Run stress:
-                # (stress takes the stats as a parameter, and adds
-                #  more as it runs):
-                stress_sha = stress_shas[operation.get('stress_revision', 'default')]
-                stats = stress(cmd, revision, stress_sha, stats=stats)
-                # Wait for all compactions to finish (unless disabled):
-                if operation.get('wait_for_compaction', True):
-                    compaction_throughput = revision_config.get("compaction_throughput_mb_per_sec", 16)
-                    wait_for_compaction(compaction_throughput=compaction_throughput)
+                if operation['type'] == 'stress':
+                    # Default to all the nodes of the cluster if no
+                    # nodes were specified in the command:
+                    if operation.has_key('nodes'):
+                        cmd = "{command} -node {hosts}".format(
+                            command=operation['command'],
+                            hosts=",".join(host=operation['nodes']))
+                    elif '-node' in operation['command']:
+                        cmd = operation['command']
+                    else:
+                        cmd = "{command} -node {hosts}".format(
+                            command=operation['command'],
+                            hosts=",".join([n for n in fab_config['hosts']]))
+                    stats['command'] = cmd
+                    stats['intervals'] = []
+                    stats['test'] = '{operation_i}_{operation}'.format(
+                        operation_i=operation_i, operation=cmd.strip().split(' ')[0]).replace(" ","_")
+                    logger.info('Running stress operation : {cmd}  ...'.format(cmd=cmd))
+                    # Run stress:
+                    # (stress takes the stats as a parameter, and adds
+                    #  more as it runs):
+                    stress_sha = stress_shas[operation.get('stress_revision', 'default')]
+                    stats = stress(cmd, revision, stress_sha, stats=stats)
+                    # Wait for all compactions to finish (unless disabled):
+                    if operation.get('wait_for_compaction', True):
+                        compaction_throughput = revision_config.get("compaction_throughput_mb_per_sec", 16)
+                        wait_for_compaction(compaction_throughput=compaction_throughput)
 
-            elif operation['type'] == 'nodetool':
-                if 'nodes' not in operation:
-                    operation['nodes'] = 'all'
-                if operation['nodes'] in ['all','ALL']:
-                    nodes = [n for n in fab_config['hosts']]
-                else:
-                    nodes = operation['nodes']
+                elif operation['type'] == 'nodetool':
+                    if 'nodes' not in operation:
+                        operation['nodes'] = 'all'
+                    if operation['nodes'] in ['all','ALL']:
+                        nodes = [n for n in fab_config['hosts']]
+                    else:
+                        nodes = operation['nodes']
 
-                set_nodetool_path(os.path.join(product.get_bin_path(), 'nodetool'))
-                logger.info("Running nodetool on {nodes} with command: {command}".format(nodes=operation['nodes'], command=operation['command']))
-                stats['command'] = operation['command']
-                output = nodetool_multi(nodes, operation['command'])
-                stats['output'] = output
-                logger.info("Nodetool command finished on all nodes")
+                    set_nodetool_path(os.path.join(product.get_bin_path(), 'nodetool'))
+                    logger.info("Running nodetool on {nodes} with command: {command}".format(nodes=operation['nodes'], command=operation['command']))
+                    stats['command'] = operation['command']
+                    output = nodetool_multi(nodes, operation['command'])
+                    stats['output'] = output
+                    logger.info("Nodetool command finished on all nodes")
 
-            elif operation['type'] == 'cqlsh':
-                logger.info("Running cqlsh commands on {node}".format(node=operation['node']))
-                set_cqlsh_path(os.path.join(product.get_bin_path(), 'cqlsh'))
-                output = cqlsh(operation['script'], operation['node'])
-                stats['output'] = output.split("\n")
-                logger.info("Cqlsh commands finished")
+                elif operation['type'] == 'cqlsh':
+                    logger.info("Running cqlsh commands on {node}".format(node=operation['node']))
+                    set_cqlsh_path(os.path.join(product.get_bin_path(), 'cqlsh'))
+                    output = cqlsh(operation['script'], operation['node'])
+                    stats['output'] = output.split("\n")
+                    logger.info("Cqlsh commands finished")
 
-            elif operation['type'] == 'bash':
-                nodes = operation.get('nodes', [n for n in fab_config['hosts']])
-                logger.info("Running bash commands on: {nodes}".format(nodes=nodes))
-                stats['output'] = bash(operation['script'], nodes)
-                logger.info("Bash commands finished")
+                elif operation['type'] == 'bash':
+                    nodes = operation.get('nodes', [n for n in fab_config['hosts']])
+                    logger.info("Running bash commands on: {nodes}".format(nodes=nodes))
+                    stats['output'] = bash(operation['script'], nodes)
+                    logger.info("Bash commands finished")
 
-
-            end = datetime.datetime.now()
-            stats['end_date'] = end.isoformat()
-            stats['op_duration'] = str(end - start)
-            log_stats(stats, file=log)
-
-            #Copy node logs:
-            logs_dir = os.path.join(os.path.expanduser('~'),'.cstar_perf','logs')
-            log_dir = os.path.join(logs_dir, stats['id'])
-            os.makedirs(log_dir)
-            retrieve_logs(log_dir)
-            revision_config['last_log'] = stats['id']
-            #Tar them for archiving:
-            subprocess.Popen(shlex.split('tar cfvz {id}.tar.gz {id}'.format(id=stats['id'])), cwd=logs_dir).communicate()
-            shutil.rmtree(log_dir)
+                end = datetime.datetime.now()
+                stats['end_date'] = end.isoformat()
+                stats['op_duration'] = str(end - start)
+                log_stats(stats, file=log)
+            finally:
+                # Copy node logs:
+                logs_dir = os.path.join(os.path.expanduser('~'),'.cstar_perf','logs')
+                log_dir = os.path.join(logs_dir, stats['id'])
+                os.makedirs(log_dir)
+                retrieve_logs(log_dir)
+                revision_config['last_log'] = stats['id']
+                # Tar them for archiving:
+                subprocess.Popen(shlex.split('tar cfvz {id}.tar.gz {id}'.format(id=stats['id'])), cwd=logs_dir).communicate()
+                shutil.rmtree(log_dir)
 
             if capture_fincore:
                 stop_fincore_capture()
