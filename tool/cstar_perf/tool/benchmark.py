@@ -240,24 +240,8 @@ def cqlsh(script, node):
 
 def nodetool_multi(nodes, command):
     """Run a nodetool command simultaneously on each node specified"""
-    class NodetoolThread(threading.Thread):
-        """Run nodetool in a thread"""
-        def __init__(self, cmd):
-            threading.Thread.__init__(self)
-            self.node = node
-            self.cmd = cmd
-        def run(self):
-            self.output = nodetool(self.cmd)
-    threads = {}
-    for node in nodes:
-        t = NodetoolThread("-h {node} {cmd}".format(node=node, cmd=command))
-        t.start()
-        threads[node] = t
-    output = {}
-    for node, t in threads.items():
-        t.join()
-        output[node] = t.output
-    return output
+    with common.fab.settings(hosts=nodes):
+        return execute(common.multi_nodetool, command)
 
 def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
                         compaction_throughput=16, allowed_connection_errors=10):
