@@ -162,7 +162,7 @@ def stress_compare(revisions,
                     if operation.has_key('nodes'):
                         cmd = "{command} -node {hosts}".format(
                             command=operation['command'],
-                            hosts=",".join(host=operation['nodes']))
+                            hosts=",".join(operation['nodes']))
                     elif '-node' in operation['command']:
                         cmd = operation['command']
                     else:
