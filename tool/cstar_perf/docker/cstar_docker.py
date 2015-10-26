@@ -57,7 +57,8 @@ RUN \
       libjna-java \
       psmisc \
       python-software-properties \
-      libjpeg-dev
+      libjpeg-dev \
+      lxc
 
 RUN echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections && \
     add-apt-repository ppa:webupd8team/java && \
@@ -70,7 +71,8 @@ RUN echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true 
 # Download and compile cassandra, we don't use this verison, but what
 # this does is provide a git cache and primes the ~/.m2 directory to
 # speed things up:
-RUN useradd -ms /bin/bash cstar
+RUN groupadd -g 999 docker
+RUN useradd -ms /bin/bash -G docker cstar
 USER cstar
 RUN git clone http://github.com/apache/cassandra.git ~/.docker_cassandra.git 
 RUN cd ~/.docker_cassandra.git && \
@@ -325,8 +327,9 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
     for i in range(num_nodes):
         node_name = "%s_%02d" % (cluster_name,i)
         ssh_path = os.path.split(get_ssh_key_pair()[0])[0]
-        run_cmd = ('docker run --label cstar_node=true --label '
+        run_cmd = ('docker run --privileged --label cstar_node=true --label '
             'cluster_name={cluster_name} --label cluster_type={cluster_type} --label node={node_num} '
+            ' -v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/bin/docker '
             '-d -m {CONTAINER_DEFAULT_MEMORY} --name={node_name} {port_settings} -h {node_name}'.format(
                 cluster_name=cluster_name, node_num=i, node_name=node_name, cluster_type=cluster_type,
                 CONTAINER_DEFAULT_MEMORY=CONTAINER_DEFAULT_MEMORY, ssh_path=ssh_path,

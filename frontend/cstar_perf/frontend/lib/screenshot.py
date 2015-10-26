@@ -40,13 +40,13 @@ def check_docker_service():
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
-        return (False, False)
+        return (False, False, 'fail')
     data = json.loads(stdout)
-    return (True, data[0]['State']['Running'])
+    return (True, data[0]['State']['Running'], data[0]['NetworkSettings']['IPAddress'])
 
 
 def start_selenium_grid(docker_image='selenium/standalone-chrome'):
-    container_exists, container_running = check_docker_service()
+    container_exists, container_running, host = check_docker_service()
     if not container_running:
         if container_exists:
             p = subprocess.call(['docker','rm','-f','cstar_perf_selenium'])
@@ -59,16 +59,18 @@ def start_selenium_grid(docker_image='selenium/standalone-chrome'):
                              '--name',
                              'cstar_perf_selenium',
                              docker_image])
-        assert check_docker_service() == (True, True), "Docker failed to create or start container"
+        container_exists, container_running, host = check_docker_service()
+        assert container_exists == True and container_running == True, "Docker failed to create or start container"
     else:
         logging.info("Found running cstar_perf_selenium docker container ...")
+    return host
         
 def get_graph_png(url, image_path=None, timeout=60, x_crop=None, y_crop=None):
-    start_selenium_grid()
+    host = start_selenium_grid()
     print "Fetching screenshot of url " + url
 
     driver = webdriver.Remote(
-        command_executor='http://127.0.0.1:4444/wd/hub',
+        command_executor="http://" + host + ":4444/wd/hub",
         desired_capabilities=DesiredCapabilities.CHROME)
 
     driver.get(url)
