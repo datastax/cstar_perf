@@ -170,6 +170,7 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
         assert expected_host_shas == git_ids, 'expected: {}\ngot:{}'.format(expected_host_shas, git_ids)
 
     execute(common.start)
+    time.sleep(15)
     execute(common.ensure_running, hosts=[common.config['seeds'][0]])
     time.sleep(30)
 
@@ -449,7 +450,6 @@ def stress(cmd, revision_tag, stress_sha, stats=None):
     
     # Regex for trunk cassandra-stress
     start_of_intervals_re = re.compile('type.*total ops,.*op/s,.*pk/s')
-    
     for line in log:
         line = line.strip()
         if line.startswith("Results:"):
