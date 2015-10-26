@@ -429,7 +429,7 @@ def stress(cmd, revision_tag, stress_sha, stats=None):
     collecting_values = False
     
     # Regex for trunk cassandra-stress
-    start_of_intervals_re = re.compile('type,.*total ops,.*op/s,.*pk/s')
+    start_of_intervals_re = re.compile('type.*total ops,.*op/s,.*pk/s')
     
     for line in log:
         line = line.strip()
