@@ -397,18 +397,18 @@ def get_series_summaries( series, start_timestamp, end_timestamp):
     summaries = get_series_summaries_impl( series, start_timestamp, end_timestamp)
     #Construct the response in two passes, first sort the data points on the UUID
     #Then denormalize to arrays for each metric
-    #Operation -> revision -> uuid (for ordering) -> metrics as a bloc
-    #Then do Operation -> revision -> metrics as arrays (already sorted)
+    #Operation -> revision label -> uuid (for ordering) -> metrics as a bloc
+    #Then do Operation -> revision label -> metrics as arrays (already sorted)
     byOperation = {}
 
     for summary in summaries:
-        #First get everything sorted by operation, revision, test id
+        #First get everything sorted by operation, revision label (not actual revision branch/tag,sha), test id
         for stat in summary['stats']:
             operationStats = byOperation.setdefault(stat['test'], {})
-            revisionStats = operationStats.setdefault(stat['revision'], OrderedDict())
+            revisionStats = operationStats.setdefault(stat['label'], OrderedDict())
             revisionStats[uuid.UUID(stat['id'])] = stat
             del stat['test']
-            del stat['revision']
+            del stat['label']
 
     #Now flatten the entire thing to arrays for each operation -> revision
     summaries = {}
@@ -457,7 +457,7 @@ def get_series_graph( series, start_timestamp, end_timestamp, operation, metric)
 def get_series_graph_png( series, start_timestamp, end_timestamp, operation, metric):
     host = socket.gethostname()
     graphURL = "http://" + host + construct_series_graph_url( series, start_timestamp, end_timestamp, operation, metric )
-    return Response(response=screenshot.get_graph_png(graphURL, x_crop=846, y_crop=523),
+    return Response(response=screenshot.get_graph_png(graphURL, x_crop=900, y_crop=650),
                     status=200,
                     mimetype='application/png')
 
@@ -467,7 +467,7 @@ def get_series_graph_png_cached( series, age, operation, metric, expires, invali
     start_timestamp = max(0, end_timestamp - int(age))
     graphURL = "http://" + host + construct_series_graph_url( series, start_timestamp, end_timestamp, operation, metric )
     def loader():
-        return screenshot.get_graph_png(graphURL, x_crop=846, y_crop=523)
+        return screenshot.get_graph_png(graphURL, x_crop=900, y_crop=650)
 
     cache_key = series + "/" + age + "/" + operation + "/" + metric
     return stupid_cache.stupid_cache_get("/tmp", cache_key, loader, expires, invalidate)
