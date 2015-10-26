@@ -252,23 +252,25 @@ class JobRunner(object):
         # Find the log tarball for each revision by introspecting the stats json:
         system_logs = []
         log_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf','logs')
+
         #Create a stats summary file without voluminous interval data
-        with open(stats_path) as stats:
-            stats = json.loads(stats.read())
-            for rev in stats['revisions']:
-                system_logs.append(os.path.join(log_dir, "{name}.tar.gz".format(name=rev['last_log'])))
-            with open(summary_path, 'w') as summary:
-                hadStats = False
-                for rev in job['revisions']:
-                    for op_num, op in enumerate(job['operations']):
+        if os.path.isfile(stats_path):
+            with open(stats_path) as stats:
+                stats = json.loads(stats.read())
+                for rev in stats['revisions']:
+                    system_logs.append(os.path.join(log_dir, "{name}.tar.gz".format(name=rev['last_log'])))
+                with open(summary_path, 'w') as summary:
+                    hadStats = False
+                    for op in stats['stats']:
                         if op['type'] == 'stress':
                             try:
-                                del stats['stats'][op_num]['intervals']
+                                del op['intervals']
                                 hadStats = True
                             except KeyError:
                                 pass
-                if hadStats:
-                    json.dump(obj=stats, fp=summary, sort_keys=True, indent=4, separators=(',', ': '))
+                    if hadStats:
+                        json.dump(obj=stats, fp=summary, sort_keys=True, indent=4, separators=(',', ': '))
+
         # Make a new tarball containing all the revision logs:
         tmptardir = tempfile.mkdtemp()
         try:
