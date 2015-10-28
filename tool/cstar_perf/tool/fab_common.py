@@ -452,7 +452,7 @@ def stop(clean=True):
 @fab.parallel
 def multi_nodetool(cmd):
     """run node tool command on all nodes in parallel"""
-    return fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool {cmd}'.format(java_home=config['java_home'], cmd=cmd))
+    return fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool {cmd}'.format(java_home=config['java_home'], cmd=cmd), warn_only=True)
 
 def ensure_running(retries=15, wait=10):
     """Ensure cassandra is running on all nodes.
