@@ -472,8 +472,14 @@ def ensure_running(retries=15, wait=10):
         nodes_up = dict((host,False) for host in broadcast_ips)
         for line in ring:
             for host in broadcast_ips:
-                if host in line and " Up " in line:
-                    nodes_up[host] = True
+                try:
+                    if host in line and " Up " in line:
+                        nodes_up[host] = True
+                except UnicodeDecodeError:
+                    # sometimes the operations on line will fail when it contains characters
+                    # outside ascii range. we don't care; these lines can exist as long as
+                    # we see the 'UP' lines that let us know a node is up.
+                    pass
         for node,up in nodes_up.items():
             if not up:
                 fab.puts("Node is not up (yet): %s" % node)
