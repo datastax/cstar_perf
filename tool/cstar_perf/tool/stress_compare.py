@@ -2,10 +2,12 @@ from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash,
                        log_stats, log_set_title, log_add_data, retrieve_logs, restart,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
                        drop_page_cache, wait_for_compaction, setup_stress, clean_stress,
-                       get_localhost)
+                       get_localhost, retrieve_flamegraph)
 from benchmark import config as fab_config, cstar, dse, set_cqlsh_path, set_nodetool_path
 import fab_common as common
 import fab_cassandra as cstar
+import fab_flamegraph as flamegraph
+from fabric import api as fab
 from fabric.tasks import execute
 import os
 import sys
@@ -19,6 +21,7 @@ import json
 import subprocess
 import shlex
 import shutil
+import sh
 
 logging.basicConfig()
 logger = logging.getLogger('stress_compare')
@@ -113,6 +116,11 @@ def stress_compare(revisions,
     with common.fab.settings(hosts=[localhost_entry]):
         execute(cstar.update_cassandra_git)
 
+    # Flamegraph Setup
+    flamegraph.set_common_module(common)
+    if flamegraph.is_enabled():
+        execute(flamegraph.setup)
+
     clean_stress()
     stress_revisions = set([operation['stress_revision'] for operation in operations if 'stress_revision' in operation])
     stress_shas = setup_stress(stress_revisions)
@@ -142,13 +150,18 @@ def stress_compare(revisions,
         if not keep_page_cache:
             drop_page_cache()
 
-        #Only fetch from git on the first run:
+        # Only fetch from git on the first run:
         git_fetch = True if rev_num == 0 else False
         revision_config['git_id'] = git_id = bootstrap(config, destroy=True, leave_data=leave_data, git_fetch=git_fetch)
+
+        if flamegraph.is_enabled(revision_config):
+            execute(flamegraph.ensure_stopped_perf_agent)
+            execute(flamegraph.start_perf_agent, rev_num)
 
         if capture_fincore:
             start_fincore_capture(interval=10)
 
+        last_stress_operation_id = 'None'
         for operation_i, operation in enumerate(operations, 1):
             try:
                 start = datetime.datetime.now()
@@ -157,6 +170,7 @@ def stress_compare(revisions,
                          "label":revision_config.get('label', revision_config['revision'])}
 
                 if operation['type'] == 'stress':
+                    last_stress_operation_id = stats['id']
                     # Default to all the nodes of the cluster if no
                     # nodes were specified in the command:
                     if operation.has_key('nodes'):
@@ -234,6 +248,15 @@ def stress_compare(revisions,
                 # operation:
                 if operation_i < len(operations):
                     start_fincore_capture(interval=10)
+
+        if flamegraph.is_enabled(revision_config):
+            # Generate and Copy node flamegraphs
+            execute(flamegraph.stop_perf_agent)
+            flamegraph_dir = os.path.join(os.path.expanduser('~'),'.cstar_perf', 'flamegraph')
+            flamegraph_test_dir = os.path.join(flamegraph_dir, last_stress_operation_id)
+            retrieve_flamegraph(flamegraph_test_dir, rev_num+1)
+            sh.tar('cfvz', "{}.tar.gz".format(stats['id']), last_stress_operation_id, _cwd=flamegraph_dir)
+            shutil.rmtree(flamegraph_test_dir)
 
         log_add_data(log, {'title':title,
                            'subtitle': subtitle,
