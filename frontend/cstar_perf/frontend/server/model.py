@@ -104,11 +104,14 @@ class Model(object):
         'select_user_passphrase_hash': "SELECT hash, salt FROM user_passphrase WHERE user_id = ?;",
         'update_user_passphrase_hash': "UPDATE user_passphrase SET hash = ?, salt = ? WHERE user_id = ?",
         'select_user_roles': "SELECT roles FROM users WHERE user_id = ?;",
-        'update_test_artifact': "UPDATE test_artifacts SET artifact = ? WHERE test_id = ? AND artifact_type = ? AND name = ?;",
-        'select_test_artifact': "SELECT artifact_type, name FROM test_artifacts WHERE test_id = ? AND artifact_type = ? AND name = ?;",
-        'select_test_artifacts_by_type': "SELECT artifact_type, name FROM test_artifacts WHERE test_id = ? AND artifact_type = ?",
-        'select_test_artifacts_all': "SELECT artifact_type, name FROM test_artifacts WHERE test_id = ? ORDER BY artifact_type ASC",
-        'select_test_artifact_data': "SELECT artifact FROM test_artifacts WHERE test_id = ? AND artifact_type = ? AND name = ?",
+        'update_test_artifact': "UPDATE test_artifacts SET artifact = ?, artifact_available = ?, object_id = ? WHERE test_id = ? AND artifact_type = ? AND name = ?;",
+        'select_test_artifacts_by_type': "SELECT artifact_type, name, object_id, artifact_available FROM test_artifacts WHERE test_id = ? AND artifact_type = ?",
+        'select_test_artifacts_all': "SELECT artifact_type, name, object_id, artifact_available FROM test_artifacts WHERE test_id = ? ORDER BY artifact_type ASC",
+        'select_test_artifact_data': "SELECT artifact, object_id, artifact_available FROM test_artifacts WHERE test_id = ? AND artifact_type = ? AND name = ?",
+        'insert_chunk_object': "INSERT INTO chunk_object_storage (object_id, chunk_id, chunk_size, chunk_sha, object_chunk, total_chunks, object_size, object_sha) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        'insert_chunk_artifact_meta': "UPDATE test_artifacts SET object_id = ?, artifact_available = ? WHERE test_id = ? AND artifact_type = ? AND name = ?;",
+        'select_base_chunk_info': "SELECT object_id, total_chunks, object_size, object_sha FROM chunk_object_storage where object_id = ? ORDER BY chunk_id ASC LIMIT 1",
+        'select_chunk_data': "SELECT object_chunk FROM chunk_object_storage where object_id = ? AND chunk_id = ?",
         'insert_test_completed': "INSERT INTO tests_completed (status, completed_date, test_id, cluster, title, user) VALUES (?, ?, ?, ?, ?, ?);",
         'select_test_completed': "SELECT * FROM tests_completed LIMIT ?;",
         'select_api_pubkey': "SELECT * FROM api_pubkeys WHERE name = ? LIMIT 1",
@@ -130,7 +133,7 @@ class Model(object):
         ## Prepare statements:
         self.__prepared_statements = {}
         for name, stmt in Model.statements.items():
-            #log.debug("Preparing statement: {stmt}".format(stmt=stmt))
+            log.debug("Preparing statement: {stmt}".format(stmt=stmt))
             self.__prepared_statements[name] = self.get_session().prepare(stmt)
 
         ### ZeroMQ publisher for announcing jobs as they come in:
@@ -186,7 +189,27 @@ class Model(object):
         session.execute("CREATE TABLE tests_completed (status text, completed_date timeuuid, test_id timeuuid, cluster text, title text, user text, PRIMARY KEY (status, completed_date)) WITH CLUSTERING ORDER BY (completed_date DESC)")
 
         # Test artifacts
-        session.execute("CREATE TABLE test_artifacts (test_id timeuuid, artifact_type text, name text, artifact blob, PRIMARY KEY (test_id, artifact_type, name));")
+        session.execute("""CREATE TABLE test_artifacts (
+                                test_id timeuuid,
+                                artifact_type text,
+                                name text,
+                                artifact blob,
+                                artifact_available boolean,
+                                object_id text,
+                                PRIMARY KEY (test_id, artifact_type, name)
+                        );""")
+
+        session.execute("""CREATE TABLE chunk_object_storage (
+                                object_id text,
+                                chunk_id int,
+                                chunk_size int,
+                                chunk_sha text,
+                                object_chunk blob,
+                                total_chunks int static,
+                                object_size int static,
+                                object_sha text static,
+                                primary key ((object_id), chunk_id)
+                        );""")
 
         # Cluster information
         session.execute("CREATE TABLE clusters (name text PRIMARY KEY, nodes list<text>, description text, jvms map<text, text>, additional_products set<text>)")
@@ -269,7 +292,7 @@ class Model(object):
                                   test_id=test_id).send()
         return namedtuple('TestStatus', 'test_id status')(test_id, status)
 
-    def update_test_artifact(self, test_id, artifact_type, artifact, name=None):
+    def update_test_artifact(self, test_id, artifact_type, artifact, name=None, available=True, object_id=None):
         """Update an artifact blob
 
         artifact can be a string or a file-like object
@@ -287,12 +310,47 @@ class Model(object):
             test_id = uuid.UUID(test_id)
         if not name:
             name = "Unknown artifact"
-        artifact = artifact.encode("hex")
-        session.execute(self.__prepared_statements['update_test_artifact'], (artifact, test_id, artifact_type, name))
+        if hasattr(artifact, 'encode'):
+            artifact = artifact.encode("hex")
+        session.execute(self.__prepared_statements['update_test_artifact'], (description, artifact, available, object_id, test_id, artifact_type, name))
         return test_id
 
+    def insert_artifact_chunk(self, object_id, chunk_id, chunk_size, chunk_sha, object_chunk, total_chunks, object_size, object_sha):
+        if hasattr(object_chunk, 'read'):
+            f = object_chunk
+            pos = f.tell()
+            f.seek(0)
+            object_chunk = f.read()
+            f.seek(pos)
+        object_chunk = object_chunk.encode("hex")
+        session = self.get_session()
+        session.execute(self.__prepared_statements['insert_chunk_object'],
+                        (object_id, chunk_id, chunk_size, chunk_sha, object_chunk, total_chunks, object_size, object_sha))
+
+    def get_base_chunk_info(self, object_id):
+        session = self.get_session()
+        rows = session.execute(self.__prepared_statements['select_base_chunk_info'], (object_id, ))
+        return [r.__dict__ for r in rows][0]
+
+    def get_chunk_data(self, object_id, chunk_id):
+        session = self.get_session()
+        rows = session.execute(self.__prepared_statements['select_chunk_data'], (object_id, chunk_id))
+        if rows:
+            return rows[0].object_chunk.decode("hex")
+        return ""
+
+    def add_chunk_artifact(self, test_id, artifact_type, object_id, name, artifact_complete=False):
+        session = self.get_session()
+        session.execute(self.__prepared_statements['insert_chunk_artifact_meta'],
+                        (object_id, artifact_complete, test_id, artifact_type, name))
+
+    def generate_object_by_chunks(self, object_id):
+        chunk_info = self.get_base_chunk_info(object_id)
+        for chunk_num in range(chunk_info['total_chunks']):
+            yield self.get_chunk_data(object_id, chunk_num)
+
     def get_test_artifact(self, test_id, artifact_type, artifact_name):
-        """Retrieve one test artifact"""
+        """Retrieve one test artifact type"""
         session = self.get_session()
         if not isinstance(test_id, uuid.UUID):
             test_id = uuid.UUID(test_id)
@@ -317,7 +375,7 @@ class Model(object):
             test_id = uuid.UUID(test_id)
         rows = session.execute(self.__prepared_statements['select_test_artifact_data'], (test_id, artifact_type, artifact_name))
         if rows:
-            return rows[0].artifact.decode("hex")
+            return (rows[0].artifact.decode("hex") if rows[0].artifact else None), rows[0].name, rows[0].object_id, rows[0].artifact_available
         return None
 
     ################################################################################

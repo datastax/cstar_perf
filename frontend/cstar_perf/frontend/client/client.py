@@ -27,10 +27,11 @@ from distutils.dir_util import mkpath
 import ecdsa
 from daemonize import Daemonize
 import fabric.api, fabric.network
+from math import ceil
 from websocket import WebSocket
 
 from cstar_perf.frontend.lib.crypto import APIKey, BadConfigFileException
-from cstar_perf.frontend.lib.util import random_token, timeout, TimeoutError, format_bytesize, cd
+from cstar_perf.frontend.lib.util import random_token, timeout, TimeoutError, format_bytesize, cd, generate_object_id, sha256_of_file
 from cstar_perf.frontend.lib.socket_comms import Command, Response, CommandResponseBase, receive_data, UnauthenticatedError
 from cstar_perf.tool.stress_compare import stress_compare
 from api_client import APIClient
@@ -383,7 +384,7 @@ class JobRunner(object):
 
             for artifact in artifacts:
                 if os.path.isfile(artifact):
-                    self.stream_artifact(job_id, kind, os.path.basename(artifact), artifact, binary)
+                    self.stream_artifact_in_chunks(job_id, kind, os.path.basename(artifact), artifact, binary)
                     if self.__server_synced:
                         streamed.append(kind)
                     else:
@@ -405,7 +406,7 @@ class JobRunner(object):
     def stream_artifact(self, job_id, kind, name, path, binary=False):
         """Stream job artifact to server"""
         # Inform the server we will be streaming an artifact:
-        command = Command.new(self.ws, action='stream', test_id=job_id, 
+        command = Command.new(self.ws, action='stream', test_id=job_id,
                               kind=kind, name=name, eof=EOF_MARKER, keepalive=KEEPALIVE_MARKER, binary=binary)
         response = self.send(command, assertions={'message':'ready'})
 
@@ -421,6 +422,56 @@ class JobRunner(object):
         self.send(base64.b64encode(EOF_MARKER))
 
         response = self.receive(response, assertions={'message':'stream_received', 'done':True})
+
+    @staticmethod
+    def _get_chunks(file_size, chunk_size=16384):
+        chunk_num = 0
+        chunk_start = 0
+        while chunk_start + chunk_size < file_size:
+            yield(chunk_start, chunk_size, chunk_num)
+            chunk_start += chunk_size
+            chunk_num += 1
+
+        final_chunk_size = file_size - chunk_start
+        chunk_num = (chunk_num + 1) if chunk_num > 0 else 0
+        yield(chunk_start, final_chunk_size, chunk_num)
+
+    def stream_artifact_in_chunks(self, job_id, kind, name, path, binary=False):
+        """Stream job artifact to server in chunks"""
+
+        file_size = os.path.getsize(path)
+        object_id = generate_object_id(job_id, kind)
+        object_sha = sha256_of_file(path)
+        num_chunks = len(list(self._get_chunks(file_size)))
+
+        uploaded_successfully = True
+        for chunk_start, chunk_size, chunk_id in self._get_chunks(file_size):
+            log.info("sending artifact[{}][{}] chunk: {}".format(name, object_id, chunk_id))
+
+            command = Command.new(self.ws, action='chunk-stream', test_id=job_id, file_size=file_size,
+                                  num_of_chunks=num_chunks, chunk_id=chunk_id, object_id=object_id,
+                                  object_sha=object_sha, chunk_size=chunk_size,
+                                  kind=kind, name=name, eof=EOF_MARKER, keepalive=KEEPALIVE_MARKER, binary=binary)
+            response = self.send(command, assertions={'message': 'ready'})
+            # TODO check if response shows chunk already present
+
+            chunk_sha = hashlib.sha256()
+            with open(path) as fh:
+                fh.seek(chunk_start, os.SEEK_SET)
+                while fh.tell() < (chunk_start + chunk_size):
+                    byte_size = 512 if fh.tell() + 512 < (chunk_start + chunk_size) else (chunk_start + chunk_size) - fh.tell()
+                    data = fh.read(byte_size)
+                    chunk_sha.update(data)
+                    data = base64.b64encode(data)
+                    self.send(data)
+                self.send(base64.b64encode(EOF_MARKER))
+                response = self.receive(response, assertions={'message': 'chunk_received', 'done': True})
+                uploaded_successfully = uploaded_successfully and chunk_sha.hexdigest() == response['chunk_sha']
+
+            log.info("UPLOADED SUCCESS: {}".format(uploaded_successfully))
+            self.send(Command.new(self.ws, action='chunk-stream-complete', successful=uploaded_successfully,
+                                  test_id=job_id, object_id=object_id, kind=kind, name=name),
+                      assertions={'message': 'ok'})
 
     def recover_jobs(self):
         """Find old jobs that are still on this machine and update the server on their state.

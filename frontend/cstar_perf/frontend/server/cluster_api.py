@@ -205,6 +205,30 @@ def cluster_comms(ws):
         # Send response:
         command.respond(test_id=command['test_id'], message='test_update', done=True)
 
+    def receive_artifact_chunk_object(command):
+        command.respond(message="ready", follow_up=False, done=False)
+        tmp = cStringIO.StringIO()
+        chunk_sha = hashlib.sha256()
+
+        def frame_callback(frame, binary):
+            if not binary:
+                frame = frame.encode("utf-8")
+            chunk_sha.update(frame)
+            tmp.write(frame)
+
+        socket_comms.receive_stream(ws, command, frame_callback)
+        # save chunk to db
+        db.insert_artifact_chunk(command['object_id'], command['chunk_id'], command['chunk_size'],
+                                 chunk_sha.hexdigest(), tmp, command['num_of_chunks'], command['file_size'],
+                                 command['object_sha'])
+        # respond with current sha
+        command.respond(message='chunk_received', done=True, chunk_id=command['chunk_id'], chunk_sha=chunk_sha.hexdigest())
+
+    def receive_artifact_chunk_complete(command):
+        db.update_test_artifact(command['test_id'], command['kind'], None, command['name'],
+                                available=command['successful'], object_id=command['object_id'])
+        command.respond(message='ok', done=True)
+
     def receive_stream(command):
         """Receive a stream of data"""
         command.respond(message="ready", follow_up=False)
@@ -235,6 +259,8 @@ def cluster_comms(ws):
                 console.close()
             # TODO: confirm with the client that the sha is correct
             # before storing
+            # log.info("SERVER SHA: {}".format(sha.hexdigest()))
+            # log.info("CLIENT SHA: {}".format(command['file_sha']))
         finally:
             # In the event of a socket error, we always want to commit
             # what we have of the artifact to the database. Better to
@@ -261,6 +287,10 @@ def cluster_comms(ws):
                 test_done(command)
             elif command['action'] == 'stream':
                 receive_stream(command)
+            elif command['action'] == 'chunk-stream':
+                receive_artifact_chunk_object(command)
+            elif command['action'] == 'chunk-stream-complete':
+                receive_artifact_chunk_complete(command)
             elif command['action'] == 'good_bye':
                 log.info("client said good_bye. Closing socket.")
                 break

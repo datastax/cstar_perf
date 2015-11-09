@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import random
 import string
 import signal
@@ -113,6 +114,25 @@ def cd(newdir):
         yield
     finally:
         os.chdir(prevdir)
+
+
+def sha256_of_file(path):
+    """returns the SHA-256 hash in hex of the file"""
+    h = hashlib.sha256()
+
+    with open(path, 'rb') as fh:
+        chunk = 0
+        while chunk != b'':
+            chunk = fh.read(512)
+            h.update(chunk)
+
+    return h.hexdigest()
+
+
+def generate_object_id(test_id, kind):
+    """returns the SHA-256 hash in hex of the test_id and kind"""
+
+    return hashlib.sha256(kind + test_id).hexdigest()
 
 
 def auth_provider_if_configured(config):
