@@ -258,13 +258,22 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
 
     def compactionstats(nodes, check_interval):
         """Check for compactions via nodetool compactionstats"""
+        consecutive_connection_errors = 0
         pattern = re.compile("(^|\n)pending tasks: 0")
+        failure_pattern = re.compile("ConnectException")
         nodes = set(nodes)
         while True:
             results = execute(common.multi_nodetool, cmd="compactionstats")
             for node, output in results.iteritems():
                 if pattern.search(output.strip()):
                     nodes.discard(node)
+                elif failure_pattern.search(output.strip()):
+                    consecutive_connection_errors += 1
+
+            if consecutive_connection_errors > allowed_connection_errors:
+                raise NodetoolException(
+                    "Failed to connect via nodetool {consecutive_connection_errors} times in a row.".format(
+                        consecutive_connection_errors=consecutive_connection_errors))
 
             if len(nodes) == 0:
                 break
@@ -279,8 +288,10 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
 
     def tpstats(nodes, check_interval):
         """Check for compactions via nodetool tpstats"""
+        consecutive_connection_errors = 0
         stat_exists_pattern = re.compile("^CompactionExecutor", re.MULTILINE)
         no_compactions_pattern = re.compile("CompactionExecutor\W*0\W*0\W*[0-9]*\W*0", re.MULTILINE)
+        failure_pattern = re.compile("ConnectException")
 
         nodes = set(nodes)
         while True:
@@ -289,9 +300,16 @@ def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
                 if stat_exists_pattern.search(output):
                     if no_compactions_pattern.search(output):
                         nodes.discard(node)
+                elif failure_pattern.search(output.strip()):
+                    consecutive_connection_errors += 1
                 else:
                     logger.warn("CompactionExecutor not listed in nodetool tpstats, can't check for compactions this way.")
                     return
+
+            if consecutive_connection_errors > allowed_connection_errors:
+                raise NodetoolException(
+                    "Failed to connect via nodetool {consecutive_connection_errors} times in a row.".format(
+                        consecutive_connection_errors=consecutive_connection_errors))
 
             if len(nodes) == 0:
                 break
