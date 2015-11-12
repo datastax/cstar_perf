@@ -104,10 +104,11 @@ class Model(object):
         'select_user_passphrase_hash': "SELECT hash, salt FROM user_passphrase WHERE user_id = ?;",
         'update_user_passphrase_hash': "UPDATE user_passphrase SET hash = ?, salt = ? WHERE user_id = ?",
         'select_user_roles': "SELECT roles FROM users WHERE user_id = ?;",
-        'update_test_artifact': "UPDATE test_artifacts SET description = ?, artifact = ? WHERE test_id = ? AND artifact_type = ?;",
-        'select_test_artifacts_by_type': "SELECT artifact_type, description FROM test_artifacts WHERE test_id = ? AND artifact_type = ?",
-        'select_test_artifacts_all': "SELECT artifact_type, description FROM test_artifacts WHERE test_id = ? ORDER BY artifact_type ASC",
-        'select_test_artifact_data': "SELECT artifact, description FROM test_artifacts WHERE test_id = ? AND artifact_type = ? LIMIT 1",
+        'update_test_artifact': "UPDATE test_artifacts SET artifact = ? WHERE test_id = ? AND artifact_type = ? AND name = ?;",
+        'select_test_artifact': "SELECT artifact_type, name FROM test_artifacts WHERE test_id = ? AND artifact_type = ? AND name = ?;",
+        'select_test_artifacts_by_type': "SELECT artifact_type, name FROM test_artifacts WHERE test_id = ? AND artifact_type = ?",
+        'select_test_artifacts_all': "SELECT artifact_type, name FROM test_artifacts WHERE test_id = ? ORDER BY artifact_type ASC",
+        'select_test_artifact_data': "SELECT artifact FROM test_artifacts WHERE test_id = ? AND artifact_type = ? AND name = ?",
         'insert_test_completed': "INSERT INTO tests_completed (status, completed_date, test_id, cluster, title, user) VALUES (?, ?, ?, ?, ?, ?);",
         'select_test_completed': "SELECT * FROM tests_completed LIMIT ?;",
         'select_api_pubkey': "SELECT * FROM api_pubkeys WHERE name = ? LIMIT 1",
@@ -185,7 +186,7 @@ class Model(object):
         session.execute("CREATE TABLE tests_completed (status text, completed_date timeuuid, test_id timeuuid, cluster text, title text, user text, PRIMARY KEY (status, completed_date)) WITH CLUSTERING ORDER BY (completed_date DESC)")
 
         # Test artifacts
-        session.execute("CREATE TABLE test_artifacts (test_id timeuuid, artifact_type text, description text, artifact blob, PRIMARY KEY (test_id, artifact_type));")
+        session.execute("CREATE TABLE test_artifacts (test_id timeuuid, artifact_type text, name text, artifact blob, PRIMARY KEY (test_id, artifact_type, name));")
 
         # Cluster information
         session.execute("CREATE TABLE clusters (name text PRIMARY KEY, nodes list<text>, description text, jvms map<text, text>, additional_products set<text>)")
@@ -268,7 +269,7 @@ class Model(object):
                                   test_id=test_id).send()
         return namedtuple('TestStatus', 'test_id status')(test_id, status)
 
-    def update_test_artifact(self, test_id, artifact_type, artifact, description=None):
+    def update_test_artifact(self, test_id, artifact_type, artifact, name=None):
         """Update an artifact blob
 
         artifact can be a string or a file-like object
@@ -284,18 +285,18 @@ class Model(object):
         session = self.get_session()
         if not isinstance(test_id, uuid.UUID):
             test_id = uuid.UUID(test_id)
-        if not description:
-            description = "Unknown artifact"
+        if not name:
+            name = "Unknown artifact"
         artifact = artifact.encode("hex")
-        session.execute(self.__prepared_statements['update_test_artifact'], (description, artifact, test_id, artifact_type))
+        session.execute(self.__prepared_statements['update_test_artifact'], (artifact, test_id, artifact_type, name))
         return test_id
 
-    def get_test_artifact(self, test_id, artifact_type):
-        """Retrieve one test artifact type"""
+    def get_test_artifact(self, test_id, artifact_type, artifact_name):
+        """Retrieve one test artifact"""
         session = self.get_session()
         if not isinstance(test_id, uuid.UUID):
             test_id = uuid.UUID(test_id)
-        rows = session.execute(self.__prepared_statements['select_test_artifacts_by_type'], (test_id, artifact_type))
+        rows = session.execute(self.__prepared_statements['select_test_artifact'], (test_id, artifact_type, artifact_name))
         return [r.__dict__ for r in rows][0]
 
     def get_test_artifacts(self, test_id, artifact_type=None):
@@ -303,17 +304,20 @@ class Model(object):
         session = self.get_session()
         if not isinstance(test_id, uuid.UUID):
             test_id = uuid.UUID(test_id)
-        rows = session.execute(self.__prepared_statements['select_test_artifacts_all'], (test_id,))
+        if artifact_type:
+            rows = session.execute(self.__prepared_statements['select_test_artifacts_by_type'], (test_id, artifact_type))
+        else:
+            rows = session.execute(self.__prepared_statements['select_test_artifacts_all'], (test_id,))
         return [r.__dict__ for r in rows]
 
-    def get_test_artifact_data(self, test_id, artifact_type):
+    def get_test_artifact_data(self, test_id, artifact_type, artifact_name):
         """Get blob data from a specific artifact"""
         session = self.get_session()
         if not isinstance(test_id, uuid.UUID):
             test_id = uuid.UUID(test_id)
-        rows = session.execute(self.__prepared_statements['select_test_artifact_data'], (test_id, artifact_type))
+        rows = session.execute(self.__prepared_statements['select_test_artifact_data'], (test_id, artifact_type, artifact_name))
         if rows:
-            return namedtuple('Artifact', 'artifact description')(rows[0].artifact.decode("hex"), rows[0].description)
+            return rows[0].artifact.decode("hex")
         return None
 
     ################################################################################

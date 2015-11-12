@@ -45,18 +45,36 @@ h3 {
 {% endif %}
 <tr><td>Number of nodes</td><td>{{test['test_definition']['num_nodes']}}</td></tr>
 {% if has_chart %}
-<tr><td>Chart</td><td><a class='btn btn-primary' role='button' href="/tests/artifacts/{{test['test_id']}}/graph">View Chart</a></td></tr>
+<tr>
+  <td>Chart</td>
+  <td>
+    <a class='btn btn-primary' role='button' href="/tests/artifacts/{{test['test_id']}}/graph">View Chart</a>
+    <a class='btn btn-primary' role='button' href="/tests/artifacts/{{test['test_id']}}/flamegraph">Flamegraph</a>
+  </td>
+</tr>
 {% endif %}
 {% if artifacts|length > 0 %}
 <tr><th colspan="100%">Artifacts</th></tr>
 <tr><td colspan="100%"><table id="artifacts_tbl" class='col-md-12'>
   {% for artifact in artifacts %}
    {% if artifact['artifact_type'] in ('failure',) %}
-     <tr><td class='col-md-2'>{{artifact['artifact_type']}}</td><td><pre>{{artifact['artifact']}}</pre></td><td></b></td></tr>
+     <tr>
+       <td class='col-md-2'>{{artifact['artifact_type']}}</td>
+       <td><pre>{{artifact['artifact']}}</pre></td>
+       <td></b></td>
+    </tr>
    {% elif artifact['artifact_type'] in ('link',) %}
-     <tr><td class='col-md-2'>{{artifact['artifact_type']}}</td><td><a href='{{artifact['artifact']}}'>{{artifact['description']}}</a></td><td></td></tr>
+     <tr>
+       <td class='col-md-2'>{{artifact['artifact_type']}}</td>
+       <td><a href='{{artifact['artifact']}}'>{{artifact['name']}}</a></td>
+       <td></td>
+     </tr>
    {% else %}
-     <tr><td class='col-md-2'>{{artifact['artifact_type']}}</td><td><a href='/tests/artifacts/{{test['test_id']}}/{{artifact['artifact_type']}}'>{{artifact['description']}}</a></td><td></td></tr>
+     <tr>
+       <td class='col-md-2'>{{artifact['artifact_type']}}</td>
+       <td><a href='/tests/artifacts/{{test['test_id']}}/{{artifact['artifact_type']}}/{{artifact['name']}}'>{{artifact['name']}}</a></td>
+       <td></td>
+     </tr>
    {% endif %} 
   {% endfor %}
 </td></tr></table>

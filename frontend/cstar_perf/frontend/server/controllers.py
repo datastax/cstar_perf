@@ -243,28 +243,42 @@ def view_test(test_id):
     for a in artifacts:
         if a['artifact_type'] in ['failure','link']:
             # Proactively fetch non-blob artifacts:
-            a['artifact'] = db.get_test_artifact_data(test_id, a['artifact_type']).artifact
+            a['artifact'] = db.get_test_artifact_data(test_id, a['artifact_type'], a['name'])
         if a['artifact_type'] == 'stats':
             has_chart = True
 
     return render_template('view_test.jinja2.html', test=test, artifacts=artifacts, has_chart=has_chart)
 
 @app.route('/tests/artifacts/<test_id>/<artifact_type>')
-def get_artifact(test_id, artifact_type):
+@app.route('/tests/artifacts/<test_id>/<artifact_type>/<artifact_name>')
+def get_artifact(test_id, artifact_type, artifact_name=None):
+
     if artifact_type == 'graph':
         return redirect("/graph?command=one_job&stats={test_id}".format(test_id=test_id))
-    artifact, description = db.get_test_artifact_data(test_id, artifact_type)
-    if description.endswith(".tar.gz"):
+    elif artifact_type == 'flamegraph' and not artifact_name:
+        artifacts = db.get_test_artifacts(test_id, artifact_type)
+        for artifact in artifacts:
+            artifact['data'] = db.get_test_artifact_data(test_id, artifact_type, artifact['name'])
+        return render_template('flamegraph.jinja2.html', test_id=test_id, artifacts=artifacts)
+
+    if not artifact_name:
+        return make_response(jsonify({'error':'No artifact name provided.'}), 400)
+
+    artifact = db.get_test_artifact_data(test_id, artifact_type, artifact_name)
+
+    if artifact_name.endswith(".tar.gz"):
         mimetype = 'application/gzip'
-    elif description.endswith(".json"):
+    elif artifact_name.endswith(".json"):
         mimetype = 'application/json'
+    elif artifact_name.endswith(".svg"):
+        mimetype = 'image/svg+xml'
     else:
         mimetype = 'text/plain'
 
     return Response(response=artifact,
                     status=200,
                     mimetype=mimetype,
-                    headers={"Content-Disposition": "filename={name}".format(name=description)}
+                    headers={"Content-Disposition": "filename={name}".format(name=artifact_name)}
     )
 
 @app.route('/graph')
