@@ -375,7 +375,7 @@ class Model(object):
             test_id = uuid.UUID(test_id)
         rows = session.execute(self.__prepared_statements['select_test_artifact_data'], (test_id, artifact_type, artifact_name))
         if rows:
-            return (rows[0].artifact.decode("hex") if rows[0].artifact else None), rows[0].name, rows[0].object_id, rows[0].artifact_available
+            return (rows[0].artifact.decode("hex") if rows[0].artifact else None), rows[0].object_id, rows[0].artifact_available
         return None
 
     ################################################################################
