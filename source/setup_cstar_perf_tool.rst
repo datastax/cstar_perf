@@ -207,7 +207,11 @@ Test cstar_perf_bootstrap
 Now that cstar_perf.tool is installed and configured, you can bring up
 a test cluster to test that everything is working::
 
-    cstar_perf_bootstrap apache/cassandra-2.1
+    cstar_perf_bootstrap -v apache/cassandra-2.1
+
+If you want to install DSE instead of pure Cassandra, then use the following command to bring up the cluster and install the specified version from the given ``dse_url``, specified in your ``~/.cstar_perf/cluster_config.json``::
+
+    cstar_perf_bootstrap -v 4.8.1
 
 This command will tell all of the cassandra nodes to download, from
 git, the latest development version of Cassandra 2.1, build it, and
