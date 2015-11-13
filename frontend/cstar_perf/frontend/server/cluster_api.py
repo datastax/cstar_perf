@@ -227,7 +227,18 @@ def cluster_comms(ws):
     def receive_artifact_chunk_complete(command):
         db.update_test_artifact(command['test_id'], command['kind'], None, command['name'],
                                 available=command['successful'], object_id=command['object_id'])
-        command.respond(message='ok', done=True)
+        command.respond(message='ok', stored_chunk_shas=_get_stored_chunks(command['object_id']), done=True)
+
+    def receive_artifact_chunk_query(command):
+        command.respond(message='ok', stored_chunk_shas=_get_stored_chunks(command['object_id']), done=True)
+
+    def _get_stored_chunks(object_id):
+        """
+        This is super lame, but....
+        currently returning a list as a value on commands breaks the assertion functionality on the client
+        """
+        chunk_info = db.get_chunk_info(object_id)
+        return ','.join(["{}:{}".format(hsh['chunk_id'], hsh['chunk_sha']) for hsh in chunk_info])
 
     def receive_stream(command):
         """Receive a stream of data"""
@@ -259,8 +270,6 @@ def cluster_comms(ws):
                 console.close()
             # TODO: confirm with the client that the sha is correct
             # before storing
-            # log.info("SERVER SHA: {}".format(sha.hexdigest()))
-            # log.info("CLIENT SHA: {}".format(command['file_sha']))
         finally:
             # In the event of a socket error, we always want to commit
             # what we have of the artifact to the database. Better to
@@ -287,6 +296,8 @@ def cluster_comms(ws):
                 test_done(command)
             elif command['action'] == 'stream':
                 receive_stream(command)
+            elif command['action'] == 'chunk-stream-query':
+                receive_artifact_chunk_query(command)
             elif command['action'] == 'chunk-stream':
                 receive_artifact_chunk_object(command)
             elif command['action'] == 'chunk-stream-complete':

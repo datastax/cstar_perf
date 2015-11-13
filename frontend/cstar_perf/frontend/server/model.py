@@ -110,6 +110,7 @@ class Model(object):
         'select_test_artifact_data': "SELECT artifact, object_id, artifact_available FROM test_artifacts WHERE test_id = ? AND artifact_type = ? AND name = ?",
         'insert_chunk_object': "INSERT INTO chunk_object_storage (object_id, chunk_id, chunk_size, chunk_sha, object_chunk, total_chunks, object_size, object_sha) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         'insert_chunk_artifact_meta': "UPDATE test_artifacts SET object_id = ?, artifact_available = ? WHERE test_id = ? AND artifact_type = ? AND name = ?;",
+        'select_chunk_info': "select chunk_id, chunk_sha from chunk_object_storage where object_id = ?",
         'select_base_chunk_info': "SELECT object_id, total_chunks, object_size, object_sha FROM chunk_object_storage where object_id = ? ORDER BY chunk_id ASC LIMIT 1",
         'select_chunk_data': "SELECT object_chunk FROM chunk_object_storage where object_id = ? AND chunk_id = ?",
         'insert_test_completed': "INSERT INTO tests_completed (status, completed_date, test_id, cluster, title, user) VALUES (?, ?, ?, ?, ?, ?);",
@@ -133,7 +134,7 @@ class Model(object):
         ## Prepare statements:
         self.__prepared_statements = {}
         for name, stmt in Model.statements.items():
-            log.debug("Preparing statement: {stmt}".format(stmt=stmt))
+            # log.debug("Preparing statement: {stmt}".format(stmt=stmt))
             self.__prepared_statements[name] = self.get_session().prepare(stmt)
 
         ### ZeroMQ publisher for announcing jobs as they come in:
@@ -326,6 +327,11 @@ class Model(object):
         session = self.get_session()
         session.execute(self.__prepared_statements['insert_chunk_object'],
                         (object_id, chunk_id, chunk_size, chunk_sha, object_chunk, total_chunks, object_size, object_sha))
+
+    def get_chunk_info(self, object_id):
+        session = self.get_session()
+        rows = session.execute(self.__prepared_statements['select_chunk_info'], (object_id, ))
+        return [r.__dict__ for r in rows]
 
     def get_base_chunk_info(self, object_id):
         session = self.get_session()
