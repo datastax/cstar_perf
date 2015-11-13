@@ -450,38 +450,41 @@ class JobRunner(object):
             existing_chunk_shas = dict(item.split(":") for item in query_result['stored_chunk_shas'].split(","))
             log.debug("found existing stored chunks: {}".format(existing_chunk_shas))
 
-        uploaded_successfully = True  # TODO this should default to false
-        for chunk_start, chunk_size, chunk_id in self._get_chunks(file_size):
-            log.info("sending artifact[{}][{}] chunk: {}".format(name, object_id, chunk_id))
+        matching_uploaded_chunks = 0
+        try:
+            for chunk_start, chunk_size, chunk_id in self._get_chunks(file_size):
+                log.info("sending artifact[{}][{}] chunk: {}".format(name, object_id, chunk_id))
 
-            command = Command.new(self.ws, action='chunk-stream', test_id=job_id, file_size=file_size,
-                                  num_of_chunks=num_chunks, chunk_id=chunk_id, object_id=object_id,
-                                  object_sha=object_sha, chunk_size=chunk_size,
-                                  kind=kind, name=name, eof=EOF_MARKER, keepalive=KEEPALIVE_MARKER, binary=binary)
-            response = self.send(command, assertions={'message': 'ready'})
+                command = Command.new(self.ws, action='chunk-stream', test_id=job_id, file_size=file_size,
+                                      num_of_chunks=num_chunks, chunk_id=chunk_id, object_id=object_id,
+                                      object_sha=object_sha, chunk_size=chunk_size,
+                                      kind=kind, name=name, eof=EOF_MARKER, keepalive=KEEPALIVE_MARKER, binary=binary)
+                response = self.send(command, assertions={'message': 'ready'})
 
-            # check if server already has chunk stored
-            if str(chunk_id) in existing_chunk_shas:
-                log.info("chunk {} already exists on server skipping upload".format(chunk_id))
-                continue
+                # check if server already has chunk stored
+                if str(chunk_id) in existing_chunk_shas:
+                    log.info("chunk {} already exists on server skipping upload".format(chunk_id))
+                    continue
 
-            chunk_sha = hashlib.sha256()
-            with open(path) as fh:
-                fh.seek(chunk_start, os.SEEK_SET)
-                while fh.tell() < (chunk_start + chunk_size):
-                    byte_size = 512 if fh.tell() + 512 < (chunk_start + chunk_size) else (chunk_start + chunk_size) - fh.tell()
-                    data = fh.read(byte_size)
-                    chunk_sha.update(data)
-                    data = base64.b64encode(data)
-                    self.send(data)
-                self.send(base64.b64encode(EOF_MARKER))
-                response = self.receive(response, assertions={'message': 'chunk_received', 'done': True})
-                uploaded_successfully = uploaded_successfully and chunk_sha.hexdigest() == response['chunk_sha']
-
-        log.info("UPLOADED SUCCESS: {}".format(uploaded_successfully))
-        self.send(Command.new(self.ws, action='chunk-stream-complete', successful=uploaded_successfully,
-                              test_id=job_id, object_id=object_id, kind=kind, name=name),
-                  assertions={'message': 'ok'})
+                chunk_sha = hashlib.sha256()
+                with open(path) as fh:
+                    fh.seek(chunk_start, os.SEEK_SET)
+                    while fh.tell() < (chunk_start + chunk_size):
+                        byte_size = 512 if fh.tell() + 512 < (chunk_start + chunk_size) else (chunk_start + chunk_size) - fh.tell()
+                        data = fh.read(byte_size)
+                        chunk_sha.update(data)
+                        data = base64.b64encode(data)
+                        self.send(data)
+                    self.send(base64.b64encode(EOF_MARKER))
+                    response = self.receive(response, assertions={'message': 'chunk_received', 'done': True})
+                    if chunk_sha.hexdigest() == response['chunk_sha']:
+                        matching_uploaded_chunks += 1
+        finally:
+            uploaded_successfully = matching_uploaded_chunks == num_chunks
+            log.info("UPLOADED SUCCESS: {}".format(uploaded_successfully))
+            self.send(Command.new(self.ws, action='chunk-stream-complete', successful=uploaded_successfully,
+                                  test_id=job_id, object_id=object_id, kind=kind, name=name),
+                      assertions={'message': 'ok'})
 
     def recover_jobs(self):
         """Find old jobs that are still on this machine and update the server on their state.
