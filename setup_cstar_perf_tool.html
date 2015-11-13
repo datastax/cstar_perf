@@ -285,7 +285,11 @@ which you&#8217;ll define later.</p>
 <h2>Test cstar_perf_bootstrap<a class="headerlink" href="#test-cstar-perf-bootstrap" title="Permalink to this headline">¶</a></h2>
 <p>Now that cstar_perf.tool is installed and configured, you can bring up
 a test cluster to test that everything is working:</p>
-<div class="highlight-python"><div class="highlight"><pre>cstar_perf_bootstrap apache/cassandra-2.1
+<div class="highlight-python"><div class="highlight"><pre>cstar_perf_bootstrap -v apache/cassandra-2.1
+</pre></div>
+</div>
+<p>If you want to install DSE instead of pure Cassandra, then use the following command to bring up the cluster and install the specified version from the given <code class="docutils literal"><span class="pre">dse_url</span></code>, specified in your <code class="docutils literal"><span class="pre">~/.cstar_perf/cluster_config.json</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre>cstar_perf_bootstrap -v 4.8.1
 </pre></div>
 </div>
 <p>This command will tell all of the cassandra nodes to download, from
