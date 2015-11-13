@@ -72,7 +72,8 @@ def get_cassandra_path():
     return os.path.join(get_dse_path(), 'resources/cassandra/')
 
 def get_bin_path():
-    return os.path.join(get_dse_path(), 'bin')
+    dse_home = 'DSE_HOME={dse_path}'.format(dse_path=get_dse_path())
+    return os.path.join('{dse_home} {dse_path}'.format(dse_home=dse_home, dse_path=get_dse_path()), 'bin')
 
 def bootstrap(config):
     filename = os.path.join(dse_cache, dse_tarball)
@@ -92,8 +93,9 @@ def bootstrap(config):
 
 def start(config):
     fab.puts("Starting DSE Cassandra..")
-    cmd = 'JAVA_HOME={java_home} nohup ~/fab/dse/bin/dse cassandra'.format(
-        java_home=config['java_home'])
+    dse_home = 'DSE_HOME={dse_path}'.format(dse_path=get_dse_path())
+    cmd = 'JAVA_HOME={java_home} {dse_home} nohup {dse_path}/bin/dse cassandra'.format(
+        java_home=config['java_home'], dse_home=dse_home, dse_path=get_dse_path())
     fab.run(cmd)
 
 def stop(clean, config):
