@@ -7,7 +7,7 @@ var drawGraph = function() {
     //Dataset and metric to draw is passed via query option:
     query = parseUri(location).queryKey;
     query.stats = unescape(query.stats);
-    stats_db = '/tests/artifacts/' + query.stats + '/stats';
+    stats_db = '/tests/artifacts/' + query.stats + '/stats/stats.' + query.stats + '.json';
     var metric = query.metric;
     var operation = query.operation;
     var smoothing = query.smoothing;
@@ -317,7 +317,7 @@ var drawGraph = function() {
                     return d.intervals[0][time_index];
                 }
             };
-            
+
             if (rendering_series_graph) {
                 query.xmin = xmin = query.xmin ? query.xmin : d3.min(data, getMinX);
                 query.xmax = xmax = query.xmax ? query.xmax : d3.max(data, getMaxX);
@@ -372,7 +372,7 @@ var drawGraph = function() {
         });
 
         //Setup chart:
-        if (rendering_series_graph) 
+        if (rendering_series_graph)
         {
             var margin = {top: 20, right: 1180, bottom: 2240, left: 60};
             var width = 2060 - margin.left - margin.right;
@@ -680,4 +680,3 @@ $(document).ready(function(){
     drawGraph();
 
 });
-

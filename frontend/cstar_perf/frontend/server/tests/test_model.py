@@ -123,9 +123,9 @@ class TestModel(unittest.TestCase):
         a2 = m.update_test_artifact(test_id, 'logs-2', 'LOG data 2', 'more logs')
         a3 = m.update_test_artifact(test_id, 'graph', 'GRAPH data 1', 'stats.json')
 
-        artifact_meta = m.get_test_artifact(test_id, 'logs')
+        artifact_meta = m.get_test_artifact(test_id, 'logs', 'logs.tar.gz')
         self.assertEqual(artifact_meta['artifact_type'], 'logs')
-        artifact_meta = m.get_test_artifact(test_id, 'graph')
+        artifact_meta = m.get_test_artifact(test_id, 'graph', 'stats.json')
         self.assertEqual(artifact_meta['artifact_type'], 'graph')
 
         artifact_meta = m.get_test_artifacts(test_id)
@@ -134,15 +134,15 @@ class TestModel(unittest.TestCase):
         self.assertEqual(artifact_meta[1]['artifact_type'], 'logs')
         self.assertEqual(artifact_meta[2]['artifact_type'], 'logs-2')
 
-        artifact = m.get_test_artifact_data(test_id, 'logs')
+        artifact = m.get_test_artifact_data(test_id, 'logs', 'logs.tar.gz')
         self.assertEqual(artifact.artifact, 'LOG data 1')
-        self.assertEqual(artifact.description, 'logs.tar.gz')
-        artifact = m.get_test_artifact_data(test_id, 'logs-2')
+        self.assertEqual(artifact.name, 'logs.tar.gz')
+        artifact = m.get_test_artifact_data(test_id, 'logs-2', 'more logs')
         self.assertEqual(artifact.artifact, 'LOG data 2')
-        self.assertEqual(artifact.description, 'more logs')
-        artifact = m.get_test_artifact_data(test_id, 'graph')
+        self.assertEqual(artifact.name, 'more logs')
+        artifact = m.get_test_artifact_data(test_id, 'graph', 'stats.json')
         self.assertEqual(artifact.artifact, 'GRAPH data 1')
-        self.assertEqual(artifact.description, 'stats.json')
+        self.assertEqual(artifact.name, 'stats.json')
 
     def test_clusters(self):
         m = self.model

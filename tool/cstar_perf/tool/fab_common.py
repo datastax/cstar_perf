@@ -24,10 +24,18 @@ import os
 import yaml
 from cluster_config import config as cluster_config
 import re
+import sh
 import uuid
+import subprocess
 from util import random_token
 import fab_dse as dse
 import fab_cassandra as cstar
+import fab_flamegraph as flamegraph
+import logging
+
+logging.basicConfig()
+logger = logging.getLogger('common')
+logger.setLevel(logging.INFO)
 
 fab.env.use_ssh_config = True
 fab.env.connection_attempts = 10
@@ -430,6 +438,10 @@ def start():
     # Enable JMX without authentication
     env = "JVM_OPTS=\"$JVM_OPTS -Dcom.sun.management.jmxremote.port=7199 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false\"\n" + env
 
+    # Flamegraph
+    if flamegraph.is_enabled(config):
+        env += "JVM_OPTS=\"$JVM_OPTS -XX:+PreserveFramePointer\""
+
     env_script = "{name}.sh".format(name=uuid.uuid1())
     env_file = StringIO(env)
     fab.run('mkdir -p ~/fab/scripts')
@@ -654,3 +666,28 @@ def bash(script):
     fab.run('bash {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
     output.seek(0)
     return output.read().splitlines()
+
+
+def find_process_pid(process_line, child_process=False):
+    ps_opts = 'auxww' if not child_process else 'auxfww'
+    try:
+        pid = sh.awk(
+            sh.grep(
+                sh.grep(sh.ps(ps_opts, _piped=True, _tty_out=False), "-ie", process_line),
+                '-v', 'grep'
+            ),
+            "{print $2}",
+        )
+    except sh.ErrorReturnCode:
+        raise AssertionError("Cannot find process pid")
+
+    return pid.strip()
+
+
+def runbg(cmd, envs, sockname="dtach"):
+    env_vars = ""
+    for var, value in envs.iteritems():
+        env_vars += "{}={} ".format(var, value)
+    cmd_ = '{} dtach -n `mktemp -u /tmp/{}.XXXX` {}'.format(env_vars, sockname, cmd)
+    logger.info("Running background task: {}".format(cmd_))
+    return fab.run(cmd_)

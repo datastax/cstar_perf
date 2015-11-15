@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+</head>
+<body>
+
+  <h1><center>FlameGraph</center></h1>
+
+  {% for artifact in artifacts %}
+     <h2>{{ artifact['name'] }}</h2>
+     {{ artifact['data']|safe }}
+  {% endfor %}
+
+</body>
+</html>

@@ -27,6 +27,7 @@ import shutil
 import fab_common as common
 import fab_dse as dse
 import fab_cassandra as cstar
+import fab_flamegraph as flamegraph
 
 # Then import our cluster specific config:
 from cluster_config import config
@@ -489,6 +490,10 @@ def retrieve_fincore_logs(local_directory):
     """Retrieve each node's fincore logs to the given local directory."""
     execute(common.copy_fincore_logs, local_directory=local_directory)
 
+def retrieve_flamegraph(local_directory, rev_num):
+    """Retrieve each node's flamegraph data and svg to the given local directory."""
+    execute(flamegraph.copy_flamegraph, local_directory=local_directory, rev_num=rev_num)
+
 def start_fincore_capture(interval=10):
     """Start linux-fincore monitoring of Cassandra data files on each node"""
     execute(common.start_fincore_capture, interval=interval)
@@ -528,4 +533,3 @@ def log_stats(stats, memo=None, file='stats.json'):
 
     with open(file, 'w') as f:
         f.write(log)
-

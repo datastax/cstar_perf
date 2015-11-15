@@ -20,6 +20,7 @@ import traceback
 import urlparse
 import threading
 import psutil
+import glob
 from collections import namedtuple
 from distutils.dir_util import mkpath
 
@@ -251,12 +252,17 @@ class JobRunner(object):
 
         # Find the log tarball for each revision by introspecting the stats json:
         system_logs = []
+        flamegraph_logs = []
         log_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf','logs')
+        flamegraph_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf','flamegraph')
         #Create a stats summary file without voluminous interval data
         with open(stats_path) as stats:
             stats = json.loads(stats.read())
             for rev in stats['revisions']:
                 system_logs.append(os.path.join(log_dir, "{name}.tar.gz".format(name=rev['last_log'])))
+                fg_path = os.path.join(flamegraph_dir, "{name}.tar.gz".format(name=rev['last_log']))
+                if os.path.exists(fg_path):
+                    flamegraph_logs.append(fg_path)
             with open(summary_path, 'w') as summary:
                 hadStats = False
                 for rev in job['revisions']:
@@ -285,6 +291,38 @@ class JobRunner(object):
             assert os.path.exists(system_logs_path)
         finally:
             shutil.rmtree(tmptardir)
+
+        # Make a new tarball containing all the flamegraph and data
+        if flamegraph_logs:
+            tmptardir = tempfile.mkdtemp()
+            try:
+                flamegraph_tmp_dir = os.path.join(tmptardir, 'flamegraph_logs.{test_id}'.format(test_id=job['test_id']))
+                os.mkdir(flamegraph_tmp_dir)
+                for x, flamegraph in enumerate(flamegraph_logs, 1):
+                    with tarfile.open(flamegraph) as tar:
+                        tar.extractall(flamegraph_tmp_dir)
+                        tmp_dir = os.path.join(flamegraph_tmp_dir, tar.getnames()[0])
+
+                        # Copy all flamegraph as artifacts
+                        for node_dir in os.listdir(tmp_dir):
+                            glob_match = os.path.join(os.path.join(tmp_dir, node_dir), '*.svg')
+                            graphs = glob.glob(glob_match)
+                            for graph in graphs:
+                                graph_name = os.path.basename(graph).replace(
+                                    'flamegraph_', 'flamegraph_{}_{}_'.format(job['test_id'], node_dir))
+                                graph_dst_filename = os.path.join(job_dir, graph_name)
+                                shutil.copyfile(graph, graph_dst_filename)
+
+                        os.rename(tmp_dir, os.path.join(flamegraph_tmp_dir, 'revision_{x:02d}'.format(x=x)))
+
+                flamegraph_job_path = os.path.join(job_dir, 'flamegraph_logs.{test_id}.tar.gz'.format(test_id=job['test_id']))
+                with tarfile.open(flamegraph_job_path, 'w:gz') as tar:
+                    with cd(tmptardir):
+                        tar.add('flamegraph_logs.{test_id}'.format(test_id=job['test_id']))
+                assert os.path.exists(flamegraph_job_path)
+            finally:
+                shutil.rmtree(tmptardir)
+
 
         ## Stream artifacts
         ## Write final job status to 0.job_status file
@@ -320,6 +358,8 @@ class JobRunner(object):
           stats       - stress statistics (intervals, aggregates) JSON
           stats_summary - stress statistics with only aggregates
           system_logs - cassandra logs
+          flamegraph_logs - data logs and graphs
+          flamegraph - all flamegraphs
 
         returns a namedtuple of sent, failed to transmit, or missing artifacts.
         """
@@ -327,24 +367,35 @@ class JobRunner(object):
         failed = []
         missing = []
         job_dir = os.path.join(os.path.expanduser("~"), ".cstar_perf","jobs",job_id)
-        
+
         def stream(kind, name_pattern, binary):
             name = name_pattern.format(job_id=job_id)
             path = os.path.join(job_dir, name)
-            if os.path.isfile(path):
-                self.stream_artifact(job_id, kind, name, path, binary)
-                if self.__server_synced:
-                    streamed.append(kind)
+            artifacts = [path]
+
+            if '*' in name_pattern:
+                artifacts = []
+                glob_match = os.path.join(job_dir, name)
+                graphs = glob.glob(glob_match)
+                artifacts = graphs
+
+            for artifact in artifacts:
+                if os.path.isfile(artifact):
+                    self.stream_artifact(job_id, kind, os.path.basename(artifact), artifact, binary)
+                    if self.__server_synced:
+                        streamed.append(kind)
+                    else:
+                        failed.append(kind)
                 else:
-                    failed.append(kind)
-            else:
-                missing.append(kind)
+                    missing.append(kind)
 
         for kind, pattern, binary in (
                 ('console', 'stress_compare.{job_id}.log', False),
                 ('stats', 'stats.{job_id}.json', False),
                 ('stats_summary', 'stats_summary.{job_id}.json', False),
-                ('system_logs', 'cassandra_logs.{job_id}.tar.gz', True)):
+                ('system_logs', 'cassandra_logs.{job_id}.tar.gz', True),
+                ('flamegraph_logs', 'flamegraph_logs.{job_id}.tar.gz', True),
+                ('flamegraph', 'flamegraph_{job_id}*.svg', False)):
             stream(kind, pattern, binary)
 
         return namedtuple('StreamedArtifacts', 'streamed failed missing')(streamed, failed, missing)
