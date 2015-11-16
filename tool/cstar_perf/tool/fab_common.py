@@ -381,7 +381,7 @@ def destroy(leave_data=False):
     # We used to have a better pattern match for the Cassandra
     # process, but it got fragile if you put too many JVM params.
     if leave_data:
-        fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool drain'.format(java_home=config['java_home']), quiet=True)
+        fab.run('JAVA_HOME={java_home} {nodetool_cmd} drain'.format(java_home=config['java_home'], nodetool_cmd=_nodetool_cmd()), quiet=True)
         fab.run('rm -rf {commitlog}/*'.format(commitlog=config['commitlog_directory']))
     fab.run('killall -9 java', quiet=True)
     fab.run('pkill -f "python.*fincore_capture"', quiet=True)
@@ -449,10 +449,15 @@ def stop(clean=True):
     product = dse if config['product'] == 'dse' else cstar
     product.stop(clean, config)
 
+def _nodetool_cmd():
+    product = dse if config['product'] == 'dse' else cstar
+    bin_path = product.get_bin_path()
+    return os.path.join(bin_path, 'nodetool')
+
 @fab.parallel
 def multi_nodetool(cmd):
     """run node tool command on all nodes in parallel"""
-    return fab.run('JAVA_HOME={java_home} ~/fab/cassandra/bin/nodetool {cmd}'.format(java_home=config['java_home'], cmd=cmd), warn_only=True)
+    return fab.run('JAVA_HOME={java_home} {nodetool_cmd} {cmd}'.format(java_home=config['java_home'], nodetool_cmd=_nodetool_cmd(), cmd=cmd), warn_only=True)
 
 def ensure_running(retries=15, wait=10):
     """Ensure cassandra is running on all nodes.
@@ -461,13 +466,10 @@ def ensure_running(retries=15, wait=10):
 
     INTENDED TO BE RUN ON ONE NODE, NOT ALL.
     """
-    product = dse if config['product'] == 'dse' else cstar
-    bin_path = product.get_bin_path()
-    nodetool_bin = os.path.join(bin_path, 'nodetool')
     time.sleep(15)
     for attempt in range(retries):
         ring = StringIO(fab.run('JAVA_HOME={java_home} {nodetool_bin} ring'.format(
-            java_home=config['java_home'], nodetool_bin=nodetool_bin)))
+            java_home=config['java_home'], nodetool_bin=_nodetool_cmd())))
         broadcast_ips = [x.get('external_ip', x['internal_ip']) for x in config['hosts'].values()]
         nodes_up = dict((host,False) for host in broadcast_ips)
         for line in ring:
