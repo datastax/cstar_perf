@@ -54,5 +54,5 @@ def csrf_protect_app(app):
             session['_csrf_token'] = random_token()
         return session['_csrf_token']
 
-    app.jinja_env.globals['csrf_token'] = generate_csrf_token 
+    app.jinja_env.globals['csrf_token'] = generate_csrf_token
 
