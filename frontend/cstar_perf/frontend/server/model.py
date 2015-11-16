@@ -313,7 +313,7 @@ class Model(object):
             name = "Unknown artifact"
         if hasattr(artifact, 'encode'):
             artifact = artifact.encode("hex")
-        session.execute(self.__prepared_statements['update_test_artifact'], (description, artifact, available, object_id, test_id, artifact_type, name))
+        session.execute(self.__prepared_statements['update_test_artifact'], (artifact, available, object_id, test_id, artifact_type, name))
         return test_id
 
     def insert_artifact_chunk(self, object_id, chunk_id, chunk_size, chunk_sha, object_chunk, total_chunks, object_size, object_sha):
