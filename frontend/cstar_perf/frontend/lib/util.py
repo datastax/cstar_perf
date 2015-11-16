@@ -113,3 +113,10 @@ def cd(newdir):
         yield
     finally:
         os.chdir(prevdir)
+
+
+def auth_provider_if_configured(config):
+    if config.has_option('server', 'cassandra_user') and config.has_option('server', 'cassandra_password'):
+        from cassandra.auth import PlainTextAuthProvider
+        return PlainTextAuthProvider(username=config.get('server', 'cassandra_user'), password=config.get('server', 'cassandra_password'))
+    return None

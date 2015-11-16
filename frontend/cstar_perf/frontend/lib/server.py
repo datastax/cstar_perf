@@ -8,6 +8,7 @@ import logging
 
 from cstar_perf.frontend.server.util import create_app_config, load_app_config
 from cstar_perf.frontend.lib.crypto import get_or_generate_server_keys, SERVER_KEY_PATH
+from cstar_perf.frontend.lib.util import auth_provider_if_configured
 from cstar_perf.frontend.server.notifications import console_publish
 
 log = logging.getLogger('cstar_perf.frontend.lib.server')
@@ -19,7 +20,12 @@ def run_server():
     cassandra_hosts = [h.strip() for h in config.get('server','cassandra_hosts').split(",")]
     from cstar_perf.frontend.server.model import Model
     from cassandra.cluster import Cluster
-    db = Model(Cluster(cassandra_hosts))
+
+    auth_provider = auth_provider_if_configured(config)
+    cluster = Cluster(contact_points=cassandra_hosts, auth_provider=auth_provider)
+
+    keyspace = config.get('server', 'cassandra_keyspace') if config.has_option('server', 'cassandra_keyspace') else 'cstar_perf'
+    db = Model(cluster=cluster, keyspace=keyspace)
     del db
 
     app_path = os.path.realpath(os.path.join(os.path.dirname(
