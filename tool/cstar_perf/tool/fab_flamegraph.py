@@ -23,6 +23,8 @@ def set_common_module(module):
 
 
 def is_enabled(revision_config=None):
+    if not common_module:
+        return False
     is_compatible = True
     is_enabled = common_module.config.get('flamegraph', False)
     if revision_config:
