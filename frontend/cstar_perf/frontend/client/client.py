@@ -214,8 +214,9 @@ class JobRunner(object):
             f.write(stress_json)
 
         # Inform the server we will be streaming the console output to them:
-        command = Command.new(self.ws, action='stream', test_id=job['test_id'], 
-                              kind='console', name='console_out', eof=EOF_MARKER, keepalive=KEEPALIVE_MARKER)
+        command = Command.new(self.ws, action='stream', test_id=job['test_id'],
+                              kind='console', name="stress_compare.{test_id}.log".format(test_id=job['test_id']),
+                              eof=EOF_MARKER, keepalive=KEEPALIVE_MARKER)
         response = self.send(command, assertions={'message':'ready'})
 
         # Start a status checking thread.
