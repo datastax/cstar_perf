@@ -558,6 +558,14 @@ def get_clusters_by_name(cluster_name):
     return make_response(jsonify(clusters[cluster_name]))
 
 
+@app.route('/api/tests/progress/id/<test_id>', methods=['POST'])
+@requires_auth('user')
+def set_progress_message_on_test(test_id):
+    msg = request.get_json()['progress_msg']
+    db.update_test_progress_msg(test_id, msg)
+    return Response(status=204, mimetype='application/json')
+
+
 ################################################################################
 #### Websockets
 ################################################################################

@@ -86,6 +86,8 @@ class Model(object):
         'select_series' : "SELECT test_id from test_series where series = ? AND test_id > ? AND test_id < ?",
         'get_test_status': "SELECT status FROM tests WHERE test_id = ?;",
         'update_test_set_status': "UPDATE tests SET status = ? WHERE test_id = ?",
+        'update_test_set_progress_msg': "UPDATE tests SET progress_msg = ? WHERE test_id = ?",
+        'update_test_status_set_progress_msg': "UPDATE test_status SET progress_msg = ? WHERE status = ? and cluster = ? and test_id = ? IF EXISTS",
         'update_test_set_status_completed': "UPDATE tests SET status = ?, completed_date = ? WHERE test_id = ?",
         'insert_test_status': "INSERT INTO test_status (status, cluster, test_id, user, title) VALUES (?, ?, ?, ?, ?);",
         'select_test_status_asc': "SELECT * FROM test_status WHERE status = ? AND cluster = ? ORDER BY cluster DESC, test_id ASC LIMIT ?",
@@ -173,7 +175,7 @@ class Model(object):
         session = self.cluster.connect(self.keyspace)
 
         # All test tests indexed by id:
-        session.execute("CREATE TABLE tests (test_id timeuuid PRIMARY KEY, user text, cluster text, status text, test_definition text, completed_date timeuuid);")
+        session.execute("CREATE TABLE tests (test_id timeuuid PRIMARY KEY, user text, cluster text, status text, test_definition text, completed_date timeuuid, progress_msg text);")
 
         # Index series by series name and then the tests by uuid
         session.execute("CREATE TABLE test_series (series text, test_id timeuuid, PRIMARY KEY (series, test_id));")
@@ -182,7 +184,7 @@ class Model(object):
         # order. Descending order because the completed status will have
         # the largest number. 'scheduled' status will want to be queried
         # in ASC order.
-        session.execute("CREATE TABLE test_status (status text, test_id timeuuid, cluster text, user text, title text, PRIMARY KEY (status, cluster, test_id)) WITH CLUSTERING ORDER BY (cluster ASC, test_id DESC);")
+        session.execute("CREATE TABLE test_status (status text, test_id timeuuid, cluster text, user text, title text, progress_msg text, PRIMARY KEY (status, cluster, test_id)) WITH CLUSTERING ORDER BY (cluster ASC, test_id DESC);")
         session.execute("CREATE INDEX ON test_status (user);")
         # A denormalized copy of test_status for the completed tests.
         # This makes a reverse querying of completed tests for the
@@ -264,6 +266,15 @@ class Model(object):
         except IndexError:
             raise UnknownTestError('Unknown test {test_id}'.format(test_id=test_id))
         return status[0]
+
+    def update_test_progress_msg(self, test_id, progress_msg):
+        if not isinstance(test_id, uuid.UUID):
+            test_id = uuid.UUID(test_id)
+        session = self.get_session()
+        test = self.get_test(test_id)
+        session.execute(self.__prepared_statements['update_test_set_progress_msg'], (progress_msg, test_id))
+        session.execute(self.__prepared_statements['update_test_status_set_progress_msg'],
+                        (progress_msg, 'in_progress', test['cluster'], test_id))
 
     def update_test_status(self, test_id, status):
         assert status in TEST_STATES, "{status} is not a valid test state".format(status=status)
