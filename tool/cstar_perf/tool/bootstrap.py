@@ -1,6 +1,8 @@
 from benchmark import (bootstrap, stress, nodetool, teardown,
                        log_stats, log_set_title, retrieve_logs, config)
 from fabric.tasks import execute
+import fab_flamegraph as flamegraph
+import fab_common as common
 import argparse
 import sys
 import json
@@ -16,6 +18,11 @@ pristine_config = copy.copy(config)
 def bootstrap_cluster(cfg):
     config = copy.copy(pristine_config)
     config.update(cfg)
+
+    # Flamegraph Setup
+    flamegraph.set_common_module(common)
+    if flamegraph.is_enabled():
+        execute(flamegraph.setup)
 
     git_id = bootstrap(config, destroy=True)
     return git_id
