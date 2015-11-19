@@ -7,6 +7,7 @@ import logging
 import time
 import sh
 from fabric import api as fab
+from distutils import version as v
 
 logging.basicConfig()
 logger = logging.getLogger('flamegraph')
@@ -27,9 +28,14 @@ def is_enabled(revision_config=None):
     is_enabled = common_module.config.get('flamegraph', False)
     if revision_config:
         jvm = revision_config.get('java_home', '')
-        if jvm.find('1.7') != -1:
-            logger.info('Flamegraph is not compatible with java <1.8')
-            is_compatible = False
+        try:
+            jvm = os.path.basename(jvm)
+            jvm = jvm[jvm.index('1'):]
+            if v.LooseVersion(jvm) < v.LooseVersion('1.8.0_60'):
+                logger.info('Flamegraph is not compatible with java <1.8.0_60')
+                is_compatible = False
+        except ValueError:
+            pass
     return is_enabled and is_compatible
 
 
