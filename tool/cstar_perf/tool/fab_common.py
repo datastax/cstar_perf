@@ -687,24 +687,9 @@ def bash(script):
     fab.put(script, script_path)
     output = StringIO()
     fab.run('bash {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
+    fab.run('rm {script_path}'.format(script_path=script_path))
     output.seek(0)
     return output.read().splitlines()
-
-
-def find_process_pid(process_line, child_process=False):
-    ps_opts = 'auxww' if not child_process else 'auxfww'
-    try:
-        pid = sh.awk(
-            sh.grep(
-                sh.grep(sh.ps(ps_opts, _piped=True, _tty_out=False), "-ie", process_line),
-                '-v', 'grep'
-            ),
-            "{print $2}",
-        )
-    except sh.ErrorReturnCode:
-        raise AssertionError("Cannot find process pid")
-
-    return pid.strip()
 
 
 def runbg(cmd, envs, sockname="dtach"):
@@ -725,6 +710,7 @@ def python(script):
     fab.put(script, script_path)
     output = StringIO()
     fab.run('python {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
+    fab.run('rm {script_path}'.format(script_path=script_path))
     output.seek(0)
     return output.read().splitlines()
 
