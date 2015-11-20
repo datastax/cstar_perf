@@ -257,8 +257,6 @@ def get_artifact(test_id, artifact_type, artifact_name=None):
         return redirect("/graph?command=one_job&stats={test_id}".format(test_id=test_id))
     elif artifact_type == 'flamegraph' and not artifact_name:
         artifacts = db.get_test_artifacts(test_id, artifact_type)
-        for artifact in artifacts:
-            artifact['data'] = db.get_test_artifact_data(test_id, artifact_type, artifact['name'])
         return render_template('flamegraph.jinja2.html', test_id=test_id, artifacts=artifacts)
 
     if not artifact_name:

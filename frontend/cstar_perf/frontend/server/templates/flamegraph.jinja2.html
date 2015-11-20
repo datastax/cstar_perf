@@ -9,7 +9,7 @@
 
   {% for artifact in artifacts %}
      <h2>{{ artifact['name'] }}</h2>
-     {{ artifact['data']|safe }}
+     <iframe src="/tests/artifacts/{{ test_id }}/flamegraph/{{ artifact['name'] }}" width="1200" height="1500"></iframe>
   {% endfor %}
 
 </body>
