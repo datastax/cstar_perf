@@ -64,44 +64,29 @@ def copy_flamegraph(local_directory, rev_num):
 @fab.parallel
 def setup():
     logger.info("Setup Flamegraph dependencies")
-    perf_map_agent_path, flamegraph_path = get_flamegraph_paths()
-
-    # Create the flamegraph directory and clean the directory
     flamegraph_directory = get_flamegraph_directory()
-    if not os.path.exists(flamegraph_directory):
-        os.mkdir(flamegraph_directory)
-    for f in os.listdir(flamegraph_directory):
-        file_path = os.path.join(flamegraph_directory, f)
-        sh.sudo.rm(file_path)
-
-    if not os.path.exists(perf_map_agent_path):
-        sh.git('clone', 'https://github.com/jrudolph/perf-map-agent', perf_map_agent_path)
-        sh.cmake('.', _cwd=perf_map_agent_path)
-        sh.make(_cwd=perf_map_agent_path)
-
-    if not os.path.exists(flamegraph_path):
-        sh.git('clone', 'https://github.com/brendangregg/FlameGraph', flamegraph_path)
+    perf_map_agent_path, flamegraph_path = get_flamegraph_paths()
+    common_module.run_python_script(
+        'flamegraph',
+        'setup',
+        '"{}", "{}", "{}"'.format(flamegraph_directory, flamegraph_path, perf_map_agent_path)
+    )
 
 
 @fab.parallel
 def ensure_stopped_perf_agent():
     logger.info("Ensure there are no perf agent running")
-
-    def try_kill(process_line):
-        try:
-            sh.sudo.pkill('-f', '-9', process_line)
-        except (sh.ErrorReturnCode, sh.SignalException):
-            pass
-
-    for p in ['perf.script', 'perf.record', 'perf-java-flames']:
-        try_kill(p)
+    common_module.run_python_script('flamegraph', 'ensure_stopped_perf_agent', '')
 
 
 @fab.parallel
 def stop_perf_agent():
     logger.info("Stopping Flamegraph perf agent")
-    perf_record_pid = common_module.find_process_pid("[^/]perf record -F", child_process=True)
-    sh.sudo.kill(perf_record_pid)
+    common_module.run_python_script(
+        'utils',
+        'find_and_kill_process',
+        '"{}", {}'.format("[^/]perf record -F", 'child_process=True')
+    )
 
     logger.info("Waiting 10 seconds to for the flamegraph generation")
     time.sleep(10)
@@ -114,7 +99,12 @@ def start_perf_agent(rev_num):
     logger.info("Starting Flamegraph perf agent")
     perf_map_agent_path, flamegraph_path = get_flamegraph_paths()
     java_home = os.path.expanduser(common_module.config['java_home'])
-    cassandra_pid = common_module.find_process_pid("java.*Cassandra")
+    output = common_module.run_python_script(
+        'utils',
+        'find_process_pid',
+        '"{}"'.format("java.*Cassandra")
+    )
+    cassandra_pids = common_module.parse_output(output)
     perf_bin = os.path.join(os.path.expanduser('~/fab/perf-map-agent'), 'bin/perf-java-flames')
     flamegraph_directory = get_flamegraph_directory()
 
@@ -127,4 +117,6 @@ def start_perf_agent(rev_num):
         'PERF_FLAME_OUTPUT': os.path.join(flamegraph_directory, 'flamegraph_revision_{}.svg'.format(rev_num + 1))
     }
 
-    common_module.runbg("{perf_bin} {pid}".format(perf_bin=perf_bin, pid=cassandra_pid), env_vars)
+    for host, pid in cassandra_pids.iteritems():
+        with common_module.fab.settings(hosts=[host]):
+            common_module.runbg("{perf_bin} {pid}".format(perf_bin=perf_bin, pid=pid[0]), env_vars)

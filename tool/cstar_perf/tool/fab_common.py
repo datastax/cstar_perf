@@ -32,6 +32,7 @@ import fab_dse as dse
 import fab_cassandra as cstar
 import fab_flamegraph as flamegraph
 import logging
+import pkg_resources
 
 logging.basicConfig()
 logger = logging.getLogger('common')
@@ -657,6 +658,26 @@ def build_striped_drives(devices, mount_point='/mnt/striped', filesystem='ext4',
 
         fab.run('chmod 777 {mount_point}'.format(**locals()))
 
+
+def parse_output(output):
+    """Parse fabric output and return the output per host"""
+
+    line_pattern = re.compile('\[(?P<host>.+)\] out: (?P<line>.+)')
+
+    results = {}
+    for line in output:
+        m = line_pattern.match(line)
+        if m:
+            host = m.group('host')
+            if host not in results:
+                results[host] = []
+            line = m.group('line').strip()
+            if line:
+                results[host].append(line)
+
+    return results
+
+
 @fab.parallel
 def bash(script):
     """Run a bash script on the host"""
@@ -693,3 +714,25 @@ def runbg(cmd, envs, sockname="dtach"):
     cmd_ = '{} dtach -n `mktemp -u /tmp/{}.XXXX` {}'.format(env_vars, sockname, cmd)
     logger.info("Running background task: {}".format(cmd_))
     return fab.run(cmd_)
+
+
+@fab.parallel
+def python(script):
+    """Run a python script on the host"""
+    script = StringIO(script)
+    fab.run('mkdir -p ~/fab/scripts')
+    script_path = '~/fab/scripts/{script_name}.py'.format(script_name=uuid.uuid1())
+    fab.put(script, script_path)
+    output = StringIO()
+    fab.run('python {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
+    output.seek(0)
+    return output.read().splitlines()
+
+
+def run_python_script(script_name, function_name, parameters):
+    """Run a python function on the host"""
+    resource_package = __name__
+    resource_path = os.path.join('scripts', '{}.py'.format(script_name))
+    script = pkg_resources.resource_string(resource_package, resource_path)
+    script = script.replace('{function}', function_name).replace('{parameters}', parameters)
+    return python(script)
