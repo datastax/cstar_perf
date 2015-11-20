@@ -57,6 +57,7 @@
 </li>
 <li><a class="reference internal" href="#configuration">Configuration</a></li>
 <li><a class="reference internal" href="#test-cstar-perf-bootstrap">Test cstar_perf_bootstrap</a></li>
+<li><a class="reference internal" href="#flamegraph">Flamegraph</a></li>
 </ul>
 </li>
 </ul>
@@ -303,6 +304,32 @@ INFO:benchmark:Started cassandra on 3 nodes with git SHA: bd396ec8acb74436fd84a9
 </div>
 <p>Assuming that worked, your cluster is now fully automated via
 cstar_perf. Next steps include creating some <a class="reference internal" href="running_tests.html"><em>test definitions</em></a>, or to setup the <a class="reference internal" href="setup_cstar_perf_frontend.html"><em>web frontend</em></a>.</p>
+</div>
+<div class="section" id="flamegraph">
+<h2>Flamegraph<a class="headerlink" href="#flamegraph" title="Permalink to this headline">¶</a></h2>
+<p>It is possible to generate flamegraphs when running tests. Follow these intructions to enable the feature:</p>
+<p>Install system dependencies on all workers of the cluster:</p>
+<div class="highlight-python"><div class="highlight"><pre>sudo apt-get install cmake dtach linux-tools-`uname -r`
+sudo pip install sh
+</pre></div>
+</div>
+<p>Ensure your kernel has performance profling support:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ sudo perf record -F 99 -g -p &lt;a_running_process_pid&gt; -- sleep 10
+[ perf record: Woken up 1 times to write data ]
+[ perf record: Captured and wrote 0.098 MB perf.data (~4278 samples) ]
+</pre></div>
+</div>
+<p>Add NOPASSWD sudo configuration for the cstar/automaton user:</p>
+<div class="highlight-python"><div class="highlight"><pre>echo &quot;cstar ALL = (root) NOPASSWD: ALL&quot; | sudo tee /etc/sudoers.d/perf
+</pre></div>
+</div>
+<p>Enable flamegraph feature in your cluster configuration:</p>
+<div class="highlight-python"><div class="highlight"><pre>&quot;flamegraph&quot;: true,
+&quot;flamegraph_directory&quot;: &quot;/mnt/data/cstar_perf/flamegraph&quot;
+
+# The flamegraph working directory default to /tmp/flamegraph if not specified.
+</pre></div>
+</div>
 </div>
 </div>
 
