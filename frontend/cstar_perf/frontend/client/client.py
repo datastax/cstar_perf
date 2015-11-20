@@ -442,7 +442,7 @@ class JobRunner(object):
 
             for artifact in artifacts:
                 if os.path.isfile(artifact):
-                    self.stream_artifact(job_id, kind, os.path.basename(artifact), artifact, binary)
+                    self.stream_artifact_in_chunks(job_id, kind, os.path.basename(artifact), artifact, binary)
                     if self.__ws_client.in_sync():
                         streamed.append(kind)
                     else:
