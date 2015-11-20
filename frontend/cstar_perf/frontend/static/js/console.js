@@ -1,5 +1,6 @@
 var ws;
 var connectionAttempts = 1;
+var currentJobId;
 
 var consoleMessage = function(msg, classes) {
     var conn = $("#console");
@@ -11,7 +12,7 @@ var consoleMessage = function(msg, classes) {
         });
     }
     conn.append(span);
-}
+};
 
 var newWebsocket = function() {
     var wsUri = "ws://" + window.location.host + "/api/console";
@@ -38,7 +39,9 @@ var newWebsocket = function() {
             indicator.removeClass();
             $("#cluster_status").text("Unknown state: " + state);
         }
-    }
+
+        currentJobId = job_id != null ? job_id : null;
+    };
     change_status('client_disconnected');
     ws = new WebSocket(wsUri);
     ws.onmessage = function(evt) {
@@ -113,7 +116,7 @@ var newWebsocket = function() {
         change_status('client_disconnected');
     };
     return ws;
-}
+};
 
 
 function exponentialBackoff (k, limit) {
@@ -129,12 +132,34 @@ function exponentialBackoff (k, limit) {
     return maxInterval; 
 }
 
+function updateProgressMsg() {
+    if (currentJobId) {
+        $.ajax({
+                method: "GET",
+                url: "/api/tests/id/" + currentJobId,
+                dataType: 'json'
+            })
+            .done(function (msg) {
+                if (msg['progress_msg'] != null) {
+                    $('#progress_msg').html(" &mdash; Progress: " + msg['progress_msg']);
+                } else {
+                    $('#progress_msg').html(" &mdash; Progress: Unavailable");
+                }
+            });
+    } else {
+        $('#progress_msg').html("");
+    }
+}
+
 $(document).ready(function() {
     ws = newWebsocket();
+    var progressMsgTimer = setInterval(updateProgressMsg, 60000);
+
     //Close the websocket cleanly on page unload:
     window.onbeforeunload = function() {
         ws.onclose = function() {};
         console.log("Shutting down websocket due to page unload");
         ws.close();
+        clearInterval(progressMsgTimer)
     };
 });

@@ -563,7 +563,7 @@ def get_clusters_by_name(cluster_name):
 def set_progress_message_on_test(test_id):
     msg = request.get_json()['progress_msg']
     db.update_test_progress_msg(test_id, msg)
-    return Response(status=204, mimetype='application/json')
+    return jsonify({'status': 'ok'})
 
 
 ################################################################################
