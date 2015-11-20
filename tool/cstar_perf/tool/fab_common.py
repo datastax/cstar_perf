@@ -687,7 +687,6 @@ def bash(script):
     fab.put(script, script_path)
     output = StringIO()
     fab.run('bash {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
-    fab.run('rm {script_path}'.format(script_path=script_path))
     output.seek(0)
     return output.read().splitlines()
 
@@ -710,7 +709,6 @@ def python(script):
     fab.put(script, script_path)
     output = StringIO()
     fab.run('python {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
-    fab.run('rm {script_path}'.format(script_path=script_path))
     output.seek(0)
     return output.read().splitlines()
 
