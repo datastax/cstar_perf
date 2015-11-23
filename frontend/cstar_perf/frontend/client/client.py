@@ -496,7 +496,7 @@ class JobRunner(object):
         """Stream job artifact to server in chunks"""
 
         file_size = os.path.getsize(path)
-        object_id = generate_object_id(job_id, kind)
+        object_id = generate_object_id(job_id, kind, name)
         object_sha = sha256_of_file(path)
         num_chunks = len(list(self._get_chunks(file_size)))
 

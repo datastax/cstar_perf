@@ -129,10 +129,10 @@ def sha256_of_file(path):
     return h.hexdigest()
 
 
-def generate_object_id(test_id, kind):
+def generate_object_id(test_id, kind, name):
     """returns the SHA-256 hash in hex of the test_id and kind"""
 
-    return hashlib.sha256(kind + test_id).hexdigest()
+    return hashlib.sha256(kind + test_id + name).hexdigest()
 
 
 def auth_provider_if_configured(config):
