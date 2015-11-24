@@ -6,6 +6,7 @@ import re
 import base64
 import ConfigParser
 import json
+import datetime
 import uuid
 import time
 import yaml
@@ -23,14 +24,18 @@ import psutil
 import glob
 from collections import namedtuple
 from distutils.dir_util import mkpath
+from watchdog.observers import Observer
+from watchdog.events import RegexMatchingEventHandler
 
 import ecdsa
 from daemonize import Daemonize
 import fabric.api, fabric.network
+from math import ceil
 from websocket import WebSocket
 
+from cstar_perf.frontend import CLIENT_CONFIG_PATH, KEEPALIVE_MARKER, EOF_MARKER
 from cstar_perf.frontend.lib.crypto import APIKey, BadConfigFileException
-from cstar_perf.frontend.lib.util import random_token, timeout, TimeoutError, format_bytesize, cd
+from cstar_perf.frontend.lib.util import random_token, timeout, TimeoutError, format_bytesize, cd, generate_object_id, sha256_of_file
 from cstar_perf.frontend.lib.socket_comms import Command, Response, CommandResponseBase, receive_data, UnauthenticatedError
 from cstar_perf.tool.stress_compare import stress_compare
 from api_client import APIClient
@@ -40,21 +45,17 @@ logging.getLogger('paramiko').setLevel(logging.WARNING)
 logging.getLogger('requests').setLevel(logging.WARNING)
 log = logging.getLogger('cstar_perf.client')
 
-from cstar_perf.frontend import CLIENT_CONFIG_PATH, KEEPALIVE_MARKER, EOF_MARKER
 
 class JobFailure(Exception):
     pass
 
-class JobRunner(object):
-    """Periodically requests jobs from the remote server. 
-    Runs them. 
-    Reports back."""
 
+class WebSocketClient(object):
     def __init__(self, ws_endpoint):
         self.ws_endpoint = ws_endpoint
         config = ConfigParser.RawConfigParser()
         config.read(CLIENT_CONFIG_PATH)
-        self.__cluster_name = config.get('cluster','name')
+        self.__cluster_name = config.get('cluster', 'name')
         self.__client_key = APIKey.load(key_type='client')
         self.__server_key = APIKey.load(key_type='server')
 
@@ -67,7 +68,7 @@ class JobRunner(object):
         log.debug("Connecting to {ws_endpoint} ...".format(ws_endpoint=self.ws_endpoint))
         ws = self.ws = WebSocket()
         ws.connect(self.ws_endpoint)
-        # Alias websocket-client's recv command to receieve so that
+        # Alias websocket-client's recv command to receive so that
         # it's compatible with gevent-websocket:
         ws.receive = ws.recv
 
@@ -76,6 +77,15 @@ class JobRunner(object):
         self.__authenticate(cmd)
         self.__server_synced = True
         return ws
+
+    def disconnect(self):
+        self.__good_bye()
+
+    def socket(self):
+        return self.ws
+
+    def in_sync(self):
+        return self.__server_synced
 
     def send(self, data_or_command_response, assertions={}):
         return self.__socket_comms('send', data_or_command_response, assertions)
@@ -98,7 +108,7 @@ class JobRunner(object):
             send - either a text string to send on the websocket, or a prepared Command / Response object.
             recv - either a websocket object to receive from, or a Command / Response object.
             respond - a Command / Response object
-    
+
         assertions - the key/value pairs of assertions, if specified,
           must exist in the Response object received. (Not applicable if
           ws_or_command is a raw websocket.)
@@ -111,7 +121,7 @@ class JobRunner(object):
         """
         # Default response data if there's a problem:
         if isinstance(obj, CommandResponseBase):
-            data_or_response = Response(obj.ws, {'type':'response', 'command_id':obj['command_id']})
+            data_or_response = Response(obj.ws, {'type': 'response', 'command_id': obj['command_id']})
         else:
             data_or_response = ""
 
@@ -121,7 +131,7 @@ class JobRunner(object):
                 if isinstance(obj, CommandResponseBase) or isinstance(obj, WebSocket):
                     data_or_response = getattr(obj, method)()
                 elif method == 'send':
-                    # Assume obj is a peice of data to send on the raw websocket:
+                    # Assume obj is a piece of data to send on the raw websocket:
                     data_or_response = self.ws.send(obj)
                 if len(assertions) > 0:
                     assert isinstance(data_or_response, CommandResponseBase)
@@ -138,18 +148,59 @@ class JobRunner(object):
                 log.warn("Can't use the websocket anymore. I'll finish this job and then disconnect.")
                 self.__server_synced = False
 
-
         return data_or_response
+
+    def __good_bye(self):
+        """Tell the server we're disconnecting"""
+        command = Command.new(self.socket(), action="good_bye")
+        log.debug("Sending goodbye message to server..")
+        command.send(await_response=False)
+
+    def __authenticate(self, command):
+        """Sign the token the server asked us to sign.
+        Send it back.
+        Give the server a token of our own to sign.
+        Verify it."""
+        assert command.get('action') == 'authenticate'
+        data = {'signature': self.__client_key.sign_message(command['token']),
+                'cluster':   self.__cluster_name}
+        response = command.respond(**data)
+        if not response.get('authenticated'):
+            raise UnauthenticatedError("Our peer could not validate our signed auth token")
+        # cool, the server authenticated us, now we need to
+        # authenticate the server:
+        token = random_token()
+        cmd = Command.new(self.socket(), action='authenticate', token=token)
+        response = cmd.send()
+        signature = response['signature']
+        # Verify the signature, raises BadSignatureError if it fails:
+        try:
+            self.__server_key.verify_message(token, signature)
+        except:
+            response.respond(message='Bad Signature of token for authentication', done=True)
+            log.error('server provided bad signature for auth token')
+            raise
+        response.respond(authenticated=True, done=True)
+
+
+class JobRunner(object):
+    """Periodically requests jobs from the remote server.
+    Runs them.
+    Reports back."""
+
+    def __init__(self, ws_endpoint):
+        self.__ws_client = WebSocketClient(ws_endpoint)
+        self.ws_endpoint = ws_endpoint
 
     def run(self):
         """Run a job, collect artifacts, send them to the server"""
 
         try:
-            os.makedirs(os.path.join(os.path.expanduser("~"),'.cstar_perf','jobs'))
+            os.makedirs(os.path.join(os.path.expanduser("~"), '.cstar_perf', 'jobs'))
         except OSError:
             pass
 
-        ws = self.connect()
+        self.__ws_client.connect()
 
         # Find old jobs, find their status, update the server
         self.recover_jobs()
@@ -165,7 +216,7 @@ class JobRunner(object):
             message = None
             stacktrace = None
             try:
-                self.perform_job(job, ws)
+                self.perform_job(job)
             except Exception, e:
                 message = e.message
                 stacktrace = traceback.format_exc(e)
@@ -174,12 +225,12 @@ class JobRunner(object):
 
             # check if the server desynchronized (socket died or got
             # invalid response):
-            if self.__server_synced == False:
+            if not self.__ws_client.in_sync():
                 # Break out of this job loop. This will force a
                 # disconnect and the job data will be resent upon
                 # reconnection (self.recover_jobs())
                 log.error("Disconnecting from server due to websocket desynchronization.")
-                job_dir = os.path.join(os.path.expanduser("~"),'.cstar_perf','jobs',job['test_id'])
+                job_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'jobs', job['test_id'])
                 log.error("Last job directory: {job_dir}".format(job_dir=job_dir))
                 # Save any failure messages to the job directory to
                 # send to the server later:
@@ -189,7 +240,7 @@ class JobRunner(object):
 
             self.__job_done(job['test_id'], status=status_to_submit, message=message, stacktrace=stacktrace)
             
-    def perform_job(self, job, ws):
+    def perform_job(self, job):
         """Perform a job the server gave us, stream output and artifacts to the given websocket."""
         job = copy.deepcopy(job['test_definition'])
         # Cleanup the job structure according to what stress_compare needs:
@@ -214,10 +265,10 @@ class JobRunner(object):
             f.write(stress_json)
 
         # Inform the server we will be streaming the console output to them:
-        command = Command.new(self.ws, action='stream', test_id=job['test_id'],
+        command = Command.new(self.__ws_client.socket(), action='stream', test_id=job['test_id'],
                               kind='console', name="stress_compare.{test_id}.log".format(test_id=job['test_id']),
                               eof=EOF_MARKER, keepalive=KEEPALIVE_MARKER)
-        response = self.send(command, assertions={'message':'ready'})
+        response = self.__ws_client.send(command, assertions={'message':'ready'})
 
         # Start a status checking thread.
         # If a user cancel's the job after it's marked in_progress, we
@@ -225,6 +276,14 @@ class JobRunner(object):
         # our test:
         cancel_checker = JobCancellationTracker(urlparse.urlparse(self.ws_endpoint).netloc, job['test_id'])
         cancel_checker.start()
+
+        # stats file observer
+        # looks for changes to update server with status progress message
+        observer = Observer()
+        observer.schedule(UpdateServerProgressMessageHandler(job, urlparse.urlparse(self.ws_endpoint).netloc),
+                          os.path.join(os.path.expanduser("~"), '.cstar_perf', 'jobs'),
+                          recursive=True)
+        observer.start()
 
         # Run stress_compare in a separate process, collecting the
         # output as an artifact:
@@ -242,20 +301,21 @@ class JobRunner(object):
                                 break
                             stress_log.write(line)
                             sys.stdout.write(line)
-                            self.send(base64.b64encode(line))
+                            self.__ws_client.send(base64.b64encode(line))
                     except TimeoutError:
-                        self.send(base64.b64encode(KEEPALIVE_MARKER))
+                        self.__ws_client.send(base64.b64encode(KEEPALIVE_MARKER))
         finally:
             cancel_checker.stop()
-            self.send(base64.b64encode(EOF_MARKER))
+            observer.stop()
+            self.__ws_client.send(base64.b64encode(EOF_MARKER))
 
-        response = self.receive(response, assertions={'message':'stream_received', 'done':True})
+        response = self.__ws_client.receive(response, assertions={'message': 'stream_received', 'done': True})
 
         # Find the log tarball for each revision by introspecting the stats json:
         system_logs = []
         flamegraph_logs = []
-        log_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf','logs')
-        flamegraph_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf','flamegraph')
+        log_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'logs')
+        flamegraph_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'flamegraph')
         #Create a stats summary file without voluminous interval data
         if os.path.isfile(stats_path):
             with open(stats_path) as stats:
@@ -332,7 +392,7 @@ class JobRunner(object):
         try:
             # Stream artifacts:
             self.stream_artifacts(job['test_id'])
-            if self.__server_synced:
+            if self.__ws_client.in_sync():
                 final_status = 'server_complete'
 
             # Spot check stats to ensure it has the data it should
@@ -346,9 +406,8 @@ class JobRunner(object):
                     final_status = 'local_fail'
                 raise
         finally:
-            with open(os.path.join(job_dir,'0.job_status'), 'w') as f:
+            with open(os.path.join(job_dir, '0.job_status'), 'w') as f:
                 f.write(final_status)
-            
 
     def stream_artifacts(self, job_id):
         """Stream all job artifacts
@@ -368,7 +427,7 @@ class JobRunner(object):
         streamed = []
         failed = []
         missing = []
-        job_dir = os.path.join(os.path.expanduser("~"), ".cstar_perf","jobs",job_id)
+        job_dir = os.path.join(os.path.expanduser("~"), ".cstar_perf", "jobs", job_id)
 
         def stream(kind, name_pattern, binary):
             name = name_pattern.format(job_id=job_id)
@@ -383,8 +442,8 @@ class JobRunner(object):
 
             for artifact in artifacts:
                 if os.path.isfile(artifact):
-                    self.stream_artifact(job_id, kind, os.path.basename(artifact), artifact, binary)
-                    if self.__server_synced:
+                    self.stream_artifact_in_chunks(job_id, kind, os.path.basename(artifact), artifact, binary)
+                    if self.__ws_client.in_sync():
                         streamed.append(kind)
                     else:
                         failed.append(kind)
@@ -405,9 +464,9 @@ class JobRunner(object):
     def stream_artifact(self, job_id, kind, name, path, binary=False):
         """Stream job artifact to server"""
         # Inform the server we will be streaming an artifact:
-        command = Command.new(self.ws, action='stream', test_id=job_id, 
+        command = Command.new(self.__ws_client.socket(), action='stream', test_id=job_id,
                               kind=kind, name=name, eof=EOF_MARKER, keepalive=KEEPALIVE_MARKER, binary=binary)
-        response = self.send(command, assertions={'message':'ready'})
+        response = self.__ws_client.send(command, assertions={'message': 'ready'})
 
         fsize = format_bytesize(os.stat(path).st_size)
         with open(path) as f:
@@ -417,10 +476,72 @@ class JobRunner(object):
                 if data == '':
                     break
                 data = base64.b64encode(data)
-                self.send(data)
-        self.send(base64.b64encode(EOF_MARKER))
+                self.__ws_client.send(data)
+        self.__ws_client.send(base64.b64encode(EOF_MARKER))
+        self.__ws_client.receive(response, assertions={'message': 'stream_received', 'done': True})
 
-        response = self.receive(response, assertions={'message':'stream_received', 'done':True})
+    @staticmethod
+    def _get_chunks(file_size, chunk_size=10485760):
+        chunk_num = 0
+        chunk_start = 0
+        while chunk_start + chunk_size < file_size:
+            yield(chunk_start, chunk_size, chunk_num)
+            chunk_start += chunk_size
+            chunk_num += 1
+
+        final_chunk_size = file_size - chunk_start
+        yield(chunk_start, final_chunk_size, chunk_num)
+
+    def stream_artifact_in_chunks(self, job_id, kind, name, path, binary=False):
+        """Stream job artifact to server in chunks"""
+
+        file_size = os.path.getsize(path)
+        object_id = generate_object_id(job_id, kind, name)
+        object_sha = sha256_of_file(path)
+        num_chunks = len(list(self._get_chunks(file_size)))
+
+        query = Command.new(self.__ws_client.socket(), action='chunk-stream-query', object_id=object_id)
+        query_result = self.__ws_client.send(query, assertions={'message': 'ok'})
+        existing_chunk_shas = {}
+        if 'stored_chunk_shas' in query_result and query_result['stored_chunk_shas'] != '':
+            existing_chunk_shas = dict(item.split(":") for item in query_result['stored_chunk_shas'].split(","))
+            log.debug("found existing stored chunks: {}".format(existing_chunk_shas))
+
+        matching_uploaded_chunks = 0
+        try:
+            for chunk_start, chunk_size, chunk_id in self._get_chunks(file_size):
+                # skip if server already has chunk stored
+                if str(chunk_id) in existing_chunk_shas:
+                    log.info("chunk {} already exists on server skipping upload".format(chunk_id))
+                    continue
+
+                log.info("sending artifact[{}][{}] chunk: {}".format(name, object_id, chunk_id))
+
+                command = Command.new(self.__ws_client.socket(), action='chunk-stream', test_id=job_id, file_size=file_size,
+                                      num_of_chunks=num_chunks, chunk_id=chunk_id, object_id=object_id,
+                                      object_sha=object_sha, chunk_size=chunk_size,
+                                      kind=kind, name=name, eof=EOF_MARKER, keepalive=KEEPALIVE_MARKER, binary=binary)
+                response = self.__ws_client.send(command, assertions={'message': 'ready'})
+
+                chunk_sha = hashlib.sha256()
+                with open(path) as fh:
+                    fh.seek(chunk_start, os.SEEK_SET)
+                    while fh.tell() < (chunk_start + chunk_size):
+                        byte_size = 512 if fh.tell() + 512 < (chunk_start + chunk_size) else (chunk_start + chunk_size) - fh.tell()
+                        data = fh.read(byte_size)
+                        chunk_sha.update(data)
+                        data = base64.b64encode(data)
+                        self.__ws_client.send(data)
+                    self.__ws_client.send(base64.b64encode(EOF_MARKER))
+                    response = self.__ws_client.receive(response, assertions={'message': 'chunk_received', 'done': True})
+                    if chunk_sha.hexdigest() == response['chunk_sha']:
+                        matching_uploaded_chunks += 1
+        finally:
+            uploaded_successfully = matching_uploaded_chunks == num_chunks
+            log.info("UPLOADED SUCCESS: {}".format(uploaded_successfully))
+            self.__ws_client.send(Command.new(self.__ws_client.socket(), action='chunk-stream-complete', successful=uploaded_successfully,
+                                  test_id=job_id, object_id=object_id, kind=kind, name=name),
+                      assertions={'message': 'ok'})
 
     def recover_jobs(self):
         """Find old jobs that are still on this machine and update the server on their state.
@@ -429,8 +550,8 @@ class JobRunner(object):
         """
         # Iterate over every directory in ~/.cstar_perf/jobs
         log.info("Looking for old jobs that did not get sent to the server ...")
-        for job_dir in os.listdir(os.path.join(os.path.expanduser("~"),'.cstar_perf', 'jobs')):
-            job_dir = os.path.join(os.path.expanduser("~"),'.cstar_perf', 'jobs', job_dir)
+        for job_dir in os.listdir(os.path.join(os.path.expanduser("~"), '.cstar_perf', 'jobs')):
+            job_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'jobs', job_dir)
             if not os.path.isdir(job_dir):
                 continue
             job_id = os.path.split(job_dir)[-1]
@@ -452,9 +573,9 @@ class JobRunner(object):
                 # problem uploading to the server. We should try
                 # again:
                 self.stream_artifacts(job_id)
-                if self.__server_synced:
+                if self.__ws_client.in_sync():
                     self.__job_done(job_id, status='completed')
-                    with open(os.path.join(job_dir, '0.job_status'),'w') as f:
+                    with open(os.path.join(job_dir, '0.job_status'), 'w') as f:
                         f.write('server_complete')                    
             else:
                 # local_fail
@@ -462,17 +583,17 @@ class JobRunner(object):
                 # we should upload whatever artifacts we have, and
                 # tell the server the test failed
                 self.stream_artifacts(job_id)
-                if self.__server_synced:
+                if self.__ws_client.in_sync():
                     failure_json = os.path.join(job_dir, 'failure.json')
                     failures = {}
                     if os.path.exists(failure_json):
                         with open(failure_json) as f:
-                            failures=json.load(f)
+                            failures = json.load(f)
                     self.__job_done(job_id, status='failed', **failures)
-                    with open(os.path.join(job_dir, '0.job_status'),'w') as f:
+                    with open(os.path.join(job_dir, '0.job_status'), 'w') as f:
                         f.write('server_fail')
 
-            if not self.__server_synced:
+            if not self.__ws_client.in_sync():
                 raise JobFailure("Server desynchronized while we were trying to send an old job. We'll try again later.")
 
     def __spot_check_stats(self, job, stats_path):
@@ -489,12 +610,12 @@ class JobRunner(object):
         except Exception, e:
             message = e.message
             stacktrace = traceback.format_exc(e)
-            raise JobFailure("job stats is incomplete. message={message}\n{stacktrace}".format(message=message, stacktrace=stacktrace))
-
+            raise JobFailure("job stats is incomplete. message={message}\n{stacktrace}".format(message=message,
+                                                                                               stacktrace=stacktrace))
 
     def __get_work(self):
         """Ask the server for work"""
-        command = Command.new(self.ws, action='get_work')
+        command = Command.new(self.__ws_client.socket(), action='get_work')
         response = command.send()
         while True:
             # We either got a job, or we received a wait request:
@@ -516,7 +637,7 @@ class JobRunner(object):
     def __job_done(self, job_id, status='completed', message=None, stacktrace=None):
         """Tell the server we're done with a job, and give it the test artifacts"""
         ##{type:'command', command_id:'llll', action:'test_done', test_id:'xxxxxxx'}
-        command = Command.new(self.ws, action="test_done", test_id=job_id, status=status)
+        command = Command.new(self.__ws_client.socket(), action="test_done", test_id=job_id, status=status)
         if message is not None:
             command['message'] = message
         if stacktrace is not None:
@@ -529,38 +650,31 @@ class JobRunner(object):
         assert response['done'] == True
         log.debug("Server confirms job {test_id} is complete.".format(test_id=job_id))
 
-    def __good_bye(self):
-        """Tell the server we're disconnecting"""
-        ##{type:'command', command_id:'llll', action:'good_bye'}
-        command = Command.new(self.ws, action="good_bye")
-        log.debug("Sending goodbye message to server..")
-        command.send(await_response=False)
 
-    def __authenticate(self, command):
-        """Sign the token the server asked us to sign.
-        Send it back.
-        Give the server a token of our own to sign.
-        Verify it."""
-        assert command.get('action') == 'authenticate'
-        data = {'signature' :self.__client_key.sign_message(command['token']),
-                'cluster': self.__cluster_name}
-        response = command.respond(**data)
-        if response.get('authenticated') != True:
-            raise UnauthenticatedError("Our peer could not validate our signed auth token")
-        # cool, the server authenticated us, now we need to
-        # authenticate the server:
-        token = random_token()
-        cmd = Command.new(self.ws, action='authenticate', token=token)
-        response = cmd.send()
-        signature = response['signature']
-        # Verify the signature, raises BadSignatureError if it fails:
-        try:
-            self.__server_key.verify_message(token, signature)
-        except:
-            response.respond(message='Bad Signature of token for authentication', done=True)
-            log.error('server provided bad signature for auth token')
-            raise
-        response.respond(authenticated=True, done=True)
+class UpdateServerProgressMessageHandler(RegexMatchingEventHandler):
+    def __init__(self, job, api_endpoint_url):
+        super(UpdateServerProgressMessageHandler, self).__init__(regexes=[r'^.*stats\..*\.json$'])
+        self._api_endpoint_url = api_endpoint_url
+        self._job = job
+
+    def on_modified(self, event):
+        self.__tell_server(event)
+
+    def on_created(self, event):
+        self.__tell_server(event)
+
+    def __tell_server(self, event):
+        with open(event.src_path) as fh:
+            stats_json = json.loads(fh.read())
+        last_stat = stats_json['stats'][-1]
+        total_ops = len(self._job['operations']) * len(self._job['revisions'])
+
+        msg = "Last Op Completed: {}:{}, finished {} of {} total ops ({})".format(
+            last_stat['revision'], last_stat['type'], len(stats_json['stats']), total_ops, str(datetime.datetime.now())
+        )
+        api_client = APIClient(self._api_endpoint_url)
+        api_client.post('/tests/progress/id/{}'.format(self._job['test_id']), data=json.dumps({'progress_msg': msg}))
+
 
 class JobCancellationTracker(threading.Thread):
     """Thread to poll test status changes on the server and kill jobs if requested"""
@@ -574,7 +688,7 @@ class JobCancellationTracker(threading.Thread):
 
     def run(self):
         self.api_client.login()
-        while self.stop_requested == False:
+        while not self.stop_requested:
             time.sleep(self.check_interval)
             # Check job status:
             status = self.api_client.get('/tests/status/id/'+self.test_id)
@@ -595,6 +709,7 @@ class JobCancellationTracker(threading.Thread):
                     log.info("Killing cassandra-stress - pid:{}".format(proc.pid))
                     proc.kill()
 
+
 def create_credentials():
     """Create ecdsa keypair for authenticating with server. Save these to
     a config file in the home directory."""
@@ -604,8 +719,8 @@ def create_credentials():
     config.read(CLIENT_CONFIG_PATH)
     if not config.has_section("cluster"):
         config.add_section("cluster")
-    if config.has_option('cluster','name'):
-        cluster_name = config.get('cluster','name')
+    if config.has_option('cluster', 'name'):
+        cluster_name = config.get('cluster', 'name')
     else:
         while True:
             cluster_name = raw_input('Enter a name for this cluster: ')
@@ -613,7 +728,7 @@ def create_credentials():
                 print("Cluster name must be of the characters a-z, A-Z, 0-9, and _")
                 continue
             break
-        config.set('cluster','name', cluster_name)
+        config.set('cluster', 'name', cluster_name)
         with open(CLIENT_CONFIG_PATH, "wb") as f:
             config.write(f)
         os.chmod(CLIENT_CONFIG_PATH, 0600)
@@ -648,8 +763,10 @@ def create_credentials():
     
     print("Server public key is: {key}".format(key=apikey.get_pub_key()))
 
+
 def main():
-    parser = argparse.ArgumentParser(description='cstar_perf job client', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description='cstar_perf job client',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', '--server', default='ws://localhost:8000/api/cluster_comms',
                         help='Server endpoint', dest='server')
     parser.add_argument('--get-credentials', dest='gen_credentials',

@@ -1,5 +1,6 @@
 {% extends 'layout.jinja2.html' %}
 {% from 'test_macro.jinja2.html' import test_table %}
+{% from 'test_macro.jinja2.html' import in_progress_test_table %}
 
 {% block title %}Tests{% endblock %}
 
@@ -12,7 +13,7 @@
 {% for cluster in clusters %}
   {% if cluster_in_progress_tests.has_key(cluster) %}
     <h2>Tests in progress in {{cluster}}:</h2>
-    {{test_table(cluster_in_progress_tests[cluster])}}
+    {{in_progress_test_table(cluster_in_progress_tests[cluster])}}
   {% endif %}
 {% endfor %}
 

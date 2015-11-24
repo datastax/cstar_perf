@@ -1,5 +1,7 @@
 """Main Application Controllers"""
 import functools
+import hashlib
+
 import httplib2
 import os.path
 import uuid
@@ -257,12 +259,14 @@ def get_artifact(test_id, artifact_type, artifact_name=None):
         return redirect("/graph?command=one_job&stats={test_id}".format(test_id=test_id))
     elif artifact_type == 'flamegraph' and not artifact_name:
         artifacts = db.get_test_artifacts(test_id, artifact_type)
+        for artifact in artifacts:
+            artifact['data'] = db.get_test_artifact_data(test_id, artifact_type, artifact['name'])
         return render_template('flamegraph.jinja2.html', test_id=test_id, artifacts=artifacts)
 
     if not artifact_name:
         return make_response(jsonify({'error':'No artifact name provided.'}), 400)
 
-    artifact = db.get_test_artifact_data(test_id, artifact_type, artifact_name)
+    artifact, object_id, artifact_available = db.get_test_artifact_data(test_id, artifact_type, artifact_name)
 
     if artifact_name.endswith(".tar.gz"):
         mimetype = 'application/gzip'
@@ -273,11 +277,13 @@ def get_artifact(test_id, artifact_type, artifact_name=None):
     else:
         mimetype = 'text/plain'
 
+    if artifact is None and object_id is not None and artifact_available:
+        artifact = db.generate_object_by_chunks(object_id)
+
     return Response(response=artifact,
                     status=200,
                     mimetype=mimetype,
-                    headers={"Content-Disposition": "filename={name}".format(name=artifact_name)}
-    )
+                    headers={"Content-Disposition": "filename={name}".format(name=artifact_name)})
 
 @app.route('/graph')
 def graph():
@@ -550,6 +556,14 @@ def get_clusters_by_name(cluster_name):
     """Retrieve information about a cluster"""
     clusters = db.get_clusters()
     return make_response(jsonify(clusters[cluster_name]))
+
+
+@app.route('/api/tests/progress/id/<test_id>', methods=['POST'])
+@requires_auth('user')
+def set_progress_message_on_test(test_id):
+    msg = request.get_json()['progress_msg']
+    db.update_test_progress_msg(test_id, msg)
+    return jsonify({'status': 'ok'})
 
 
 ################################################################################

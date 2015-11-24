@@ -45,7 +45,7 @@ class APIClient(object):
         if r.status_code == 401 and not path.startswith('/login'):
             self.login()
             r = self.session.post(self.endpoint + path, data, **kwargs)
-        elif r.status_code == 200:
+        elif r.status_code in (200, 204):
             return r.json()
         error = u'Request failed to {} - {} {}'.format(path, r, body).encode("utf-8")
         raise RuntimeError(error)
@@ -69,9 +69,9 @@ class APIClient(object):
         if r.status_code == 401:
             self.login()
             r = self.session.put(self.endpoint + path, **kwargs)
-        if r.status_code == 200:
+        if r.status_code in (200, 204):
             return r.json()
-        error = u'Request failed to {} - {} {}'.format(path, r, body).encode("utf-8")        
+        error = u'Request failed to {} - {} {}'.format(path, r, body).encode("utf-8")
         raise RuntimeError(error)
         
     def login(self):
