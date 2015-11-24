@@ -13,7 +13,7 @@ var addRevisionDiv = function(animate){
         "        <label class='col-md-4 control-label' for='{revision_id}-product'>Product</label>" +
         "        <div class='col-md-8'>" +
         "          <select id='{revision_id}-product' " +
-        "                  class='product-select form-control' required>" +
+        "                  class='product-select form-control' required onchange='maybe_show_dse_yaml_div(this.id, this.value);'>" +
         "            <option value='cassandra'>cassandra</option>" +
         "          </select>" +
         "        </div>" +
@@ -41,6 +41,14 @@ var addRevisionDiv = function(animate){
         "        <div class='col-md-8'>" +
         "          <textarea class='form-control yaml' id='{revision_id}-yaml'" +
         "          placeholder='Any cassandra.yaml options you want that differ from the default settings for the chosen cluster.'></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "" +
+        "      <div class='form-group dse-yaml-settings-div' style='display:block' id='{revision_id}-dse_yaml_div'>" +
+        "        <label class='col-md-4 control-label' for='{revision_id}-dse_yaml'>dse.yaml</label>" +
+        "        <div class='col-md-8'>" +
+        "          <textarea class='form-control dse_yaml' id='{revision_id}-dse_yaml'" +
+        "          placeholder='Any dse.yaml options you want that differ from the default settings for the chosen cluster.'></textarea>" +
         "        </div>" +
         "      </div>" +
         "" +
@@ -311,6 +319,15 @@ var addOperationDiv = function(animate, operationDefaults){
     update_cluster_options(operation_id, operationDefaults)
 };
 
+var maybe_show_dse_yaml_div = function(id, value) {
+    id = id.replace("product", "dse_yaml_div")
+    if (value == "dse") {
+        $("#" + id).show();
+    } else {
+        $("#" + id).hide();
+    }
+}
+
 var createJob = function() {
     //Parse the form elements and schedule job to run.
     var job = {
@@ -330,6 +347,7 @@ var createJob = function() {
             revision: revision.find(".refspec").val(),
             label: revision.find(".revision-label").val() ? revision.find(".revision-label").val() : null,
             yaml: revision.find(".yaml").val(),
+            dse_yaml: revision.find(".dse_yaml").val(),
             env: revision.find(".env-vars").val(),
             java_home: revision.find(".jvm-select").val(),
             options: {'use_vnodes': revision.find(".options-vnodes").is(":checked") }
@@ -395,6 +413,7 @@ var cloneExistingJob = function(job_id) {
             $("#revision-"+rev+"-product").val(revision['product']);
             $("#revision-"+rev+"-label").val(revision['label']);
             $("#revision-"+rev+"-yaml").val(revision['yaml']);
+            $("#revision-"+rev+"-dse_yaml").val(revision['dse_yaml']);
             $("#revision-"+rev+"-env-vars").val(revision['env']);
             if (revision['options'] == undefined) {
                 revision['options'] = {};
@@ -466,6 +485,9 @@ var update_cluster_options = function(operation_id, operation_defaults, callback
 }
 
 var update_cluster_selections = function(callback) {
+    // initiall hide the dse yaml settings
+    $(".dse-yaml-settings-div").hide();
+
     var cluster = $('#cluster').val();
     $.get('/api/clusters/'+cluster, function(data) {
 

@@ -71,6 +71,17 @@ def get_all_hosts(env):
         hosts += [localhost_entry]
     return hosts
 
+
+def _parse_yaml(yaml_file):
+    if isinstance(yaml_file, basestring):
+        yaml_file = yaml.load(yaml_file)
+    if yaml_file is None:
+        yaml_file = {}
+    if type(yaml_file) is not dict:
+        raise JobFailure('Invalid yaml, was expecting a dictionary: {cass_yaml}'.format(cass_yaml=yaml_file))
+    return yaml_file
+
+
 def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     """Deploy and start cassandra on the cluster
     
@@ -87,13 +98,10 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     # Parse yaml 
     if cfg.has_key('yaml'):
         cass_yaml = cfg['yaml']
-        if isinstance(cass_yaml, basestring):
-            cass_yaml = yaml.load(cass_yaml)
-        if cass_yaml is None:
-            cass_yaml = {}
-        if type(cass_yaml) is not dict:
-            raise JobFailure('Invalid yaml, was expecting a dictionary: {cass_yaml}'.format(cass_yaml=cass_yaml))
-        common.config['yaml'] = cass_yaml
+        common.config['yaml'] = _parse_yaml(cass_yaml)
+    if cfg.has_key('dse_yaml'):
+        dse_yaml = cfg['dse_yaml']
+        common.config['dse_yaml'] = _parse_yaml(dse_yaml)
     if cfg.has_key('options'):
         if cfg['options'] is not None:
             common.config.update(cfg['options'])

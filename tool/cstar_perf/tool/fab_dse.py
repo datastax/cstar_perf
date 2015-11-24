@@ -1,5 +1,7 @@
 import os
 import requests
+import yaml
+import re
 from urlparse import urljoin
 from fabric import api as fab
 from util import download_file, download_file_contents, digest_file
@@ -68,6 +70,10 @@ def download_binaries():
 def get_dse_path():
     return "~/fab/dse"
 
+
+def get_dse_conf_path():
+    return os.path.join(get_dse_path(), 'resources', 'dse', 'conf')
+
 def get_cassandra_path():
     return os.path.join(get_dse_path(), 'resources/cassandra/')
 
@@ -104,3 +110,51 @@ def stop(clean, config):
 def is_running():
     jps = fab.run('jps | grep DseDaemon"', quiet=True)
     return True if jps.return_code == 0 else False
+
+
+def _download_jython_if_necessary():
+    # Get Jython helper :
+    jython_status = fab.run('test -f ~/fab/jython.jar', quiet=True)
+    if jython_status.return_code > 0:
+        fab.run("wget http://search.maven.org/remotecontent?filepath=org/python/jython-standalone/2.7-b1/jython-standalone-2.7-b1.jar -O ~/fab/jython.jar")
+
+
+def get_cassandra_config_options(config):
+    """Parse Cassandra's Config class to get all possible config values.
+
+    Unfortunately, some are hidden from the default cassandra.yaml file, so this appears the only way to do this."""
+    _download_jython_if_necessary()
+
+    dse_lib_folder = os.path.join('{dse}'.format(dse=get_dse_path().replace('~', '$HOME')), 'lib', '*')
+    cass_lib_folder = os.path.join('{cass}'.format(cass=get_cassandra_path().replace('~', '$HOME')), 'lib', '*')
+
+    classpath = ":".join([dse_lib_folder, cass_lib_folder, "$HOME/fab/jython.jar"])
+    cmd = '{java_home}/bin/java -cp "{classpath}" org.python.util.jython -c "import org.apache.cassandra.config.Config as Config; print dict(Config.__dict__).keys()"'.format(java_home=config['java_home'], **locals())
+
+    out = fab.run(cmd, combine_stderr=False)
+    if out.failed:
+        fab.abort('Failed to run Jython Config parser : ' + out.stderr)
+    opts = yaml.load(out)
+    p = re.compile("^[a-z][^A-Z]*$")
+    return [o for o in opts if p.match(o)]
+
+
+def get_dse_config_options(config):
+    """
+    Parse DSE Config class to get all possible dse.yaml config values
+
+    """
+    _download_jython_if_necessary()
+
+    dse_lib_folder = os.path.join('{dse}'.format(dse=get_dse_path().replace('~', '$HOME')), 'lib', '*')
+    cass_lib_folder = os.path.join('{cass}'.format(cass=get_cassandra_path().replace('~', '$HOME')), 'lib', '*')
+
+    classpath = ":".join([dse_lib_folder, cass_lib_folder, "$HOME/fab/jython.jar"])
+    cmd = '{java_home}/bin/java -cp "{classpath}" org.python.util.jython -c "import com.datastax.bdp.config.Config as Config; print dict(Config.__dict__).keys()"'.format(java_home=config['java_home'], **locals())
+
+    out = fab.run(cmd, combine_stderr=False)
+    if out.failed:
+        fab.abort('Failed to run Jython Config parser : ' + out.stderr)
+    opts = yaml.load(out)
+    p = re.compile("^[a-z][^A-Z]*$")
+    return [o for o in opts if p.match(o)]
