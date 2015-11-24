@@ -226,3 +226,31 @@ Assuming that worked, your cluster is now fully automated via
 cstar_perf. Next steps include creating some :doc:`test definitions
 <running_tests>`, or to setup the :doc:`web frontend
 <setup_cstar_perf_frontend>`.
+
+Flamegraph
+----------
+
+It is possible to generate flamegraphs when running tests. Follow these intructions to enable the feature:
+
+Install system dependencies on all workers of the cluster::
+
+  sudo apt-get install cmake dtach linux-tools-`uname -r`
+  sudo pip install sh
+
+Ensure your kernel has performance profling support::
+
+  $ sudo perf record -F 99 -g -p <a_running_process_pid> -- sleep 10
+  [ perf record: Woken up 1 times to write data ]
+  [ perf record: Captured and wrote 0.098 MB perf.data (~4278 samples) ]
+
+Add NOPASSWD sudo configuration for the cstar/automaton user::
+
+  echo "cstar ALL = (root) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/perf
+
+Enable flamegraph feature in your cluster configuration::
+
+  "flamegraph": true,
+  "flamegraph_directory": "/mnt/data/cstar_perf/flamegraph"
+
+  # The flamegraph working directory default to /tmp/flamegraph if not specified.
+
