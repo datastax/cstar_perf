@@ -67,9 +67,9 @@ h3 {
        <td></b></td>
     </tr>
    {% elif artifact['artifact_type'] in ('link',) %}
-     <tr><td class='col-md-2'>{{artifact['artifact_type']}}</td><td><a href='{{artifact['artifact']}}'>{{artifact['description']}}</a></td><td></td></tr>
+     <tr><td class='col-md-2'>{{artifact['artifact_type']}}</td><td><a href='{{artifact['artifact']}}'>{{artifact['name']}}</a></td><td></td></tr>
    {% elif artifact['artifact_available'] in (False, ) %}
-       <tr><td class='col-md-2'>{{artifact['artifact_type']}}</td><td>{{artifact['description']}} (currently unavailable)</td><td></td></tr>
+       <tr><td class='col-md-2'>{{artifact['artifact_type']}}</td><td>{{artifact['name']}} (currently unavailable)</td><td></td></tr>
    {% else %}
      <tr>
        <td class='col-md-2'>{{artifact['artifact_type']}}</td>
