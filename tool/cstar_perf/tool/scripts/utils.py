@@ -6,10 +6,8 @@ def find_process_pid(process_line, child_process=False):
     try:
         pid = sh.awk(
             sh.grep(
-            sh.grep(
                 sh.grep(sh.ps(ps_opts, _piped=True, _tty_out=False), "-ie", process_line),
-                '-v', 'grep'
-            ), '-v', '768'),
+                '-v', 'grep'),
             "{print $2}",
         )
     except sh.ErrorReturnCode:
