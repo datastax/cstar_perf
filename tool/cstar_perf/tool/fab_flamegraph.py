@@ -27,6 +27,9 @@ def is_enabled(revision_config=None):
     is_compatible = True
     is_enabled = common_module.config.get('flamegraph', False)
     if revision_config:
+        if revision_config.get('product', 'cassandra') == 'dse':
+            logger.info('Flamegraph is not compatible with DSE yet')
+            is_compatible = False
         jvm = revision_config.get('java_home', '')
         try:
             jvm = os.path.basename(jvm)

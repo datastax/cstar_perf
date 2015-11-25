@@ -423,6 +423,9 @@ var cloneExistingJob = function(job_id) {
             update_cluster_selections(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);
                 $("#revision-"+rev+"-product").val(revision['product']);
+                if (revision['product'] == 'dse') {
+                    $("#revision-"+rev+"-dse_yaml_div").show();
+                }
             });
 
         });

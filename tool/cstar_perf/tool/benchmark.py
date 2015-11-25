@@ -78,7 +78,7 @@ def _parse_yaml(yaml_file):
     if yaml_file is None:
         yaml_file = {}
     if type(yaml_file) is not dict:
-        raise JobFailure('Invalid yaml, was expecting a dictionary: {cass_yaml}'.format(cass_yaml=yaml_file))
+        raise ValueError('Invalid yaml, was expecting a dictionary: {cass_yaml}'.format(cass_yaml=yaml_file))
     return yaml_file
 
 
