@@ -298,10 +298,28 @@ def bootstrap(git_fetch=True, revision_override=None):
     cass_yaml = yaml.load(conf_file.read())
 
     # Get the canonical list of options from the c* source code:
+    cstar_config_opts = product.get_cassandra_config_options(config)
+
     if product.name == 'dse':
-        cstar_config_opts = cass_yaml.keys()
-    else:
-        cstar_config_opts = product.get_cassandra_config_options(config)
+        dse_config_options = product.get_dse_config_options(config)
+        dse_conf_file = StringIO()
+        dse_yaml_path = os.path.join(product.get_dse_conf_path(), 'dse.yaml')
+        fab.get(dse_yaml_path, dse_conf_file)
+        dse_conf_file.seek(0)
+        dse_yaml = yaml.load(dse_conf_file.read())
+
+        configured_dse_yaml_settings = config.get('dse_yaml', {})
+        if configured_dse_yaml_settings:
+            for option, value in configured_dse_yaml_settings.items():
+                if option not in dse_config_options:
+                    raise ValueError('Unknown dse.yaml option: {}'.format(option))
+                dse_yaml[option] = value
+
+            # write values to dse.yaml
+            dse_conf_file = StringIO()
+            dse_conf_file.write(yaml.safe_dump(dse_yaml, encoding='utf-8', allow_unicode=True))
+            dse_conf_file.seek(0)
+            fab.put(dse_conf_file, dse_yaml_path)
 
     # Cassandra YAML values can come from two places:
     # 1) Set as options at the top level of the config. This is how

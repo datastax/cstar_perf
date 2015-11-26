@@ -92,6 +92,9 @@ h3 {
       {% if revision['yaml'] %}
         <tr><td>Cassandra.yaml</td><td><pre>{{revision['yaml']}}</pre></td></tr>
       {% endif %}
+      {% if revision['dse_yaml'] %}
+        <tr><td>dse.yaml</td><td><pre>{{revision['dse_yaml']}}</pre></td></tr>
+      {% endif %}
       {% if revision['env'] %}
         <tr><td>Environment</td><td><pre>{{revision['env']}}</pre></td></tr>
       {% endif %}

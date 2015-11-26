@@ -327,7 +327,7 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
     for i in range(num_nodes):
         node_name = "%s_%02d" % (cluster_name,i)
         ssh_path = os.path.split(get_ssh_key_pair()[0])[0]
-        run_cmd = ('docker run --privileged --label cstar_node=true --label '
+        run_cmd = ('docker run --ulimit memlock=100000000:100000000 --privileged --label cstar_node=true --label '
             'cluster_name={cluster_name} --label cluster_type={cluster_type} --label node={node_num} '
             ' -v /var/run/docker.sock:/var/run/docker.sock -v /usr/bin/docker:/bin/docker '
             '-d -m {CONTAINER_DEFAULT_MEMORY} --name={node_name} {port_settings} -h {node_name}'.format(
