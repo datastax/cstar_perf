@@ -26,6 +26,7 @@ from cluster_config import config as cluster_config
 import re
 import sh
 import uuid
+from util import random_token, get_static_vnode_tokens
 import subprocess
 from util import random_token
 import fab_dse as dse
@@ -150,13 +151,14 @@ def setup(my_config=None):
         # Cluster name
         'cluster_name': 'cstar_perf {random_string}'.format(random_string=random_token()),
         # Ant tarball:
-        'ant_tarball' : 'http://www.apache.org/dist/ant/binaries/apache-ant-1.8.4-bin.tar.bz2',
+        'ant_tarball': 'http://www.apache.org/dist/ant/binaries/apache-ant-1.8.4-bin.tar.bz2',
         # The user to install as
         'user': 'ryan',
-        'partitioner': 'murmur3', #murmur3 or random
+        'partitioner': 'murmur3',  # murmur3 or random
         'git_repo': 'git://github.com/apache/cassandra.git',
         # Enable vnodes:
         'use_vnodes': True,
+        'token_allocation': 'random',  # random, static-random, static-algorithmic, non-vnodes
         # Number of vnodes per node. Ignored if use_vnodes == False:
         'num_tokens': 256,
         # Directories:
@@ -460,6 +462,14 @@ def start():
     # Flamegraph
     if flamegraph.is_enabled(config):
         env += "JVM_OPTS=\"$JVM_OPTS -XX:+PreserveFramePointer\""
+
+    fab.puts("running with token allocation type: {}".format(config['token_allocation']))
+    if config['use_vnodes'] and config['token_allocation'] != 'random':
+        env += "JVM_OPTS=\"$JVM_OPTS -Dcassandra.initial_token={}\"\n".format(
+            get_static_vnode_tokens(fab.env.host,
+                                    fab.env.hosts,
+                                    partitioner=config['partitioner'],
+                                    group=config['token_allocation']))
 
     env_script = "{name}.sh".format(name=uuid.uuid1())
     env_file = StringIO(env)
