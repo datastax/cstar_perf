@@ -93,6 +93,9 @@ var addRevisionDiv = function(animate){
     update_cluster_selections();
     update_cluster_options();
 
+    // initially hide the dse yaml settings
+    $("#" + revision_id + "-dse_yaml_div").hide();
+
     //Remove revision handler:
     $("#remove-"+revision_id).click(function() {
         $("div#"+revision_id).slideUp(function() {
@@ -488,9 +491,6 @@ var update_cluster_options = function(operation_id, operation_defaults, callback
 }
 
 var update_cluster_selections = function(callback) {
-    // initiall hide the dse yaml settings
-    $(".dse-yaml-settings-div").hide();
-
     var cluster = $('#cluster').val();
     $.get('/api/clusters/'+cluster, function(data) {
 
