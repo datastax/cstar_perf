@@ -11,11 +11,13 @@ var checkForTestStatusUpdates = function(interval) {
     // If [interval] is undefined, check only once.
     // Otherwise check periodically every [interval] seconds.
     var currentStatus = $("#test_status").text();
+    var currentProgress = $("#progress_msg").text();
     var test_id = $("#test_id").text();
     console.log("Checking for test updates " + (interval ? 'every '+interval+'ms' : 'once'));
     getTest(test_id, function(test) {
         var newStatus = test['status'];
-        if (currentStatus != newStatus) {
+        var newProgress = test['progress_msg'];
+        if (currentStatus != newStatus || (currentProgress != newProgress && newProgress != null)) {
             window.location.reload();
         } else {
             //Check again for update in 30s:

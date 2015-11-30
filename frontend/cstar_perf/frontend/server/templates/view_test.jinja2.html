@@ -37,7 +37,7 @@ h3 {
   {% endif %}
 </td></tr>
 {% if test['status'] == 'in_progress' %}
-    <tr><td>Progress</td><td>{{test['progress_msg']}}</td></tr>
+    <tr><td>Progress</td><td><span id="progress_msg">{{test['progress_msg']}}</span></td></tr>
 {% endif %}
 <tr><td>Date Scheduled</td><td>{{test['scheduled_date']}}</td></tr>
 {% if test['completed_date'] %}
