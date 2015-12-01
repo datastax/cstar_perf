@@ -1,10 +1,10 @@
 var cancelTest = function(test_id, callback){
     $.post('/api/tests/cancel', {'test_id':test_id}, callback);
-}
+};
 
 var getTest = function(test_id, callback, fail_callback){
     $.getJSON('/api/tests/id/'+test_id, callback).fail(fail_callback);
-}
+};
 
 var checkForTestStatusUpdates = function(interval) {
     // Check for test status updates, refresh the page if there are.
@@ -29,7 +29,7 @@ var checkForTestStatusUpdates = function(interval) {
         if (interval != undefined) 
             setTimeout(function(){checkForTestStatusUpdates(interval)}, 3*interval)
     });
-}
+};
 
 $(document).ready(function() {
     //Create cancel button for tests in scheduled status:
