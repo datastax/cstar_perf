@@ -618,31 +618,32 @@ var drawGraph = function() {
             $("g.trial[title='" + $(this).attr('title') + "']").toggle();
         });
 
-
-        // Chart control callbacks:
-        metric_selector.unbind().change(function(e) {
-            // change the metric in the url to reload the page:
-            metric = query.metric = this.value;
-            metric_index = stress_metrics.indexOf(metric);
-            graph_callback();
-            defaultZoom();
-        });
-        operation_selector.unbind().change(function(e) {
-            // change the metric in the url to reload the page:
-            operation = query.operation = this.value;
-            graph_callback();
-            defaultZoom();
-        });
-        smoothing_selector.unbind().change(function(e) {
-            // change the metric in the url to reload the page:
-            smoothing = query.smoothing = this.value;
-            graph_callback();
-            defaultZoom();
-        });
-        show_aggregates_checkbox.unbind().change(function(e) {
-            show_aggregates = query.show_aggregates = this.checked;
-            graph_callback();
-        });
+        if (!rendering_series_graph) {
+            // Chart control callbacks:
+            metric_selector.unbind().change(function (e) {
+                // change the metric in the url to reload the page:
+                metric = query.metric = this.value;
+                metric_index = stress_metrics.indexOf(metric);
+                graph_callback();
+                defaultZoom();
+            });
+            operation_selector.unbind().change(function (e) {
+                // change the metric in the url to reload the page:
+                operation = query.operation = this.value;
+                graph_callback();
+                defaultZoom();
+            });
+            smoothing_selector.unbind().change(function (e) {
+                // change the metric in the url to reload the page:
+                smoothing = query.smoothing = this.value;
+                graph_callback();
+                defaultZoom();
+            });
+            show_aggregates_checkbox.unbind().change(function (e) {
+                show_aggregates = query.show_aggregates = this.checked;
+                graph_callback();
+            });
+        }
 
         updateURLBar();
 

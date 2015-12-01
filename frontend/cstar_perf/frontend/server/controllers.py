@@ -428,30 +428,28 @@ def get_series( series, start_timestamp, end_timestamp):
         response = json.dumps(obj=jsobj)
     return Response(response=response,
                     status=200,
-                    mimetype= 'application/json')
+                    mimetype='application/json')
 
 def get_series_summaries_impl(series, start_timestamp, end_timestamp):
-    series = db.get_series( series, start_timestamp, end_timestamp)
+    series = db.get_series(series, start_timestamp, end_timestamp)
     summaries = []
     for test_id in series:
-        artifact = db.get_test_artifact_data(test_id, 'stats_summary')
-        if artifact:
-            summary = db.get_test_artifact_data(test_id, 'stats_summary')[0]
-            if summary:
-                summaries.append(json.loads(summary))
+        artifact = db.get_test_artifact_data(test_id, 'stats_summary', 'stats_summary.{}.json'.format(test_id))
+        if artifact and artifact[0]:
+            summaries.append(json.loads(artifact[0]))
     return summaries
 
 @app.route('/api/series/<series>/<start_timestamp>/<end_timestamp>/summaries')
-def get_series_summaries( series, start_timestamp, end_timestamp):
-    summaries = get_series_summaries_impl( series, start_timestamp, end_timestamp)
-    #Construct the response in two passes, first sort the data points on the UUID
-    #Then denormalize to arrays for each metric
-    #Operation -> revision label -> uuid (for ordering) -> metrics as a bloc
-    #Then do Operation -> revision label -> metrics as arrays (already sorted)
+def get_series_summaries(series, start_timestamp, end_timestamp):
+    summaries = get_series_summaries_impl(series, start_timestamp, end_timestamp)
+    # Construct the response in two passes, first sort the data points on the UUID
+    # Then denormalize to arrays for each metric
+    # Operation -> revision label -> uuid (for ordering) -> metrics as a bloc
+    # Then do Operation -> revision label -> metrics as arrays (already sorted)
     byOperation = {}
 
     for summary in summaries:
-        #First get everything sorted by operation, revision label (not actual revision branch/tag,sha), test id
+        # First get everything sorted by operation, revision label (not actual revision branch/tag,sha), test id
         for stat in summary['stats']:
             operationStats = byOperation.setdefault(stat['test'], {})
             revisionStats = operationStats.setdefault(stat['label'], OrderedDict())
@@ -459,7 +457,7 @@ def get_series_summaries( series, start_timestamp, end_timestamp):
             del stat['test']
             del stat['label']
 
-    #Now flatten the entire thing to arrays for each operation -> revision
+    # Now flatten the entire thing to arrays for each operation -> revision
     summaries = {}
     for operation in byOperation:
         newOperation = summaries.setdefault(operation, {})
@@ -475,7 +473,7 @@ def get_series_summaries( series, start_timestamp, end_timestamp):
                     else:
                         statsArray.append(value)
 
-    #Wrapper object of facilitate adding fields later
+    # Wrapper object of facilitate adding fields later
     jsobj = { 'summaries' : summaries }
 
     if 'true' == request.args.get('pretty', 'True').lower():
@@ -495,11 +493,12 @@ def construct_series_graph_url( series, start_timestamp, end_timestamp, operatio
     redirectURL += "&metric={metric}"
     redirectURL += "&show_aggregates=false"
     redirectURL += "&operation={operation}"
-    return redirectURL.format( series=series, start_timestamp=start_timestamp, end_timestamp=end_timestamp, operation=operation, metric=metric)
+    return redirectURL.format(series=series, start_timestamp=start_timestamp, end_timestamp=end_timestamp,
+                              operation=operation, metric=metric)
 
 @app.route('/api/series/<series>/<start_timestamp>/<end_timestamp>/graph/<operation>/<metric>')
 def get_series_graph( series, start_timestamp, end_timestamp, operation, metric):
-    redirectURL = construct_series_graph_url( series, start_timestamp, end_timestamp, operation, metric)
+    redirectURL = construct_series_graph_url(series, start_timestamp, end_timestamp, operation, metric)
     return redirect(redirectURL)
 
 @app.route('/api/series/<series>/<start_timestamp>/<end_timestamp>/graph/<operation>/<metric>.png')
