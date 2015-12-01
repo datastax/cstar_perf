@@ -36,7 +36,7 @@ h3 {
   console</a> to monitor progress</span>
   {% endif %}
 </td></tr>
-{% if test['status'] == 'in_progress' %}
+{% if test['status'] != 'completed' %}
     <tr><td>Progress</td><td><span id="progress_msg">{{test['progress_msg']}}</span></td></tr>
 {% endif %}
 <tr><td>Date Scheduled</td><td>{{test['scheduled_date']}}</td></tr>

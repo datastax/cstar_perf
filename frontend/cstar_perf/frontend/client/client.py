@@ -534,8 +534,12 @@ class JobRunner(object):
                         self.__ws_client.send(data)
                     self.__ws_client.send(base64.b64encode(EOF_MARKER))
                     response = self.__ws_client.receive(response, assertions={'message': 'chunk_received', 'done': True})
-                    if chunk_sha.hexdigest() == response['chunk_sha']:
+
+                    if 'chunk_sha' in response and chunk_sha.hexdigest() == response['chunk_sha']:
                         matching_uploaded_chunks += 1
+                    else:
+                        log.error('chunk upload failed: response[{}], objectid: [{}], chunkid: [{}], totalchunks: [{}], name: [{}]'
+                                  .format(response, object_id, chunk_id, num_chunks, name))
         finally:
             uploaded_successfully = matching_uploaded_chunks == num_chunks
             log.info("UPLOADED SUCCESS: {}".format(uploaded_successfully))
