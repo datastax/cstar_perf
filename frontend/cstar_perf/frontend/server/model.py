@@ -392,7 +392,13 @@ class Model(object):
             test_id = uuid.UUID(test_id)
         rows = session.execute(self.__prepared_statements['select_test_artifact_data'], (test_id, artifact_type, artifact_name))
         if rows:
-            return (rows[0].artifact.decode("hex") if rows[0].artifact else None), rows[0].object_id, rows[0].artifact_available
+            artifact = rows[0]
+            # new chunked artifact and available
+            if artifact.object_id and artifact.artifact_available:
+                return ''.join(self.generate_object_by_chunks(artifact.object_id)), artifact.object_id, artifact.artifact_available
+            # old style artifact
+            else:
+                return (artifact.artifact.decode("hex") if artifact.artifact else None), artifact.object_id, artifact.artifact_available
         return None
 
     ################################################################################
