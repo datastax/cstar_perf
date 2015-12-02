@@ -2,7 +2,7 @@ import os
 import sh
 
 
-def setup(flamegraph_directory, flamegraph_path, perf_map_agent_path):
+def setup(flamegraph_directory, flamegraph_path, perf_map_agent_path, java_home):
     """Setup deps for flamegraph"""
 
     # Create the flamegraph directory and clean the directory
@@ -14,7 +14,7 @@ def setup(flamegraph_directory, flamegraph_path, perf_map_agent_path):
 
     if not os.path.exists(perf_map_agent_path):
         sh.git('clone', 'https://github.com/jrudolph/perf-map-agent', perf_map_agent_path)
-        sh.cmake('.', _cwd=perf_map_agent_path)
+        sh.cmake('.', _cwd=perf_map_agent_path, _env={'JAVA_HOME': java_home})
         sh.make(_cwd=perf_map_agent_path)
 
     if not os.path.exists(flamegraph_path):

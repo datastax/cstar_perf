@@ -69,10 +69,11 @@ def setup():
     logger.info("Setup Flamegraph dependencies")
     flamegraph_directory = get_flamegraph_directory()
     perf_map_agent_path, flamegraph_path = get_flamegraph_paths()
+    java_home = common_module.config['jdk7_home']
     common_module.run_python_script(
         'flamegraph',
         'setup',
-        '"{}", "{}", "{}"'.format(flamegraph_directory, flamegraph_path, perf_map_agent_path)
+        '"{}", "{}", "{}", "{}"'.format(flamegraph_directory, flamegraph_path, perf_map_agent_path, java_home)
     )
 
 
