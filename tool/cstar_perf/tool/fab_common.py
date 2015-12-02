@@ -464,7 +464,7 @@ def start():
         env += "JVM_OPTS=\"$JVM_OPTS -XX:+PreserveFramePointer\""
 
     fab.puts("running with token allocation type: {}".format(config['token_allocation']))
-    if config['use_vnodes'] and config['token_allocation'] != 'random':
+    if config['use_vnodes'] and config['token_allocation'] in ('static-random', 'static-algorithmic'):
         env += "JVM_OPTS=\"$JVM_OPTS -Dcassandra.initial_token={}\"\n".format(
             get_static_vnode_tokens(fab.env.host,
                                     fab.env.hosts,
