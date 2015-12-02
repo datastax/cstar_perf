@@ -101,7 +101,7 @@ def stop_perf_agent():
 def start_perf_agent(rev_num):
     logger.info("Starting Flamegraph perf agent")
     perf_map_agent_path, flamegraph_path = get_flamegraph_paths()
-    java_home = os.path.expanduser(common_module.config['java_home'])
+    java_home = common_module.config['jdk7_home']
     output = common_module.run_python_script(
         'utils',
         'find_process_pid',
