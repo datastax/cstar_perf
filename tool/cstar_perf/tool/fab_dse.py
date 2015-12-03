@@ -1,12 +1,13 @@
 import os
-import requests
-import yaml
 import re
 from urlparse import urljoin
+
+import yaml
 from fabric import api as fab
 from fabric.state import env
 
 from util import download_file, download_file_contents, digest_file
+
 
 # I don't like global ...
 global config
