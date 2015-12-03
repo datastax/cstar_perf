@@ -434,9 +434,11 @@ def get_series_summaries_impl(series, start_timestamp, end_timestamp):
     series = db.get_series(series, start_timestamp, end_timestamp)
     summaries = []
     for test_id in series:
-        artifact = db.get_test_artifact_data(test_id, 'stats_summary', 'stats_summary.{}.json'.format(test_id))
-        if artifact and artifact[0]:
-            summaries.append(json.loads(artifact[0]))
+        status = db.get_test_status(test_id)
+        if status == 'completed':
+            artifact = db.get_test_artifact_data(test_id, 'stats_summary', 'stats_summary.{}.json'.format(test_id))
+            if artifact and artifact[0]:
+                summaries.append(json.loads(artifact[0]))
     return summaries
 
 @app.route('/api/series/<series>/<start_timestamp>/<end_timestamp>/summaries')
