@@ -249,7 +249,10 @@ def bootstrap(git_fetch=True, revision_override=None):
 
     fab.run('mkdir -p fab')
 
-    if config['product'] not in ('cassandra', 'dse'):
+    if config['product'] in (None, ''):
+        logger.warn("revision product was not set -- defaulting to cassandra")
+        config['product'] = 'cassandra'
+    elif config['product'] not in ('cassandra', 'dse'):
         raise ValueError("Invalid product. Should be cassandra or dse")
 
     product = dse if config['product'] == 'dse' else cstar
