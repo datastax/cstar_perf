@@ -543,8 +543,8 @@ def get_series_graph_png_cached( series, age, operation, metric, expires, invali
     return stupid_cache.stupid_cache_get("/tmp", cache_key, loader, expires, invalidate)
 
 @app.route('/api/series/<series>/<age>/graph/cached/<operation>/<metric>.png')
-def get_series_graph_png_cached_caching( series, age, operation, metric):
-    return Response(response=get_series_graph_png_cached( series, age, operation, metric, 0, False),
+def get_series_graph_png_cached_caching(series, age, operation, metric):
+    return Response(response=get_series_graph_png_cached(series, age, operation, metric, 0, False),
                     status=200,
                     mimetype='application/png')
 

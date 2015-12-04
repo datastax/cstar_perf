@@ -43,10 +43,11 @@ def get_tagged_releases(series='stable'):
     releases.sort(reverse=True)
 
     stable_major_version = LooseVersion(str(releases[0].version[0]) + "." + str(releases[0].version[1]))
-    stable_releases = [release for release in releases if r >= stable_major_version]
-    oldstable_releases = [release for release in releases if r not in stable_releases]
+    stable_releases = [release for release in releases if release >= stable_major_version]
+
+    oldstable_releases = [release for release in releases if release not in stable_releases]
     oldstable_major_version = LooseVersion(str(oldstable_releases[0].version[0]) + "." + str(oldstable_releases[0].version[1]))
-    oldstable_releases = [release for release in oldstable_releases if r >= oldstable_major_version]
+    oldstable_releases = [release for release in oldstable_releases if release >= oldstable_major_version]
 
     if series == 'testing':
         return ['cassandra-' + release.vstring for release in releases]
@@ -156,7 +157,8 @@ def get_sha_from_build_days_ago(cstar_server, day_deltas, revision):
 
         for test_id in test_ids_by_distance_asc[:30]:
             print 'trying {}'.format(test_id)
-            stats_url = '/'.join([cstar_server, 'tests', 'artifacts', str(test_id), 'stats'])
+            stats_url = '/'.join(
+                [cstar_server, 'tests', 'artifacts', str(test_id), 'stats', 'stats.{}.json'.format(str(test_id))])
             try:
                 stats_json = requests.get(stats_url).text
             except requests.exceptions.ConnectionError as e:
