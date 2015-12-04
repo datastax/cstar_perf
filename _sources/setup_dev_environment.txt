@@ -11,6 +11,43 @@ environment for development or testing, all on a single machine.
 cstar_perf. Any real-world benchmarks should not be done from
 within docker.**
 
+Setup from scratch on OSX 10.10+ (lower might work)
+---------------------------------------------------
+This document will go through all the steps necessary to setup your
+environment on a fresh OSX machine.
+
+Install VirtualBox_ and VirtualBox_Extension_Pack_
+
+.. _VirtualBox: https://www.virtualbox.org/wiki/Downloads
+.. _VirtualBox_Extension_Pack: https://www.virtualbox.org/wiki/Downloads
+
+Install docker either from Docker_Toolbox_ or via Homebrew::
+
+    brew install docker docker-machine docker-compose
+
+.. _Docker_Toolbox: http://docs.docker.com/mac/step_one/
+
+Create a docker base virtual machine -- adjusting the cpu and memory based on your plans and system::
+
+    docker-machine create --driver virtualbox --virtualbox-cpu-count "4" --virtualbox-memory "6144" cstar-perf
+
+Start the docker-machine image::
+
+    docker-machine start cstar-perf
+
+Setup environment vars for docker (must be run when starting a new shell::
+
+    eval "$(docker-machine env cstar-perf)"
+
+Setup routing to access docker containers:
+Get the IP address of the docker-machine host::
+
+    docker-machine inspect cstar-perf | grep "IPAddress"
+
+Add route for docker containers (must be re-run after reboot / or add it to a startup script)::
+
+    sudo route -n add 172.17.0.0/16 <<IP ADDRESS FROM ABOVE COMMAND>>
+
 Setup from scratch on Ubuntu 14.04
 ----------------------------------
 
@@ -28,6 +65,9 @@ Add your normal user account to the docker group::
 
     sudo usermod -aG docker $USER
     newgrp docker
+
+Setup cstar_perf code and build docker images
+---------------------------------------------
 
 Checkout cstar_perf source code someplace::
 
@@ -74,6 +114,10 @@ Launch a node for the frontend::
 
     cstar_docker frontend test_frontend -m
 
+-------
+
+**If your base machine is Ubuntu:**
+
 If you are running on a machine with a webbrowser installed, the home
 page of the frontend should automatically load to
 http://localhost:8000. The frontend container is only bound to the
@@ -86,6 +130,16 @@ machine running cstar_perf::
     ssh your_cstar_perf_server -L 8000:localhost:8000 -N &
 
 Then you should be able to load http://localhost:8000 normally.
+
+**If your base machine is OSX:**
+
+You can load the frontend by it's IP address.  This can be found by::
+
+    docker inspect test_frontend_00 | grep "IPAddress"
+
+And visiting that IP on port 8000. ex: http://172.17.0.4:8000/
+
+-------
 
 At this point, the frontend can't run any tests because it still
 doesn't know about the test cluster. To link the frontend to the test
@@ -107,6 +161,28 @@ arguments::
 
 For example, you can ssh directly to any of the nodes, or start, stop,
 or destroy them.
+
+-------
+
+**OSX Users**
+
+You can now edit code in your choice of editor and it will be updated
+in the docker container.  If you make edits that need a restart to either
+the client or server service, ssh in a use supervisord_.
+
+server restart::
+
+    cstar_docker ssh test_frontend
+    sudo supervisorctl -c /supervisord.conf restart cstar_perf_server
+
+client restart::
+
+    cstar_docker ssh test_cluster
+    sudo supervisorctl -c /supervisord.conf restart cstar_perf_client
+
+-------
+
+.. _supervisord: http://supervisord.org/
 
 If you make useful modifications to cstar_perf, please consider
 opening a pull-request on the `cstar_perf github page`_
