@@ -31,6 +31,7 @@ def create_baseline_config(title=None, series=None):
         r['java_home'] = ("~/fab/jvms/jdk1.7.0_71"
                           if 'oldstable' in r['label']
                           else "~/fab/jvms/jdk1.8.0_45")
+        r['product'] = 'cassandra'
 
     config['title'] = 'Daily C* regression suite - {}'.format(datetime.datetime.now().strftime("%Y-%m-%d"))
     config['product'] = 'cassandra'
@@ -49,11 +50,17 @@ def test_simple_profile(title='Read/Write', cluster=DEFAULT_CLUSTER_NAME, load_r
     config['cluster'] = cluster
     config['operations'] = [
         {'operation': 'stress',
-         'command': 'write n={load_rows} -rate threads={threads}'.format(**locals())},
+         'stress_revision': 'apache/trunk',
+         'command': 'write n={load_rows} -rate threads={threads}'.format(**locals()),
+         'wait_for_compaction': True},
         {'operation': 'stress',
-         'command': 'read n={read_rows} -rate threads={threads}'.format(**locals())},
+         'stress_revision': 'apache/trunk',
+         'command': 'read n={read_rows} -rate threads={threads}'.format(**locals()),
+         'wait_for_compaction': True},
         {'operation': 'stress',
-         'command': 'read n={read_rows} -rate threads={threads}'.format(**locals())}
+         'stress_revision': 'apache/trunk',
+         'command': 'read n={read_rows} -rate threads={threads}'.format(**locals()),
+         'wait_for_compaction': True}
     ]
     if yaml:
         config['yaml'] = yaml
@@ -67,15 +74,22 @@ def compaction_profile(title='Compaction', cluster=DEFAULT_CLUSTER_NAME, rows=65
     config['cluster'] = cluster
     config['operations'] = [
         {'operation': 'stress',
-         'command': 'write n={rows} -rate threads={threads}'.format(rows=rows, threads=threads)},
+         'stress_revision': 'apache/trunk',
+         'command': 'write n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+         'wait_for_compaction': True},
         {'operation': 'nodetool',
          'command': 'flush'},
         {'operation': 'nodetool',
          'command': 'compact'},
         {'operation': 'stress',
-         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads)},
+         'stress_revision': 'apache/trunk',
+         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+         'wait_for_compaction': True},
         {'operation': 'stress',
-         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads)}]
+         'stress_revision': 'apache/trunk',
+         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+         'wait_for_compaction': True}
+    ]
 
     scheduler = Scheduler(CSTAR_SERVER)
     scheduler.schedule(config)
@@ -90,15 +104,22 @@ def repair_profile(title='Repair', cluster=DEFAULT_CLUSTER_NAME, rows=65000000, 
     config['cluster'] = cluster
     config['operations'] = [
         {'operation': 'stress',
-         'command': 'write n={rows} -rate threads={threads}'.format(rows=rows, threads=threads)},
+         'stress_revision': 'apache/trunk',
+         'command': 'write n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+         'wait_for_compaction': True},
         {'operation': 'nodetool',
          'command': 'flush'},
         {'operation': 'nodetool',
          'command': 'repair'},
         {'operation': 'stress',
-         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads)},
+         'stress_revision": 'apache/trunk',
+         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+         'wait_for_compaction': True},
         {'operation': 'stress',
-         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads)}]
+         'stress_revision': 'apache/trunk',
+         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+         'wait_for_compaction': True}
+    ]
 
     scheduler = Scheduler(CSTAR_SERVER)
     scheduler.schedule(config)
@@ -118,17 +139,23 @@ def compaction_strategies_profile(title='Compaction Strategy', cluster=DEFAULT_C
 
     config['operations'] = [
         {'operation': 'stress',
-         'command': 'write n={rows} -rate threads={threads} '
-                    '-schema {schema_options}'.format(rows=rows, threads=threads,
-                                                      schema_options=schema_options)},
+         'stress_revision': 'apache/trunk',
+         'command': 'write n={rows} -rate threads={threads} -schema {schema_options}'
+             .format(rows=rows, threads=threads, schema_options=schema_options),
+         'wait_for_compaction': True},
         {'operation': 'nodetool',
          'command': 'flush'},
         {'operation': 'nodetool',
          'command': 'compact'},
         {'operation': 'stress',
-         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads)},
+         'stress_revision': 'apache/trunk',
+         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+         'wait_for_compaction': True},
         {'operation': 'stress',
-         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads)}]
+         'stress_revision': 'apache/trunk',
+         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+         'wait_for_compaction': True}
+    ]
 
     scheduler = Scheduler(CSTAR_SERVER)
     scheduler.schedule(config)
