@@ -421,7 +421,10 @@ def get_test(test_id):
 @app.route('/api/series/<series>/<start_timestamp>/<end_timestamp>')
 def get_series( series, start_timestamp, end_timestamp):
     series = db.get_series( series, start_timestamp, end_timestamp)
-    jsobj = { 'series' : series }
+    # barf -- like below this sucks -- changing the series table to include status needs to be done
+    valid_jobs = [job_id for job_id in series if db.get_test_status(job_id) == 'completed']
+
+    jsobj = {'series': valid_jobs}
     if 'true' == request.args.get('pretty', 'True').lower():
         response = json.dumps(obj=jsobj, sort_keys=True, indent=4, separators=(',', ': '))
     else:
