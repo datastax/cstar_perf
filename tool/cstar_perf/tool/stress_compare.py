@@ -165,9 +165,17 @@ def stress_compare(revisions,
         for operation_i, operation in enumerate(operations, 1):
             try:
                 start = datetime.datetime.now()
-                stats = {"id":str(uuid.uuid1()), "type":operation['type'],
-                         "revision": revision, "git_id": git_id, "start_date":start.isoformat(),
-                         "label":revision_config.get('label', revision_config['revision'])}
+                stats = {
+                    "id": str(uuid.uuid1()),
+                    "type": operation['type'],
+                    "revision": revision,
+                    "git_id": git_id,
+                    "start_date": start.isoformat(),
+                    "label": revision_config.get('label', revision_config['revision']),
+                    "test": '{operation_i}_{operation}'.format(
+                        operation_i=operation_i,
+                        operation=operation['type'])
+                }
 
                 if operation['type'] == 'stress':
                     last_stress_operation_id = stats['id']
@@ -186,7 +194,7 @@ def stress_compare(revisions,
                     stats['command'] = cmd
                     stats['intervals'] = []
                     stats['test'] = '{operation_i}_{operation}'.format(
-                        operation_i=operation_i, operation=cmd.strip().split(' ')[0]).replace(" ","_")
+                        operation_i=operation_i, operation=cmd.strip().split(' ')[0]).replace(" ", "_")
                     logger.info('Running stress operation : {cmd}  ...'.format(cmd=cmd))
                     # Run stress:
                     # (stress takes the stats as a parameter, and adds
