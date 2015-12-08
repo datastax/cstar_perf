@@ -456,6 +456,9 @@ def get_series_summaries(series, start_timestamp, end_timestamp):
     for summary in summaries:
         # First get everything sorted by operation, revision label (not actual revision branch/tag,sha), test id
         for stat in summary['stats']:
+            if 'test' not in stat:
+                log.error("stat summary without test key: {}".format(stat['id']))
+                continue
             operationStats = byOperation.setdefault(stat['test'], {})
             revisionStats = operationStats.setdefault(stat['label'], OrderedDict())
             revisionStats[uuid.UUID(stat['id'])] = stat
