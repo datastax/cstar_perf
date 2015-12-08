@@ -20,6 +20,7 @@
 from StringIO import StringIO
 import time
 from fabric import api as fab
+from fabric.tasks import execute
 import os
 import yaml
 from cluster_config import config as cluster_config
@@ -32,6 +33,7 @@ from util import random_token
 import fab_dse as dse
 import fab_cassandra as cstar
 import fab_flamegraph as flamegraph
+import fab_profiler as profiler
 import logging
 import pkg_resources
 
@@ -465,6 +467,10 @@ def start():
     # Flamegraph
     if flamegraph.is_enabled(config):
         env += "JVM_OPTS=\"$JVM_OPTS -XX:+PreserveFramePointer\""
+
+    if profiler.yourkit_is_enabled(config):
+        execute(profiler.yourkit_clean)
+        env += profiler.yourkit_get_jvm_opts()
 
     fab.puts("running with token allocation type: {}".format(config['token_allocation']))
     if config['use_vnodes'] and config['token_allocation'] in ('static-random', 'static-algorithmic'):

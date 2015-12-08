@@ -2,6 +2,7 @@ from benchmark import (bootstrap, stress, nodetool, teardown,
                        log_stats, log_set_title, retrieve_logs, config)
 from fabric.tasks import execute
 import fab_flamegraph as flamegraph
+import fab_profiler as profiler
 import fab_common as common
 import argparse
 import sys
@@ -23,6 +24,8 @@ def bootstrap_cluster(cfg):
     flamegraph.set_common_module(common)
     if flamegraph.is_enabled():
         execute(flamegraph.setup)
+
+    profiler.set_common_module(common)
 
     git_id = bootstrap(config, destroy=True)
     return git_id
