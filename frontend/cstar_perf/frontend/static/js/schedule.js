@@ -79,6 +79,10 @@ var addRevisionDiv = function(animate){
         "             <option value='static-random'>vnodes (static-random)</option>"+
         "             <option value='static-algorithmic'>vnodes (static-algorithmic)</option>"+
         "          </select>" +
+        "          <div class='checkbox'>" +
+        "            <input type='checkbox' class='options-yourkit' id='{revision_id}-options-yourkit'/>" +
+        "            <label for='{revision_id}-options-yourkit'>Enable yourkit profiling</label>" +
+        "	  </div>" +
         "        </div>" +
         "      </div>" +
         "    </div>";
@@ -355,7 +359,8 @@ var createJob = function() {
             options: {
                 'use_vnodes': revision.find(".token-allocation-select").val() != 'non-vnodes',
                 'token_allocation': revision.find(".token-allocation-select").val()
-            }
+            },
+            yourkit_profiler: revision.find(".options-yourkit").is(":checked")
         };
     });
 
@@ -423,6 +428,7 @@ var cloneExistingJob = function(job_id) {
             if (revision['options'] == undefined) {
                 revision['options'] = {};
             }
+            $("#revision-"+rev+"-options-yourkit").prop("checked", revision['yourkit_profiler']);
             update_cluster_options();
             update_cluster_selections(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);

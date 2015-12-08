@@ -1,3 +1,4 @@
+import os
 import sh
 
 
@@ -26,6 +27,15 @@ def find_and_kill_process(process_line, child_process=False):
 
     pid = find_process_pid(process_line, child_process)
     kill_process(pid)
+
+
+def clean_directory(directory):
+    """Remove all files in a directory"""
+
+    for filename in os.listdir(directory):
+        f = os.path.join(directory, filename)
+        if os.path.isfile(f):
+            sh.rm(f)
 
 
 def main():

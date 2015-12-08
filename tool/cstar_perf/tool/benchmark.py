@@ -28,6 +28,7 @@ import fab_common as common
 import fab_dse as dse
 import fab_cassandra as cstar
 import fab_flamegraph as flamegraph
+import fab_profiler as profiler
 
 # Then import our cluster specific config:
 from cluster_config import config
@@ -501,6 +502,10 @@ def retrieve_fincore_logs(local_directory):
 def retrieve_flamegraph(local_directory, rev_num):
     """Retrieve each node's flamegraph data and svg to the given local directory."""
     execute(flamegraph.copy_flamegraph, local_directory=local_directory, rev_num=rev_num)
+
+def retrieve_yourkit(local_directory, rev_num):
+    """Retrieve each node's yourkit data to the given local directory."""
+    execute(profiler.copy_yourkit, local_directory=local_directory, rev_num=rev_num)
 
 def start_fincore_capture(interval=10):
     """Start linux-fincore monitoring of Cassandra data files on each node"""

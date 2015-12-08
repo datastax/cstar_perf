@@ -314,8 +314,10 @@ class JobRunner(object):
         # Find the log tarball for each revision by introspecting the stats json:
         system_logs = []
         flamegraph_logs = []
+        yourkit_logs = []
         log_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'logs')
         flamegraph_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'flamegraph')
+        yourkit_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'yourkit')
         #Create a stats summary file without voluminous interval data
         if os.path.isfile(stats_path):
             with open(stats_path) as stats:
@@ -323,8 +325,11 @@ class JobRunner(object):
                 for rev in stats['revisions']:
                     system_logs.append(os.path.join(log_dir, "{name}.tar.gz".format(name=rev['last_log'])))
                     fg_path = os.path.join(flamegraph_dir, "{name}.tar.gz".format(name=rev['last_log']))
+                    yourkit_path = os.path.join(yourkit_dir, "{name}.tar.gz".format(name=rev['last_log']))
                     if os.path.exists(fg_path):
                         flamegraph_logs.append(fg_path)
+                    if os.path.exists(yourkit_path):
+                        yourkit_logs.append(yourkit_path)
                 with open(summary_path, 'w') as summary:
                     hadStats = False
                     for op in stats['stats']:
@@ -385,6 +390,25 @@ class JobRunner(object):
             finally:
                 shutil.rmtree(tmptardir)
 
+        # Make a new tarball containing all the flamegraph and data
+        if yourkit_logs:
+            tmptardir = tempfile.mkdtemp()
+            try:
+                yourkit_tmp_dir = os.path.join(tmptardir, 'yourkit.{test_id}'.format(test_id=job['test_id']))
+                os.mkdir(yourkit_tmp_dir)
+                for x, yourkit in enumerate(yourkit_logs, 1):
+                    with tarfile.open(yourkit) as tar:
+                        tar.extractall(yourkit_tmp_dir)
+                        tmp_dir = os.path.join(yourkit_tmp_dir, tar.getnames()[0])
+                        os.rename(tmp_dir, os.path.join(yourkit_tmp_dir, 'revision_{x:02d}'.format(x=x)))
+
+                yourkit_job_path = os.path.join(job_dir, 'yourkit.{test_id}.tar.gz'.format(test_id=job['test_id']))
+                with tarfile.open(yourkit_job_path, 'w:gz') as tar:
+                    with cd(tmptardir):
+                        tar.add('yourkit.{test_id}'.format(test_id=job['test_id']))
+                assert os.path.exists(yourkit_job_path)
+            finally:
+                shutil.rmtree(tmptardir)
 
         ## Stream artifacts
         ## Write final job status to 0.job_status file
@@ -421,6 +445,7 @@ class JobRunner(object):
           system_logs - cassandra logs
           flamegraph_logs - data logs and graphs
           flamegraph - all flamegraphs
+          yourkit - yourkit data
 
         returns a namedtuple of sent, failed to transmit, or missing artifacts.
         """
@@ -456,7 +481,8 @@ class JobRunner(object):
                 ('stats_summary', 'stats_summary.{job_id}.json', False),
                 ('system_logs', 'cassandra_logs.{job_id}.tar.gz', True),
                 ('flamegraph_logs', 'flamegraph_logs.{job_id}.tar.gz', True),
-                ('flamegraph', 'flamegraph_{job_id}*.svg', False)):
+                ('flamegraph', 'flamegraph_{job_id}*.svg', False),
+                ('yourkit', 'yourkit.{job_id}.tar.gz', True)):
             stream(kind, pattern, binary)
 
         return namedtuple('StreamedArtifacts', 'streamed failed missing')(streamed, failed, missing)

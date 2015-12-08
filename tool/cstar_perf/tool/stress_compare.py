@@ -2,11 +2,12 @@ from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash,
                        log_stats, log_set_title, log_add_data, retrieve_logs, restart,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
                        drop_page_cache, wait_for_compaction, setup_stress, clean_stress,
-                       get_localhost, retrieve_flamegraph)
+                       get_localhost, retrieve_flamegraph, retrieve_yourkit)
 from benchmark import config as fab_config, cstar, dse, set_cqlsh_path, set_nodetool_path
 import fab_common as common
 import fab_cassandra as cstar
 import fab_flamegraph as flamegraph
+import fab_profiler as profiler
 from fabric import api as fab
 from fabric.tasks import execute
 import os
@@ -116,10 +117,13 @@ def stress_compare(revisions,
     with common.fab.settings(hosts=[localhost_entry]):
         execute(cstar.update_cassandra_git)
 
-    # Flamegraph Setup
     flamegraph.set_common_module(common)
+    profiler.set_common_module(common)
+
+    # Flamegraph Setup
     if flamegraph.is_enabled():
         execute(flamegraph.setup)
+
 
     clean_stress()
     stress_revisions = set([operation['stress_revision'] for operation in operations if 'stress_revision' in operation])
@@ -270,10 +274,23 @@ def stress_compare(revisions,
                            'subtitle': subtitle,
                            'revisions': revisions})
 
+        # Try to stop cstar gently
+        execute(cstar.stop, True, revision_config)
+
         if revisions[-1].get('leave_data', leave_data):
             teardown(destroy=False, leave_data=True)
         else:
             teardown(destroy=True, leave_data=False)
+
+        if profiler.yourkit_is_enabled(revision_config):
+            yourkit_config = profiler.yourkit_get_config()
+            yourkit_dir = os.path.join(os.path.expanduser('~'),'.cstar_perf', 'yourkit')
+            yourkit_test_dir = os.path.join(yourkit_dir, last_stress_operation_id)
+            retrieve_yourkit(yourkit_test_dir, rev_num+1)
+            sh.tar('cfvz', "{}.tar.gz".format(stats['id']),
+                   last_stress_operation_id, _cwd=yourkit_dir)
+            shutil.rmtree(yourkit_test_dir)
+
 
 def main():
     parser = argparse.ArgumentParser(description='stress_compare')
