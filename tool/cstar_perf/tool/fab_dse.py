@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from urlparse import urljoin
@@ -7,6 +8,10 @@ from fabric import api as fab
 from fabric.state import env
 
 from util import download_file, download_file_contents, digest_file
+
+logging.basicConfig()
+logger = logging.getLogger('dse')
+logger.setLevel(logging.INFO)
 
 
 # I don't like global ...
@@ -42,7 +47,7 @@ def setup(cfg):
     download_tarball = True
 
     revision = config['revision']
-    print('Using DSE revision: {rev}'.format(rev=revision))
+    logger.info('Using DSE revision: {rev}'.format(rev=revision))
     if revision.startswith('bdp/'):
         download_tarball = False
         oauth_token = config.get('dse_source_build_oauth_token', None)
@@ -82,10 +87,10 @@ def download_binaries():
     assert(len(correct_sha) == 64, 'Failed to download sha file: {}'.format(correct_sha))
 
     if os.path.exists(filename):
-        print("Already in cache: {}".format(filename))
+        logger.info("Already in cache: {}".format(filename))
         real_sha = digest_file(filename)
         if real_sha != correct_sha:
-            print("Invalid SHA for '{}'. It will be removed".format(filename))
+            logger.info("Invalid SHA for '{}'. It will be removed".format(filename))
             os.remove(filename)
         else:
             return
@@ -220,7 +225,7 @@ def _checkout_dse_branch_and_build_tarball_from_source(branch):
                           capture=True)
     dse_tarball = os.path.basename(path_name)
 
-    print('Created tarball from source: {tarball}'.format(tarball=dse_tarball))
+    logger.info('Created tarball from source: {tarball}'.format(tarball=dse_tarball))
     fab.local('cp {bdp_git}/build/{tarball} {dse_cache}'.format(bdp_git=bdp_git, dse_cache=dse_cache, tarball=dse_tarball))
 
     # remove the maven & gradle settings after the tarball got created
