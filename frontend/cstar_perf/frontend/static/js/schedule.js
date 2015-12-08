@@ -453,7 +453,9 @@ var cloneExistingJob = function(job_id) {
             update_cluster_selections(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);
                 $("#revision-"+rev+"-product").val(revision['product']);
-                $("#revision-"+rev+"-token-allocation").val(revision['options']['token_allocation']);
+                if(revision['options']['token_allocation']) {
+                    $("#revision-" + rev + "-token-allocation").val(revision['options']['token_allocation']);
+                }
                 if (revision['product'] == 'dse') {
                     $("#revision-"+rev+"-dse_yaml_div").show();
                     $("#revision-"+rev+"-dse_node_type_div").show();
