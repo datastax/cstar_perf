@@ -95,6 +95,9 @@ h3 {
       {% if revision['dse_yaml'] %}
         <tr><td>dse.yaml</td><td><pre>{{revision['dse_yaml']}}</pre></td></tr>
       {% endif %}
+      {% if revision['dse_node_type'] %}
+        <tr><td>DSE Node Type</td><td><pre>{{revision['dse_node_type']}}</pre></td></tr>
+      {% endif %}
       {% if revision['env'] %}
         <tr><td>Environment</td><td><pre>{{revision['env']}}</pre></td></tr>
       {% endif %}

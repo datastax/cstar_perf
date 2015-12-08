@@ -85,6 +85,20 @@ var addRevisionDiv = function(animate){
         "	  </div>" +
         "        </div>" +
         "      </div>" +
+        "" +
+        "      <div class='form-group' style='display:block' id='{revision_id}-dse_node_type_div'>" +
+        "        <label class='col-md-4 control-label' for='{revision_id}-dse_node_type'>DSE Node Type</label>" +
+        "        <div class='col-md-8'>" +
+        "          <select id='{revision_id}-dse_node_type' class='dse_node_type form-control'>" +
+        "                  <option value='cassandra'>Cassandra</option>" +
+        "                  <option value='search'>Search</option>" +
+        "                  <option value='search-analytics'>SearchAnalytics</option>" +
+        "                  <option value='spark'>Spark</option>" +
+        "                  <option value='spark-hadoop'>SparkHadoop</option>" +
+        "                  <option value='hadoop'>Hadoop</option>" +
+        "          </select>" +
+        "        </div>" +
+        "      </div>" +
         "    </div>";
     var newDiv = $(template.format({revision:schedule.n_revisions, revision_id:revision_id}));
     if (animate)
@@ -97,8 +111,9 @@ var addRevisionDiv = function(animate){
     update_cluster_selections();
     update_cluster_options();
 
-    // initially hide the dse yaml settings
+    // initially hide the dse yaml & dse node type settings
     $("#" + revision_id + "-dse_yaml_div").hide();
+    $("#" + revision_id + "-dse_node_type_div").hide();
 
     //Remove revision handler:
     $("#remove-"+revision_id).click(function() {
@@ -326,11 +341,14 @@ var addOperationDiv = function(animate, operationDefaults){
 };
 
 var maybe_show_dse_yaml_div = function(id, value) {
-    id = id.replace("product", "dse_yaml_div")
+    dse_yaml_div_id = id.replace("product", "dse_yaml_div")
+    dse_node_type_div_id = id.replace("product", "dse_node_type_div")
     if (value == "dse") {
-        $("#" + id).show();
+        $("#" + dse_yaml_div_id).show();
+        $("#" + dse_node_type_div_id).show();
     } else {
-        $("#" + id).hide();
+        $("#" + dse_yaml_div_id).hide();
+        $("#" + dse_node_type_div_id).hide();
     }
 }
 
@@ -356,6 +374,7 @@ var createJob = function() {
             dse_yaml: revision.find(".dse_yaml").val(),
             env: revision.find(".env-vars").val(),
             java_home: revision.find(".jvm-select").val(),
+            dse_node_type: revision.find(".dse_node_type").val(),
             options: {
                 'use_vnodes': revision.find(".token-allocation-select").val() != 'non-vnodes',
                 'token_allocation': revision.find(".token-allocation-select").val()
@@ -424,6 +443,7 @@ var cloneExistingJob = function(job_id) {
             $("#revision-"+rev+"-label").val(revision['label']);
             $("#revision-"+rev+"-yaml").val(revision['yaml']);
             $("#revision-"+rev+"-dse_yaml").val(revision['dse_yaml']);
+            $("#revision-"+rev+"-dse_node_type").val(revision['dse_node_type']);
             $("#revision-"+rev+"-env-vars").val(revision['env']);
             if (revision['options'] == undefined) {
                 revision['options'] = {};
@@ -436,6 +456,7 @@ var cloneExistingJob = function(job_id) {
                 $("#revision-"+rev+"-token-allocation").val(revision['options']['token_allocation']);
                 if (revision['product'] == 'dse') {
                     $("#revision-"+rev+"-dse_yaml_div").show();
+                    $("#revision-"+rev+"-dse_node_type_div").show();
                 }
             });
 

@@ -1,14 +1,21 @@
 import os
-import requests
-import yaml
 import re
 from urlparse import urljoin
+import yaml
 from fabric import api as fab
+
 from util import download_file, download_file_contents, digest_file
 
 # I don't like global ...
 global config
 global dse_builds, dse_cache, dse_tarball
+
+DSE_NODE_TYPE_TO_STARTUP_PARAM = {'spark': '-k',
+                                  'hadoop': '-t',
+                                  'cassandra': '',
+                                  'search': '-s',
+                                  'spark-hadoop': '-k -t',
+                                  'search-analytics': '-s -k'}
 
 name = 'dse'
 
@@ -98,10 +105,12 @@ def bootstrap(config):
     return config['revision']
 
 def start(config):
-    fab.puts("Starting DSE Cassandra..")
+    dse_node_type = config.get('dse_node_type', 'cassandra')
+    fab.puts("Starting DSE - Node Type: {node_type}".format(node_type=dse_node_type))
     dse_home = 'DSE_HOME={dse_path}'.format(dse_path=get_dse_path())
-    cmd = 'JAVA_HOME={java_home} {dse_home} nohup {dse_path}/bin/dse cassandra'.format(
-        java_home=config['java_home'], dse_home=dse_home, dse_path=get_dse_path())
+    cmd = 'JAVA_HOME={java_home} {dse_home} nohup {dse_path}/bin/dse cassandra {node_type}'.format(
+        java_home=config['java_home'], dse_home=dse_home, dse_path=get_dse_path(),
+        node_type=DSE_NODE_TYPE_TO_STARTUP_PARAM.get(dse_node_type, ''))
     fab.run(cmd)
 
 def stop(clean, config):
@@ -119,17 +128,14 @@ def _download_jython_if_necessary():
         fab.run("wget http://search.maven.org/remotecontent?filepath=org/python/jython-standalone/2.7-b1/jython-standalone-2.7-b1.jar -O ~/fab/jython.jar")
 
 
-def get_cassandra_config_options(config):
-    """Parse Cassandra's Config class to get all possible config values.
-
-    Unfortunately, some are hidden from the default cassandra.yaml file, so this appears the only way to do this."""
+def _get_config_options(config, config_class='org.apache.cassandra.config.Config'):
     _download_jython_if_necessary()
 
     dse_lib_folder = os.path.join('{dse}'.format(dse=get_dse_path().replace('~', '$HOME')), 'lib', '*')
     cass_lib_folder = os.path.join('{cass}'.format(cass=get_cassandra_path().replace('~', '$HOME')), 'lib', '*')
 
     classpath = ":".join([dse_lib_folder, cass_lib_folder, "$HOME/fab/jython.jar"])
-    cmd = '{java_home}/bin/java -cp "{classpath}" org.python.util.jython -c "import org.apache.cassandra.config.Config as Config; print dict(Config.__dict__).keys()"'.format(java_home=config['java_home'], **locals())
+    cmd = '{java_home}/bin/java -cp "{classpath}" org.python.util.jython -c "import {config_class} as Config; print dict(Config.__dict__).keys()"'.format(java_home=config['java_home'], **locals())
 
     out = fab.run(cmd, combine_stderr=False)
     if out.failed:
@@ -137,6 +143,13 @@ def get_cassandra_config_options(config):
     opts = yaml.load(out)
     p = re.compile("^[a-z][^A-Z]*$")
     return [o for o in opts if p.match(o)]
+
+
+def get_cassandra_config_options(config):
+    """Parse Cassandra's Config class to get all possible config values.
+
+    Unfortunately, some are hidden from the default cassandra.yaml file, so this appears the only way to do this."""
+    return _get_config_options(config=config, config_class='org.apache.cassandra.config.Config')
 
 
 def get_dse_config_options(config):
@@ -144,17 +157,4 @@ def get_dse_config_options(config):
     Parse DSE Config class to get all possible dse.yaml config values
 
     """
-    _download_jython_if_necessary()
-
-    dse_lib_folder = os.path.join('{dse}'.format(dse=get_dse_path().replace('~', '$HOME')), 'lib', '*')
-    cass_lib_folder = os.path.join('{cass}'.format(cass=get_cassandra_path().replace('~', '$HOME')), 'lib', '*')
-
-    classpath = ":".join([dse_lib_folder, cass_lib_folder, "$HOME/fab/jython.jar"])
-    cmd = '{java_home}/bin/java -cp "{classpath}" org.python.util.jython -c "import com.datastax.bdp.config.Config as Config; print dict(Config.__dict__).keys()"'.format(java_home=config['java_home'], **locals())
-
-    out = fab.run(cmd, combine_stderr=False)
-    if out.failed:
-        fab.abort('Failed to run Jython Config parser : ' + out.stderr)
-    opts = yaml.load(out)
-    p = re.compile("^[a-z][^A-Z]*$")
-    return [o for o in opts if p.match(o)]
+    return _get_config_options(config=config, config_class='com.datastax.bdp.config.Config')
