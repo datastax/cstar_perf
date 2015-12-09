@@ -417,6 +417,9 @@ def destroy(leave_data=False):
     if leave_data:
         fab.run('JAVA_HOME={java_home} {nodetool_cmd} drain'.format(java_home=config['java_home'], nodetool_cmd=_nodetool_cmd()), quiet=True)
         fab.run('rm -rf {commitlog}/*'.format(commitlog=config['commitlog_directory']))
+    # Try to kill the process gently first...
+    fab.run('killall java', quiet=True)
+    time.sleep(15)
     fab.run('killall -9 java', quiet=True)
     fab.run('pkill -f "python.*fincore_capture"', quiet=True)
     fab.run('rm -rf fab/cassandra')

@@ -274,9 +274,6 @@ def stress_compare(revisions,
                            'subtitle': subtitle,
                            'revisions': revisions})
 
-        # Try to stop cstar gently
-        execute(cstar.stop, True, revision_config)
-
         if revisions[-1].get('leave_data', leave_data):
             teardown(destroy=False, leave_data=True)
         else:
