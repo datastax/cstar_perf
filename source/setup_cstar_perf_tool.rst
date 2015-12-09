@@ -179,12 +179,19 @@ Here's the config for our example cluster::
         "saved_caches_directory": "/mnt/d2/saved_caches"
     }
 
-If using DSE, you can add the following keys::
+If you want to use DSE and install it from a tarball, you can add the following keys::
 
     "dse_url": "http://my-dse-repo/tar/",
     "dse_username": "XXXX",
     "dse_password": "YYYY"
     
+If you want to use DSE and install it from a source branch, you can add the following keys::
+
+    "dse_source_build_artifactory_url": "https://dse-artifactory-url.com"
+    "dse_source_build_artifactory_username" = "dse-artifactory-username"
+    "dse_source_build_artifactory_password" = "dse-artifactory-password"
+    "dse_source_build_oauth_token" = "dse-oauth-token-for-github-access"
+
 The required settings :
 
 * **hosts** - all of your Cassandra nodes need to be listed here, including hostname and IP address.
