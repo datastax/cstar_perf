@@ -419,7 +419,8 @@ def destroy(leave_data=False):
         fab.run('rm -rf {commitlog}/*'.format(commitlog=config['commitlog_directory']))
     # Try to kill the process gently first...
     fab.run('killall java', quiet=True)
-    time.sleep(15)
+    if profiler.yourkit_is_enabled():
+        time.sleep(300)  # 5 minutes, on the jvm exit, profiling stuff require some time to be dumped
     fab.run('killall -9 java', quiet=True)
     fab.run('pkill -f "python.*fincore_capture"', quiet=True)
     fab.run('rm -rf fab/cassandra')

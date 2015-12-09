@@ -30,6 +30,10 @@ logger.setLevel(logging.INFO)
 
 OPERATIONS = ['stress','nodetool','cqlsh','bash']
 
+flamegraph.set_common_module(common)
+profiler.set_common_module(common)
+
+
 def validate_revisions_list(revisions):
     for rev in revisions:
         assert rev.has_key('revision'), "Revision needs a 'revision' tag"
@@ -116,9 +120,6 @@ def stress_compare(revisions,
     _, localhost_entry = get_localhost()
     with common.fab.settings(hosts=[localhost_entry]):
         execute(cstar.update_cassandra_git)
-
-    flamegraph.set_common_module(common)
-    profiler.set_common_module(common)
 
     # Flamegraph Setup
     if flamegraph.is_enabled():

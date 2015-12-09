@@ -16,16 +16,17 @@ logger.setLevel(logging.INFO)
 
 pristine_config = copy.copy(config)
 
+flamegraph.set_common_module(common)
+profiler.set_common_module(common)
+
+
 def bootstrap_cluster(cfg):
     config = copy.copy(pristine_config)
     config.update(cfg)
 
     # Flamegraph Setup
-    flamegraph.set_common_module(common)
     if flamegraph.is_enabled():
         execute(flamegraph.setup)
-
-    profiler.set_common_module(common)
 
     git_id = bootstrap(config, destroy=True)
     return git_id
