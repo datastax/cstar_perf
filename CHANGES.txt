@@ -1,0 +1,10 @@
+November - December 2015
+ * Yourkit profiling - https://github.com/datastax/cstar_perf/pull/151
+ * Flame graphing - https://github.com/datastax/cstar_perf/pull/125
+ * Chunked artifact storage - https://github.com/datastax/cstar_perf/pull/137
+ * Progress messages - https://github.com/datastax/cstar_perf/pull/137
+ * Choose DSE node type - https://github.com/datastax/cstar_perf/pull/141
+ * dse.yaml support - https://github.com/datastax/cstar_perf/pull/141
+ * Vnode token assignment configurations - https://github.com/datastax/cstar_perf/pull/115
+
+
