@@ -418,6 +418,20 @@ def get_test(test_id):
     except UnknownTestError:
         return make_response(jsonify({'error':'Unknown Test {test_id}.'.format(test_id=test_id)}), 404)
 
+
+@app.route('/api/series')
+def get_series_list():
+    series = db.get_series_list()
+
+    if 'true' == request.args.get('pretty', 'True').lower():
+        response = json.dumps(obj=series, sort_keys=True, indent=4, separators=(',', ': '))
+    else:
+        response = json.dumps(obj=series)
+    return Response(response=response,
+                    status=200,
+                    mimetype='application/json')
+
+
 @app.route('/api/series/<series>/<start_timestamp>/<end_timestamp>')
 def get_series( series, start_timestamp, end_timestamp):
     series = db.get_series( series, start_timestamp, end_timestamp)

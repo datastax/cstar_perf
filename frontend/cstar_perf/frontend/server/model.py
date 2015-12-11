@@ -84,6 +84,7 @@ class Model(object):
         'select_test': "SELECT * FROM tests WHERE test_id = ?;",
         'insert_series': "INSERT INTO test_series (series, test_id) VALUES ( ?, ?);",
         'select_series' : "SELECT test_id from test_series where series = ? AND test_id > ? AND test_id < ?",
+        'select_series_list' : "SELECT DISTINCT series from test_series",
         'get_test_status': "SELECT status FROM tests WHERE test_id = ?;",
         'update_test_set_status': "UPDATE tests SET status = ? WHERE test_id = ?",
         'update_test_set_progress_msg': "UPDATE tests SET progress_msg = ? WHERE test_id = ?",
@@ -256,6 +257,11 @@ class Model(object):
         session = self.get_session()
         series = session.execute(self.__prepared_statements['select_series'], (series, uuid_from_time(start_timestamp), uuid_from_time(end_timestamp)))
         return [str(row.__dict__['test_id']) for row in series]
+
+    def get_series_list(self):
+        session = self.get_session()
+        series = session.execute(self.__prepared_statements['select_series_list'])
+        return [row.__dict__['series'] for row in series if row.__dict__['series'] != 'no_series']
 
     def get_test_status(self, test_id):
         session = self.get_session()
