@@ -33,7 +33,7 @@ class CstarPerfClient(object):
         return "http://{}{}".format(self.server, url)
 
 
-class RegressionSerie(CstarPerfClient):
+class RegressionSeries(CstarPerfClient):
     """Represent a regression serie"""
 
     # Serie name
@@ -52,7 +52,7 @@ class RegressionSerie(CstarPerfClient):
     has_regression = False
 
     def __init__(self, name, start_timestamp, stop_timestamp, **kwargs):
-        super(RegressionSerie, self).__init__(**kwargs)
+        super(RegressionSeries, self).__init__(**kwargs)
 
         self.name = name
         self.start_timestamp = start_timestamp
@@ -62,7 +62,7 @@ class RegressionSerie(CstarPerfClient):
         self.metrics = {}  # metrics per operation
 
     def __repr__(self):
-        return "<RegressionSerie({}, {} tests)>".format(
+        return "<RegressionSeries({}, {} tests)>".format(
             self.name, len(self.job_ids))
 
     def __unicode__(self):
@@ -156,7 +156,7 @@ class RegressionMonitor(CstarPerfClient):
             raise Exception('Unable to fetch series list')
 
         series = json.loads(r.text)
-        return [RegressionSerie(s, tmpstart, tmpstop, server=self.server) for s in series]
+        return [RegressionSeries(s, tmpstart, tmpstop, server=self.server) for s in series]
 
     def run(self):
         series = self._get_series()
@@ -183,7 +183,11 @@ class RegressionMonitor(CstarPerfClient):
                 print 'we have a problem'
 
 def main(args):
-    monitor = RegressionMonitor(server=args.server)
+    monitor = RegressionMonitor(
+        server=args.server,
+        start_timestamp=start_timestamp,
+        stop_timestamp=stop_timestamp
+    )
 
     if args.command == 'run':
         monitor.run()
@@ -197,6 +201,8 @@ if __name__ == "__main__":
 
     run = parser_subparsers.add_parser('run', description="Run the regression monitoring process")
     run.add_argument('-s', '--server', required=False, help='The hostname of the server')
+    run.add_argument('--start-timestamp', help='The start timestamp')
+    run.add_argument('--stop-timestamp', help='The stop timestamp')
 
     try:
         args = parser.parse_args()
