@@ -410,17 +410,16 @@ def bootstrap(git_fetch=True, revision_override=None):
     return rev_id
 
 @fab.parallel
-def destroy(leave_data=False):
+def destroy(leave_data=False, kill_delay=0):
     """Uninstall Cassandra and clean up data and logs"""
     # We used to have a better pattern match for the Cassandra
     # process, but it got fragile if you put too many JVM params.
     if leave_data:
         fab.run('JAVA_HOME={java_home} {nodetool_cmd} drain'.format(java_home=config['java_home'], nodetool_cmd=_nodetool_cmd()), quiet=True)
         fab.run('rm -rf {commitlog}/*'.format(commitlog=config['commitlog_directory']))
-    # Try to kill the process gently first...
-    fab.run('killall java', quiet=True)
-    if profiler.yourkit_is_enabled():
-        time.sleep(300)  # 5 minutes, on the jvm exit, profiling stuff require some time to be dumped
+    if kill_delay:
+        fab.run('killall java', quiet=True)
+        time.sleep(kill_delay)   # kill delay waiting the jvm to exit, profiling stuff require some time to be dumped
     fab.run('killall -9 java', quiet=True)
     fab.run('pkill -f "python.*fincore_capture"', quiet=True)
     fab.run('rm -rf fab/cassandra')

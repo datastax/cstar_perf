@@ -60,8 +60,9 @@ def copy_flamegraph(local_directory, rev_num):
     host_log_dir = os.path.join(local_directory, cfg['hostname'])
     flamegraph_directory = get_flamegraph_directory()
     os.makedirs(host_log_dir)
-    fab.get(os.path.join(flamegraph_directory, 'flamegraph_revision_{}.svg'.format(rev_num)), host_log_dir)
-    fab.get(os.path.join(flamegraph_directory, 'perf_revision_{}.data'.format(rev_num)), host_log_dir)
+    with fab.settings(warn_only=True):
+        fab.get(os.path.join(flamegraph_directory, 'flamegraph_revision_{}.svg'.format(rev_num)), host_log_dir)
+        fab.get(os.path.join(flamegraph_directory, 'perf_revision_{}.data'.format(rev_num)), host_log_dir)
 
 
 @fab.parallel

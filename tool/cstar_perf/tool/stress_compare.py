@@ -125,7 +125,6 @@ def stress_compare(revisions,
     if flamegraph.is_enabled():
         execute(flamegraph.setup)
 
-
     clean_stress()
     stress_revisions = set([operation['stress_revision'] for operation in operations if 'stress_revision' in operation])
     stress_shas = setup_stress(stress_revisions)
@@ -278,7 +277,8 @@ def stress_compare(revisions,
         if revisions[-1].get('leave_data', leave_data):
             teardown(destroy=False, leave_data=True)
         else:
-            teardown(destroy=True, leave_data=False)
+            kill_delay = 300 if profiler.yourkit_is_enabled(revision_config) else 0
+            teardown(destroy=True, leave_data=False, kill_delay=kill_delay)
 
         if profiler.yourkit_is_enabled(revision_config):
             yourkit_config = profiler.yourkit_get_config()

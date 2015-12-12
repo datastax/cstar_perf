@@ -194,9 +194,9 @@ def restart():
     execute(common.start)
     execute(common.ensure_running)
 
-def teardown(destroy=False, leave_data=False):
+def teardown(destroy=False, leave_data=False, kill_delay=0):
     if destroy:
-        execute(common.destroy, leave_data=leave_data)
+        execute(common.destroy, leave_data=leave_data, kill_delay=kill_delay)
     else:
         execute(common.stop)
         execute(common.ensure_stopped)
