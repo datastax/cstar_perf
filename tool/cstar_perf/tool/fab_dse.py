@@ -40,6 +40,7 @@ def setup(cfg):
     if config["product"] == 'dse':
         download_binaries()
 
+
 def download_binaries():
     "Parse config and download dse binaries (local)"
 
@@ -75,7 +76,7 @@ def download_binaries():
              '{correct_sha} but saw {real_sha}').format(correct_sha=correct_sha, real_sha=real_sha))
 
 def get_dse_path():
-    return "~/fab/dse"
+    return os.path.expanduser("~/fab/dse")
 
 
 def get_dse_conf_path():
