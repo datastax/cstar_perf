@@ -230,12 +230,14 @@ def stress_compare(revisions,
                     set_cqlsh_path(os.path.join(product.get_bin_path(), 'cqlsh'))
                     output = cqlsh(operation['script'], operation['node'])
                     stats['output'] = output.split("\n")
+                    stats['command'] = operation['script']
                     logger.info("Cqlsh commands finished")
 
                 elif operation['type'] == 'bash':
                     nodes = operation.get('nodes', [n for n in fab_config['hosts']])
                     logger.info("Running bash commands on: {nodes}".format(nodes=nodes))
                     stats['output'] = bash(operation['script'], nodes)
+                    stats['command'] = operation['script']
                     logger.info("Bash commands finished")
 
                 end = datetime.datetime.now()
