@@ -11,6 +11,7 @@ import logging
 import traceback
 from Queue import Queue
 from threading import Thread
+#from cstar_perf.frontend.server.email_notifications import RegressionTestEmail
 
 logging.basicConfig()
 logger = logging.getLogger('cstar_perf_regression_monitor')
@@ -244,8 +245,10 @@ class RegressionMonitor(CstarPerfClient):
                 average_rate = serie.historical_performance[operation_name]['op rate']
 
                 has_regression = False
-                if abs(op_rate - average_rate) > (average_rate * self.tolerance):
+                if op_rate < average_rate and abs(op_rate - average_rate) > (average_rate * self.tolerance):
                     has_regression = True
+                    #RegressionTestEmail(name=serie.name, current_performance=op_rate,
+                    #                    historical_performance=average_op).send()
 
                 logger.info(("Regression check for series '{}' operation '{}': "
                              "historical({}) - current({}) -- {}").format(

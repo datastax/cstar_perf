@@ -89,3 +89,9 @@ class TestStatusUpdateEmail(Email):
     message_template = "test_status_update.jinja2"
     required_args = ('status','name','test_id')
     subject = "[cstar_perf] test {{status|upper}} - {{name}}"
+
+
+class RegressionTestEmail(Email):
+    message_template = "regression.jinja2"
+    required_args = ('name','historical_performance','current_performance')
+    subject = "[cstar_perf] Regression Detected in series {{name}}"
