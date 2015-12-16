@@ -10,7 +10,11 @@ import urlparse
 from cstar_perf.frontend import SERVER_CONFIG_PATH
 from cstar_perf.frontend.server.util import load_app_config
 
-app_config = load_app_config()
+try:
+    app_config = load_app_config()
+except:
+    app_config = {}
+
 template_env = Environment(loader=PackageLoader('cstar_perf.frontend.server', os.path.join('templates','email')))
 
 log = logging.getLogger('cstar_perf.model')

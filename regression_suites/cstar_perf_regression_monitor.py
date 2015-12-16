@@ -11,7 +11,7 @@ import logging
 import traceback
 from Queue import Queue
 from threading import Thread
-#from cstar_perf.frontend.server.email_notifications import RegressionTestEmail
+from cstar_perf.frontend.server.email_notifications import RegressionTestEmail
 
 logging.basicConfig()
 logger = logging.getLogger('cstar_perf_regression_monitor')
@@ -81,11 +81,16 @@ class CstarTestJob(CstarPerfClient):
         """Read the job metrics"""
 
         for operation in data['stats']:
+            if operation['type'] != 'stress':
+                continue
             operation_name = operation.get('test', operation['id'])
             self.metrics[operation_name] = {}
             s = self.metrics[operation_name]
             for m in self.metrics_list:
-                s[m] = float(operation['op rate'].split(' ')[0])
+                try:
+                    s[m] = float(operation['op rate'].split(' ')[0])
+                except KeyError:
+                    pass
 
     def get_operations(self):
         return self.metrics.keys()
@@ -165,6 +170,14 @@ class RegressionSeries(CstarPerfClient):
         for operation in operations:
             average_performance[operation] = {}
             jobs_tmp = list(jobs)
+
+            # Remove jobs that don't have the metrics for op rate
+            for job in jobs_tmp:
+                if 'op rate' not in job.metrics[operation]:
+                    logger.warning("Removing job '{}' for operation '{}' due to missing stats".format(
+                        job.job_id, operation))
+                    jobs_tmp.remove(job)
+
             # Remove the fastest and slowest job
             if len(jobs_tmp) > 2:
                 fastest_job = max(jobs_tmp, key=lambda j: j.metrics[operation]['op rate'])
@@ -172,8 +185,9 @@ class RegressionSeries(CstarPerfClient):
                 jobs_tmp.remove(fastest_job)
                 jobs_tmp.remove(slowest_job)
 
-            op_rates = map(lambda j: j.metrics[operation]['op rate'], jobs_tmp)
-            average_op_rate = sum(op_rates) / len(jobs_tmp)
+            op_rates = map(lambda j: j.metrics[operation].get('op rate', None), jobs_tmp)
+            op_rates = [r for r in op_rates if r is not None]
+            average_op_rate = sum(op_rates) / len(op_rates) if op_rates else 0
             average_performance[operation]['op rate'] = average_op_rate
 
         return average_performance
@@ -196,7 +210,7 @@ class RegressionMonitor(CstarPerfClient):
 
     tolerance = 10  # performance deviation tolerance in %
 
-    concurrency = 1
+    concurrency = 5
 
     def __init__(self, start_timestamp, stop_timestamp, **kwargs):
         super(RegressionMonitor, self).__init__(**kwargs)
@@ -247,8 +261,11 @@ class RegressionMonitor(CstarPerfClient):
                 has_regression = False
                 if op_rate < average_rate and abs(op_rate - average_rate) > (average_rate * self.tolerance):
                     has_regression = True
-                    #RegressionTestEmail(['alan.boudreault@datastax.com'], name=serie.name, current_performance=op_rate,
-                    #                    historical_performance=average_op).send()
+                    email = RegressionTestEmail(['alan.boudreault@datastax.com', 'ryan@datastax.com'],
+                                                name=serie.name, current_performance=op_rate,
+                                                historical_performance=average_rate)
+                    email.config['port'] = 25
+                    email.send()
 
                 logger.info(("Regression check for series '{}' operation '{}': "
                               "historical({}) - current({}) -- {}").format(
