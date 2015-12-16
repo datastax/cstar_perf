@@ -18,7 +18,7 @@ logger = logging.getLogger('cstar_perf_regression_monitor')
 logger.setLevel(logging.INFO)
 
 DEFAULT_WINDOW_TIME = 90  # days
-DEFAULT_NUMBER_LAST_RUNS = 5  # the last 2 runs
+DEFAULT_NUMBER_LAST_RUNS = 5
 
 
 class CstarPerfClient(object):
@@ -100,7 +100,7 @@ class CstarTestJob(CstarPerfClient):
 
 
 class RegressionSeries(CstarPerfClient):
-    """Represent a regression serie"""
+    """Represent a regression series"""
 
     # Serie name
     name = None
@@ -247,13 +247,13 @@ class RegressionMonitor(CstarPerfClient):
                 has_regression = False
                 if op_rate < average_rate and abs(op_rate - average_rate) > (average_rate * self.tolerance):
                     has_regression = True
-                    #RegressionTestEmail(name=serie.name, current_performance=op_rate,
+                    #RegressionTestEmail(['alan.boudreault@datastax.com'], name=serie.name, current_performance=op_rate,
                     #                    historical_performance=average_op).send()
 
                 logger.info(("Regression check for series '{}' operation '{}': "
-                             "historical({}) - current({}) -- {}").format(
-                                 serie.name, operation_name, int(average_rate), int(op_rate),
-                                 'REGRESSION DETECTED' if has_regression else 'OK'))
+                              "historical({}) - current({}) -- {}").format(
+                                  serie.name, operation_name, int(average_rate), int(op_rate),
+                                  'REGRESSION DETECTED' if has_regression else 'OK'))
 
 
 def main(args):
