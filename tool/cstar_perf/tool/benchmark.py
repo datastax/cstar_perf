@@ -11,6 +11,7 @@ import time
 import datetime
 from pprint import pprint
 from fabric.tasks import execute
+import fabric.api as fab
 import uuid
 import re
 import json
@@ -250,6 +251,38 @@ def cqlsh(script, node):
                             stderr=subprocess.STDOUT)
     output = proc.communicate(script)
     return output[0]
+
+
+def spark_cassandra_stress(script, node):
+    download_and_build_spark_cassandra_stress(node)
+    dse_bin = os.path.join(dse.get_dse_path(), 'bin')
+    cmd = "cd {spark_cass_stress_path}; PATH=$PATH:{dse_bin} JAVA_HOME={JAVA_HOME} ./run.sh dse {script}".format(JAVA_HOME=JAVA_HOME,
+                                                                                            spark_cass_stress_path=get_spark_cassandra_stress_path(),
+                                                                                            script=script, dse_bin=dse_bin)
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+        execute(fab.sudo, 'rm -rf /var/lib/spark')
+        execute(fab.sudo, 'mkdir -p /var/lib/spark')
+        execute(fab.sudo, 'chmod -R 777 /var/lib/spark')
+        restart()
+        return execute(fab.run, cmd)
+
+
+def get_spark_cassandra_stress_path():
+    return os.path.expanduser("~/fab/spark-cassandra-stress")
+
+
+def download_and_build_spark_cassandra_stress(node):
+    dse_home = 'DSE_HOME={dse_path}'.format(dse_path=dse.get_dse_path())
+    dse_resources = 'DSE_RESOURCES={dse_resources_path}'.format(dse_resources_path=os.path.join(dse.get_dse_path(), 'resources'))
+    build_command = './gradlew jar -Pagainst=dse;'
+
+    with common.fab.settings(hosts=node):
+        execute(fab.run, 'rm -rf {spark_cass_stress_path}'.format(spark_cass_stress_path=get_spark_cassandra_stress_path()))
+        execute(fab.run, 'git clone -b master --single-branch https://github.com/datastax/spark-cassandra-stress.git {spark_cass_stress_path}'
+            .format(spark_cass_stress_path=get_spark_cassandra_stress_path()))
+        return execute(fab.run, 'cd {spark_cass_stress_path}; TERM=dumb {dse_home} {dse_resources} {build_cmd}'
+            .format(spark_cass_stress_path=get_spark_cassandra_stress_path(), dse_home=dse_home, dse_resources=dse_resources, build_cmd=build_command))
+
 
 def nodetool_multi(nodes, command):
     """Run a nodetool command simultaneously on each node specified"""

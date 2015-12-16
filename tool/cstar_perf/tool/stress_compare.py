@@ -3,7 +3,7 @@ from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
                        drop_page_cache, wait_for_compaction, setup_stress, clean_stress,
                        get_localhost, retrieve_flamegraph, retrieve_yourkit)
-from benchmark import config as fab_config, cstar, dse, set_cqlsh_path, set_nodetool_path
+from benchmark import config as fab_config, cstar, dse, set_cqlsh_path, set_nodetool_path, spark_cassandra_stress
 import fab_common as common
 import fab_cassandra as cstar
 import fab_flamegraph as flamegraph
@@ -28,7 +28,7 @@ logging.basicConfig()
 logger = logging.getLogger('stress_compare')
 logger.setLevel(logging.INFO)
 
-OPERATIONS = ['stress','nodetool','cqlsh','bash']
+OPERATIONS = ['stress','nodetool','cqlsh','bash', 'spark_cassandra_stress']
 
 flamegraph.set_common_module(common)
 profiler.set_common_module(common)
@@ -58,6 +58,9 @@ def validate_operations_list(operations):
             assert op.has_key('node'), "Cqlsh operation missing node to run on"
         elif op['type'] == 'bash':
             assert op.has_key('script'), "Bash operation missing script"
+        elif op['type'] == 'spark_cassandra_stress':
+            assert op.has_key('script'), "spark_cassandra_stress is missing parameters"
+            assert op.has_key('node'), "spark_cassandra_stress missing node to run on"
 
 
 def stress_compare(revisions,
@@ -239,6 +242,13 @@ def stress_compare(revisions,
                     stats['output'] = bash(operation['script'], nodes)
                     stats['command'] = operation['script']
                     logger.info("Bash commands finished")
+
+                elif operation['type'] == 'spark_cassandra_stress':
+                    node = operation['node']
+                    logger.info("Running spark_cassandra_stress on {node}".format(node=node))
+                    output = spark_cassandra_stress(operation['script'], node)
+                    stats['output'] = output.split("\n")
+                    logger.info("spark_cassandra_stress finished")
 
                 end = datetime.datetime.now()
                 stats['end_date'] = end.isoformat()
