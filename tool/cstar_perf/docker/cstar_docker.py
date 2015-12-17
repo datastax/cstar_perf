@@ -4,19 +4,18 @@ import subprocess
 import shlex
 import re
 import os
-import shutil
 import sys
 import json
 import hashlib
 from collections import defaultdict, OrderedDict
-import tempfile
 import time
 from StringIO import StringIO
-import paramiko
 import webbrowser
 from distutils.version import LooseVersion
-
 import logging
+
+import paramiko
+
 logging.basicConfig()
 log = logging.getLogger('cstar_docker')
 log.setLevel(logging.DEBUG)
@@ -572,7 +571,10 @@ def associate(frontend_name, cluster_names, with_dse=False):
             fab_execute(tasks.setup_client_daemon, frontend['Name'])
             fab_execute(tasks.add_or_update_host_ips, ((frontend['Name'], frontend_ip),))
 
-def enable_dse(cluster_name, dse_url, dse_username, dse_password):
+
+def enable_dse(cluster_name, dse_url, dse_username, dse_password, dse_source_build_artifactory_url,
+               dse_source_build_artifactory_username, dse_source_build_artifactory_password,
+               dse_source_build_oauth_token):
 
     try:
         cluster = get_clusters(cluster_name, all_metadata=True)[cluster_name][0]
@@ -581,7 +583,9 @@ def enable_dse(cluster_name, dse_url, dse_username, dse_password):
 
     cluster_ip = cluster['NetworkSettings']['IPAddress']
     with fab.settings(hosts=cluster_ip):
-        fab_execute(fab_deploy.enable_dse, dse_url, dse_username, dse_password)
+        fab_execute(fab_deploy.enable_dse, dse_url, dse_username, dse_password, dse_source_build_artifactory_url,
+                    dse_source_build_artifactory_username, dse_source_build_artifactory_password,
+                    dse_source_build_oauth_token)
 
     with fab.settings(hosts=cluster_ip, user="root"):
         fab_execute(tasks.restart_all_services)
@@ -729,7 +733,9 @@ def execute_cmd(cmd, args):
     elif cmd == 'build':
         build_docker_image(force=args.force)
     elif cmd == 'enable_dse':
-        enable_dse(args.frontend, args.dse_repo_url, args.dse_repo_username, args.dse_repo_password)
+        enable_dse(args.frontend, args.dse_repo_url, args.dse_repo_username, args.dse_repo_password,
+                   args.dse_source_build_artifactory_url, args.dse_source_build_artifactory_username,
+                   args.dse_source_build_artifactory_password, args.dse_source_build_oauth_token)
     else:
         raise AssertionError('Unknown command: {cmd}'.format(cmd=cmd))
 
@@ -791,9 +797,13 @@ def main():
 
     enable_dse = parser_subparsers.add_parser('enable_dse', description="Enable DSE support")
     enable_dse.add_argument('frontend', help='The name of the frontend node')
-    enable_dse.add_argument('dse_repo_url', help='DSE Repo url')
-    enable_dse.add_argument('dse_repo_username', nargs='?', default=None, help='DSE Repo username')
-    enable_dse.add_argument('dse_repo_password', nargs='?', default=None, help='DSE Repo password')
+    enable_dse.add_argument('dse_repo_url', help='DSE Tarball Repo url')
+    enable_dse.add_argument('dse_repo_username', nargs='?', default=None, help='DSE Tarball Repo username')
+    enable_dse.add_argument('dse_repo_password', nargs='?', default=None, help='DSE Tarball Repo password')
+    enable_dse.add_argument('dse_source_build_artifactory_url', nargs='?', default=None, help='DSE Artifactory URL')
+    enable_dse.add_argument('dse_source_build_artifactory_username', nargs='?', default=None, help='DSE Artifactory username')
+    enable_dse.add_argument('dse_source_build_artifactory_password', nargs='?', default=None, help='DSE Artifactory password')
+    enable_dse.add_argument('dse_source_build_oauth_token', nargs='?', default=None, help='DSE OAuth token for accessing GitHub Repo')
 
     try:
         args = parser.parse_args()

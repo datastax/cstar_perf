@@ -19,6 +19,7 @@ import json
 import re
 import operator
 
+
 fab.env.use_ssh_config = True
 fab.env.connection_attempts = 10
 
@@ -200,7 +201,10 @@ def get_client_jvms():
     jvms = [jvm for jvm in output.split(' ') if jvm]
     return jvms
 
-def enable_dse(dse_repo_url, dse_repo_username=None, dse_repo_password=None):
+
+def enable_dse(dse_repo_url, dse_repo_username=None, dse_repo_password=None, dse_source_build_artifactory_url=None,
+               dse_source_build_artifactory_username=None, dse_source_build_artifactory_password=None,
+               dse_source_build_oauth_token=None):
     """Enable DSE"""
 
     enable_dse_script = """
@@ -209,6 +213,11 @@ def enable_dse(dse_repo_url, dse_repo_username=None, dse_repo_password=None):
     config['dse_url'] = '{url}'
     username = '{username}'
     pw = '{pw}'
+    dse_source_build_artifactory_url = '{dse_source_build_artifactory_url}'
+    dse_source_build_artifactory_username = '{dse_source_build_artifactory_username}'
+    dse_source_build_artifactory_password = '{dse_source_build_artifactory_password}'
+    dse_source_build_oauth_token = '{dse_source_build_oauth_token}'
+
     if username:
         config['dse_username'] = username
     elif 'dse_username' in config:
@@ -219,9 +228,33 @@ def enable_dse(dse_repo_url, dse_repo_username=None, dse_repo_password=None):
     elif 'dse_password' in config:
         del config['dse_password']
 
+    if dse_source_build_artifactory_url:
+        config['dse_source_build_artifactory_url'] = dse_source_build_artifactory_url
+    elif 'dse_source_build_artifactory_url' in config:
+        del config['dse_source_build_artifactory_url']
+
+    if dse_source_build_artifactory_username:
+        config['dse_source_build_artifactory_username'] = dse_source_build_artifactory_username
+    elif 'dse_source_build_artifactory_username' in config:
+        del config['dse_source_build_artifactory_username']
+
+    if dse_source_build_artifactory_password:
+        config['dse_source_build_artifactory_password'] = dse_source_build_artifactory_password
+    elif 'dse_source_build_artifactory_password' in config:
+        del config['dse_source_build_artifactory_password']
+
+    if dse_source_build_oauth_token:
+        config['dse_source_build_oauth_token'] = dse_source_build_oauth_token
+    elif 'dse_source_build_oauth_token' in config:
+        del config['dse_source_build_oauth_token']
+
     with open(cluster_config_file, 'w') as f:
         f.write(json.dumps(config, sort_keys=True, indent=4, separators=(',', ': ')))
-    """.format(url=dse_repo_url, username=dse_repo_username, pw=dse_repo_password)
+    """.format(url=dse_repo_url, username=dse_repo_username, pw=dse_repo_password,
+               dse_source_build_artifactory_url=dse_source_build_artifactory_url,
+               dse_source_build_artifactory_username=dse_source_build_artifactory_username,
+               dse_source_build_artifactory_password=dse_source_build_artifactory_password,
+               dse_source_build_oauth_token=dse_source_build_oauth_token)
     print run_python_script(enable_dse_script)
 
 def add_product_to_cluster(cluster_name, product):
