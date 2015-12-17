@@ -265,7 +265,7 @@ class RegressionMonitor(CstarPerfClient):
                     email = RegressionTestEmail(
                         ADMINS,
                         name=serie.name, operation=operation_name,
-                        url="http://{}/{}".format(self.server, self.jenkins_build),
+                        url=self.jenkins_build,
                         current_performance=op_rate, historical_performance=average_rate)
                     email.config['port'] = 25
                     email.send()
