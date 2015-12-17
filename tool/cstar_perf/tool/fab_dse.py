@@ -108,7 +108,7 @@ def download_binaries():
 
 
 def get_dse_path():
-    return "~/fab/dse"
+    return os.path.expanduser("~/fab/dse")
 
 
 def get_dse_conf_path():

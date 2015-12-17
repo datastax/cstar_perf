@@ -55,6 +55,8 @@ def set_nodetool_path(path):
 
 def set_cqlsh_path(path):
     global cqlsh_path
+    if path.startswith('DSE_HOME'):
+        path = path[path.find(' ') + 1:]
     cqlsh_path = path
 
 def get_localhost():
