@@ -178,7 +178,8 @@ def setup(my_config=None):
         'use_jna': True,
         # Extra environment settings to prepend to cassandra-env.sh:
         'env': '',
-        'java_home': '~/fab/java'
+        'java_home': '~/fab/java',
+        'yourkit_profiler': False
     }
 
     public_ips = "node0, node1, node2, node3"

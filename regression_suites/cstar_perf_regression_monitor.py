@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-
 from __future__ import unicode_literals
 
 import time
@@ -19,6 +17,8 @@ logger.setLevel(logging.INFO)
 
 DEFAULT_WINDOW_TIME = 90  # days
 DEFAULT_NUMBER_LAST_RUNS = 5
+
+ADMINS = ['ryan@datastax.com', 'alan.boudreault@datastax.com']
 
 
 class CstarPerfClient(object):
@@ -212,11 +212,12 @@ class RegressionMonitor(CstarPerfClient):
 
     concurrency = 5
 
-    def __init__(self, start_timestamp, stop_timestamp, **kwargs):
+    def __init__(self, start_timestamp, stop_timestamp, jenkins_build, **kwargs):
         super(RegressionMonitor, self).__init__(**kwargs)
 
         self.start_timestamp = start_timestamp
         self.stop_timestamp = stop_timestamp
+        self.jenkins_build = jenkins_build
 
     def _get_series(self):
         url = self.build_url('get_series_list')
@@ -261,9 +262,11 @@ class RegressionMonitor(CstarPerfClient):
                 has_regression = False
                 if op_rate < average_rate and abs(op_rate - average_rate) > (average_rate * self.tolerance):
                     has_regression = True
-                    email = RegressionTestEmail(['alan.boudreault@datastax.com', 'ryan@datastax.com'],
-                                                name=serie.name, current_performance=op_rate,
-                                                historical_performance=average_rate)
+                    email = RegressionTestEmail(
+                        ADMINS,
+                        name=serie.name, operation=operation_name,
+                        url="http://{}/{}".format(self.server, self.jenkins_build),
+                        current_performance=op_rate, historical_performance=average_rate)
                     email.config['port'] = 25
                     email.send()
 
@@ -286,6 +289,7 @@ def main(args):
     monitor = RegressionMonitor(
         start_timestamp,
         stop_timestamp,
+        jenkins_build=args.jenkins_build,
         server=args.server
     )
 
@@ -301,6 +305,7 @@ if __name__ == "__main__":
 
     run = parser_subparsers.add_parser('run', description="Run the regression monitoring process")
     run.add_argument('-s', '--server', required=False, help='The hostname of the server')
+    run.add_argument('--jenkins-build', default='', help='The jenkins build url path')
     run.add_argument('--start-timestamp', default=None, help='The start timestamp')
     run.add_argument('--stop-timestamp', default=None, help='The stop timestamp')
 
