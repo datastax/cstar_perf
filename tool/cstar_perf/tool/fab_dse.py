@@ -1,7 +1,9 @@
 import logging
 import os
 import re
+import uuid
 from urlparse import urljoin
+from StringIO import StringIO
 
 import yaml
 from fabric import api as fab
@@ -136,6 +138,8 @@ def bootstrap(config):
     return config['revision']
 
 def start(config):
+    _configure_spark_env(config)
+
     dse_node_type = config.get('dse_node_type', 'cassandra')
     fab.puts("Starting DSE - Node Type: {node_type}".format(node_type=dse_node_type))
     dse_home = 'DSE_HOME={dse_path}'.format(dse_path=get_dse_path())
@@ -274,3 +278,23 @@ allprojects {{
     fab.local('rm -rf ~/.gradle')
     fab.local('mkdir -p ~/.gradle/init.d')
     fab.local('echo "{gradle_settings}" > ~/.gradle/init.d/nexus.gradle'.format(gradle_settings=gradle_settings))
+
+
+def _configure_spark_env(config):
+    # Place spark environment file on hosts:
+    spark_env = config.get('spark_env', '')
+
+    if isinstance(spark_env, list) or isinstance(spark_env, tuple):
+        spark_env = "\n".join(spark_env)
+    spark_env += "\n"
+
+    spark_env_script = "spark-{name}.sh".format(name=uuid.uuid1())
+    spark_env_file = StringIO(spark_env)
+    fab.run('mkdir -p ~/fab/scripts')
+    fab.put(spark_env_file, '~/fab/scripts/{spark_env_script}'.format(spark_env_script=spark_env_script))
+
+    fab.puts('spark-env is: {}'.format(spark_env))
+    if len(spark_env_script) > 0:
+        spark_env_path = os.path.join(get_dse_path(), 'resources', 'spark', 'conf', 'spark-env.sh')
+        fab.run('cat ~/fab/scripts/{spark_env_script} >> {spark_env_path}'.format(spark_env_script=spark_env_script,
+                                                                                  spark_env_path=spark_env_path))
