@@ -312,7 +312,7 @@ var addOperationDiv = function(animate, operationDefaults){
     } else {
         newOperation.script_bash = "df -h";
     }
-    console.log(newOperation);
+
     var newDiv = $(template.format(newOperation));
     if (animate)
         newDiv.hide();
@@ -562,19 +562,15 @@ var update_cluster_selections = function(callback) {
         } else {
             $(".product-select-div").show();
         }
-        $.each(data.jvms, function(jvm, path) {
-            $(".jvm-select").append($("<option value='"+path+"'>"+jvm+"</option>"));
-        });
-        //Try to set the one we had from before:
+
+        //Warn if the JVM option changed due to cluster switch:
         $(".jvm-select").each(function(i, e) {
-            // if (current_jvm_selections[i] != null) {
-            //     $(e).val(current_jvm_selections[i]);
-            // }
             if ($(e).val() == null) {
                 $(e).find("option:first-child").attr("selected", "selected");
                 alert("Warning - cluster JVM selection changed")
             }
         });
+        
         if (callback != null) {
             callback();
         }
