@@ -16,7 +16,7 @@ logger = logging.getLogger('cstar_perf_regression_monitor')
 logger.setLevel(logging.INFO)
 
 DEFAULT_WINDOW_TIME = 90  # days
-DEFAULT_NUMBER_LAST_RUNS = 5
+DEFAULT_NUMBER_LAST_RUNS = 7  # 5 last runs since we remove the fastest and slowest
 
 ADMINS = ['ryan@datastax.com', 'alan.boudreault@datastax.com']
 
