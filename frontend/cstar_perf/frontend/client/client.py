@@ -257,6 +257,7 @@ class JobRunner(object):
         stress_json = json.dumps(dict(revisions=job['revisions'],
                                       operations=job['operations'],
                                       title=job['title'],
+                                      leave_data=job.get('leave_data', False),
                                       log=stats_path))
 
         # Create a temporary location to store the stress_compare json file:

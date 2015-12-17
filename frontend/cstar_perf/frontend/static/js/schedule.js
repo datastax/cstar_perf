@@ -60,6 +60,14 @@ var addRevisionDiv = function(animate){
         "        </div>" +
         "      </div>" +
         "" +
+        "      <div class='form-group' style='display:block' id='{revision_id}-spark_env_div'>" +
+        "        <label class='col-md-4 control-label' for='{revision_id}-spark-env-vars'>Spark Environment Script</label>" +
+        "        <div class='col-md-8'>" +
+        "          <textarea class='form-control spark-env-vars' id='{revision_id}-spark-env-vars'" +
+        "          placeholder='Spark Environment settings to append to spark-env.sh'></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "" +
         "      <div class='form-group'>" +
         "        <label class='col-md-4 control-label' for='{revision_id}-jvm'>JVM</label>" +
         "        <div class='col-md-8'>" +
@@ -114,6 +122,7 @@ var addRevisionDiv = function(animate){
     // initially hide the dse yaml & dse node type settings
     $("#" + revision_id + "-dse_yaml_div").hide();
     $("#" + revision_id + "-dse_node_type_div").hide();
+    $("#" + revision_id + "-spark_env_div").hide();
 
     //Remove revision handler:
     $("#remove-"+revision_id).click(function() {
@@ -343,12 +352,15 @@ var addOperationDiv = function(animate, operationDefaults){
 var maybe_show_dse_yaml_div = function(id, value) {
     dse_yaml_div_id = id.replace("product", "dse_yaml_div")
     dse_node_type_div_id = id.replace("product", "dse_node_type_div")
+    spark_env_div_id = id.replace("product", "spark_env_div")
     if (value == "dse") {
         $("#" + dse_yaml_div_id).show();
         $("#" + dse_node_type_div_id).show();
+        $("#" + spark_env_div_id).show();
     } else {
         $("#" + dse_yaml_div_id).hide();
         $("#" + dse_node_type_div_id).hide();
+        $("#" + spark_env_div_id).hide();
     }
 }
 
@@ -373,6 +385,7 @@ var createJob = function() {
             yaml: revision.find(".yaml").val(),
             dse_yaml: revision.find(".dse_yaml").val(),
             env: revision.find(".env-vars").val(),
+            spark_env: revision.find(".spark-env-vars").val(),
             java_home: revision.find(".jvm-select").val(),
             dse_node_type: revision.find(".dse_node_type").val(),
             options: {
@@ -445,6 +458,7 @@ var cloneExistingJob = function(job_id) {
             $("#revision-"+rev+"-dse_yaml").val(revision['dse_yaml']);
             $("#revision-"+rev+"-dse_node_type").val(revision['dse_node_type']);
             $("#revision-"+rev+"-env-vars").val(revision['env']);
+            $("#revision-"+rev+"-spark-env-vars").val(revision['spark_env']);
             if (revision['options'] == undefined) {
                 revision['options'] = {};
             }
@@ -457,6 +471,7 @@ var cloneExistingJob = function(job_id) {
                 if (revision['product'] == 'dse') {
                     $("#revision-"+rev+"-dse_yaml_div").show();
                     $("#revision-"+rev+"-dse_node_type_div").show();
+                    $("#revision-"+rev+"-spark_env_div").show();
                 }
             });
 
