@@ -13,7 +13,7 @@ var addRevisionDiv = function(animate){
         "        <label class='col-md-4 control-label' for='{revision_id}-product'>Product</label>" +
         "        <div class='col-md-8'>" +
         "          <select id='{revision_id}-product' " +
-        "                  class='product-select form-control' required onchange='maybe_show_dse_yaml_div(this.id, this.value);'>" +
+        "                  class='product-select form-control' required onchange='maybe_show_dse_options(this.id, this.value);'>" +
         "            <option value='cassandra'>cassandra</option>" +
         "          </select>" +
         "        </div>" +
@@ -142,7 +142,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "        for='{operation_id}-type'>Operation</label>" +
         "        <div class='col-md-9'>" +
         "          <select id='{operation_id}-type'" +
-        "                  class='form-control type'>" +
+        "                  class='operation-type form-control type'>" +
         "            <option value='stress'>stress</option>" +
         "            <option value='nodetool'>nodetool</option>" +
         "            <option value='cqlsh'>cqlsh</option>" +
@@ -200,6 +200,24 @@ var addOperationDiv = function(animate, operationDefaults){
         "        <div class='col-md-9'>" +
         "          <select id='{operation_id}-nodes' type='text'" +
         "                 class='form-control input-md node-cqlsh node-select'>" +
+        "          </select>" +
+        "        </div>" +
+        "      </div>" +
+        "            " +
+        "      <div class='form-group type spark_cassandra_stress'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>Spark Cassandra Stress Command</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <textarea id='{operation_id}-script' type='text'" +
+        "                 class='form-control input-md script-spark-cassandra-stress' required=''>{script_spark_cassandra_stress}</textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes spark_cassandra_stress'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Node</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select id='{operation_id}-nodes' type='text'" +
+        "                 class='form-control input-md node-spark-cassandra-stress node-select'>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
@@ -312,13 +330,18 @@ var addOperationDiv = function(animate, operationDefaults){
     } else {
         newOperation.script_bash = "df -h";
     }
-
+    if (newOperation.operationType === 'spark_cassandra_stress' && operationDefaults.script) {
+        newOperation.script_spark_cassandra_stress = operationDefaults.script;
+    } else {
+        newOperation.script_spark_cassandra_stress = "-o 10000 -y 1000 -p 1000 writeperfrow";
+    }
+    console.log(newOperation);
     var newDiv = $(template.format(newOperation));
     if (animate)
         newDiv.hide();
     $("#schedule-operations").append(newDiv);
     $("#"+operation_id+"-type").change(function(){
-        var validOperations = ['stress', 'nodetool', 'cqlsh', 'bash'];
+        var validOperations = ['stress', 'nodetool', 'cqlsh', 'bash', 'spark_cassandra_stress'];
         if (validOperations.indexOf(this.value) < 0) {
             console.log(this.value + ' not a valid selection')
         }
@@ -349,14 +372,20 @@ var addOperationDiv = function(animate, operationDefaults){
     update_cluster_options(operation_id, operationDefaults)
 };
 
-var maybe_show_dse_yaml_div = function(id, value) {
+var maybe_show_dse_options = function(id, value) {
     dse_yaml_div_id = id.replace("product", "dse_yaml_div")
     dse_node_type_div_id = id.replace("product", "dse_node_type_div")
     spark_env_div_id = id.replace("product", "spark_env_div")
     if (value == "dse") {
         $("#" + dse_yaml_div_id).show();
         $("#" + dse_node_type_div_id).show();
-        $("#" + spark_env_div_id).show();
+	    $("#" + spark_env_div_id).show();
+        $(".operation-type").each(function(i, e) {
+            // if the spark-cass-stress option isn't present yet, then add it
+            if (typeof $(e).find("[value='spark_cassandra_stress']").val() === "undefined") {
+                $(e).append($("<option value='spark_cassandra_stress'>spark-cassandra-stress</option>"));
+            }
+        });
     } else {
         $("#" + dse_yaml_div_id).hide();
         $("#" + dse_node_type_div_id).hide();
@@ -420,6 +449,11 @@ var createJob = function() {
             jobSpec['script'] = operation.find(".script-bash").val();
             jobSpec['nodes'] = operation.find(".nodes-bash").val();
         }
+        if (op === "spark_cassandra_stress") {
+            jobSpec['script'] = operation.find(".script-spark-cassandra-stress").val();
+            jobSpec['node'] = operation.find(".node-spark-cassandra-stress").val();
+        }
+
         jobSpec['wait_for_compaction'] = operation.find(".wait-for-compaction").is(":checked");
         job.operations[i] = jobSpec;
     });
