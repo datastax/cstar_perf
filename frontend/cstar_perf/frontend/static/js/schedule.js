@@ -477,7 +477,7 @@ var cloneExistingJob = function(job_id) {
     $.get("/api/tests/id/" + job_id, function(job) {
         test = job['test_definition'];
         $("input#testname").val(test['title']);
-        $("inpur#testseries").val(test['testseries']);
+        $("input#testseries").val(test['testseries']);
         $("textarea#description").val(test['description']);
         $("select#cluster").val(test['cluster']);
         $("select#numnodes").val(test['num_nodes']);
