@@ -340,6 +340,10 @@ class JobRunner(object):
                                 hadStats = True
                             except KeyError:
                                 pass
+                        try:
+                            del op['output']
+                        except KeyError:
+                            pass
                     if hadStats:
                         json.dump(obj=stats, fp=summary, sort_keys=True, indent=4, separators=(',', ': '))
 
