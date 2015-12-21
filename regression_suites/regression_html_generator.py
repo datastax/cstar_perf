@@ -15,7 +15,7 @@ def indent(level):
 
 def get_most_recent_test(series):
     res = requests.get("http://cstar.datastax.com/api/series/{series}/{ts_start}/{ts_end}".format(
-            series=series, ts_start=int(time.time() - 100000), ts_end=int(time.time())))
+            series=series, ts_start=int(time.time() - 250000), ts_end=int(time.time())))
     data = json.loads(res.text)
     if data and data['series'] and len(data['series']) > 0:
         return data['series'][-1]
@@ -80,7 +80,7 @@ def generate_graphs(cached=False):
     retval += indent(1) + "<h2>Daily C*Perf Regression Dashboard\n"
 
     if cached:
-        retval += indent(1) + '<span style="color: red; font-size: 0.5em;">cached {} <a href="dashboard_uncached.html">non-cached version</a></span>'.format(datetime.datetime.now().isoformat(' '))
+        retval += indent(1) + '<span style="color: red; font-size: 0.5em;">cached {} <a href="#" onclick="confirm(\'Loading/Updating the cached images is extremely expensive.  Are you sure?\') == true ? window.location = \'dashboard_uncached.html\' : false; ">non-cached version</a></span>'.format(datetime.datetime.now().isoformat(' '))
     retval += indent(1) + "</h2>\n"
 
     for series, operations in series_list.iteritems():
