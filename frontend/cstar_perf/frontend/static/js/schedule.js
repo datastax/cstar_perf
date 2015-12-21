@@ -506,6 +506,12 @@ var cloneExistingJob = function(job_id) {
                     $("#revision-"+rev+"-dse_yaml_div").show();
                     $("#revision-"+rev+"-dse_node_type_div").show();
                     $("#revision-"+rev+"-spark_env_div").show();
+                    $(".operation-type").each(function(i, e) {
+                    // if the spark-cass-stress option isn't present yet, then add it
+                    if (typeof $(e).find("[value='spark_cassandra_stress']").val() === "undefined") {
+                        $(e).append($("<option value='spark_cassandra_stress'>spark-cassandra-stress</option>"));
+                    }
+                });
                 }
             });
 

@@ -256,14 +256,13 @@ def cqlsh(script, node):
 def spark_cassandra_stress(script, node):
     download_and_build_spark_cassandra_stress(node)
     dse_bin = os.path.join(dse.get_dse_path(), 'bin')
-    cmd = "cd {spark_cass_stress_path}; PATH=$PATH:{dse_bin} JAVA_HOME={JAVA_HOME} ./run.sh dse {script}".format(JAVA_HOME=JAVA_HOME,
+    cmd = "cd {spark_cass_stress_path}; PATH=$PATH:{dse_bin} JAVA_HOME={JAVA_HOME} DSE_HOME={dse_home} ./run.sh dse {script}".format(JAVA_HOME=JAVA_HOME,
                                                                                             spark_cass_stress_path=get_spark_cassandra_stress_path(),
-                                                                                            script=script, dse_bin=dse_bin)
+                                                                                            script=script, dse_bin=dse_bin, dse_home=dse.get_dse_path())
     with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
         execute(fab.sudo, 'rm -rf /var/lib/spark')
         execute(fab.sudo, 'mkdir -p /var/lib/spark')
         execute(fab.sudo, 'chmod -R 777 /var/lib/spark')
-        restart()
         return execute(fab.run, cmd)
 
 

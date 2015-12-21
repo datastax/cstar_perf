@@ -247,7 +247,7 @@ def stress_compare(revisions,
                     node = operation['node']
                     logger.info("Running spark_cassandra_stress on {node}".format(node=node))
                     output = spark_cassandra_stress(operation['script'], node)
-                    stats['output'] = output.split("\n")
+                    stats['output'] = output
                     logger.info("spark_cassandra_stress finished")
 
                 end = datetime.datetime.now()
