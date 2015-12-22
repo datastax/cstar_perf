@@ -130,6 +130,8 @@ var addRevisionDiv = function(animate){
             this.remove();
         });
     });
+
+    maybe_show_spark_cassandra_stress_option();
 };
 
 var addOperationDiv = function(animate, operationDefaults){
@@ -147,6 +149,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "            <option value='nodetool'>nodetool</option>" +
         "            <option value='cqlsh'>cqlsh</option>" +
         "            <option value='bash'>bash</option>" +
+        "            <option id='{operation_id}-spark_cass_stress_select' value='spark_cassandra_stress'>spark-cassandra-stress</option>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
@@ -336,6 +339,7 @@ var addOperationDiv = function(animate, operationDefaults){
         newOperation.script_spark_cassandra_stress = "-o 10000 -y 1000 -p 1000 writeperfrow";
     }
     console.log(newOperation);
+
     var newDiv = $(template.format(newOperation));
     if (animate)
         newDiv.hide();
@@ -358,6 +362,8 @@ var addOperationDiv = function(animate, operationDefaults){
     if (animate)
         newDiv.slideDown();
 
+    maybe_show_spark_cassandra_stress_option();
+
     //Remove operation handler:
     $("#remove-"+operation_id).click(function() {
         $("div#"+operation_id).slideUp(function() {
@@ -372,6 +378,31 @@ var addOperationDiv = function(animate, operationDefaults){
     update_cluster_options(operation_id, operationDefaults)
 };
 
+var maybe_show_spark_cassandra_stress_option = function() {
+    // show spark-cassandra-stress option if all product values are set to DSE.
+    // if there's only one product set to Cassandra, then don't show it.
+    var show_spark_stress_option = true;
+    for (var i = 1; i <= $('.product-select').length; i++) {
+        if ($('#revision-' + i + '-product').val() == "cassandra") {
+            show_spark_stress_option = false;
+            break;
+        }
+    }
+    for (var i = 1; i <= $('.operation-type').length; i++) {
+        var id = "#operation-" + i + "-spark_cass_stress_select"
+        if (show_spark_stress_option == true) {
+            $(id).show();
+        } else {
+            // if 'spark-cassandra-stress' is selected, select 'stress'
+            // before hiding 'spark-cassandra-stress' from the dropdown list
+            if ($("#operation-" + i + "-type").val() == "spark_cassandra_stress") {
+                $("#operation-" + i + "-type").val("stress").change();
+            }
+            $(id).hide()
+        }
+    }
+};
+
 var maybe_show_dse_options = function(id, value) {
     dse_yaml_div_id = id.replace("product", "dse_yaml_div")
     dse_node_type_div_id = id.replace("product", "dse_node_type_div")
@@ -379,19 +410,14 @@ var maybe_show_dse_options = function(id, value) {
     if (value == "dse") {
         $("#" + dse_yaml_div_id).show();
         $("#" + dse_node_type_div_id).show();
-	    $("#" + spark_env_div_id).show();
-        $(".operation-type").each(function(i, e) {
-            // if the spark-cass-stress option isn't present yet, then add it
-            if (typeof $(e).find("[value='spark_cassandra_stress']").val() === "undefined") {
-                $(e).append($("<option value='spark_cassandra_stress'>spark-cassandra-stress</option>"));
-            }
-        });
+        $("#" + spark_env_div_id).show();
     } else {
         $("#" + dse_yaml_div_id).hide();
         $("#" + dse_node_type_div_id).hide();
         $("#" + spark_env_div_id).hide();
     }
-}
+    maybe_show_spark_cassandra_stress_option();
+};
 
 var createJob = function() {
     //Parse the form elements and schedule job to run.
@@ -506,12 +532,6 @@ var cloneExistingJob = function(job_id) {
                     $("#revision-"+rev+"-dse_yaml_div").show();
                     $("#revision-"+rev+"-dse_node_type_div").show();
                     $("#revision-"+rev+"-spark_env_div").show();
-                    $(".operation-type").each(function(i, e) {
-                    // if the spark-cass-stress option isn't present yet, then add it
-                    if (typeof $(e).find("[value='spark_cassandra_stress']").val() === "undefined") {
-                        $(e).append($("<option value='spark_cassandra_stress'>spark-cassandra-stress</option>"));
-                    }
-                });
                 }
             });
 
