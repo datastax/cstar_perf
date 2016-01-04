@@ -17,6 +17,7 @@ logger.setLevel(logging.INFO)
 
 DEFAULT_WINDOW_TIME = 90  # days
 DEFAULT_NUMBER_LAST_RUNS = 7  # 5 last runs since we remove the fastest and slowest
+MAJOR_REVISIONS = ['apache/trunk', 'apache/cassandra-3.0', 'apache/cassandra-2.2', 'apache/cassandra-2.1']
 
 ADMINS = ['ryan@datastax.com', 'alan.boudreault@datastax.com']
 
@@ -80,7 +81,20 @@ class CstarTestJob(CstarPerfClient):
     def _read_job_metrics(self, data):
         """Read the job metrics"""
 
-        for operation in data['stats']:
+        stats = data['stats']
+
+        # In case of multiple revisions, we pick the first revision with revision set to a major revision
+        has_multiple_revisions =  True if len(data['revisions']) > 1 else False
+        if has_multiple_revisions:
+            major_revisions = [s for s in data['revisions'] if s['revision'] in MAJOR_REVISIONS]
+            if not major_revisions:
+                raise Exception('Cannot find a major revision for job id: {}'.format(self.job_id))
+
+            logger.debug("Job '{}' has multiple revisions, only '{}' stats will be used.".format(
+                self.job_id, major_revisions[0]['revision']))
+            stats = [s for s in data['stats'] if s['revision'] == major_revisions[0]['revision']]
+
+        for operation in stats:
             if operation['type'] != 'stress':
                 continue
             operation_name = operation.get('test', operation['id'])
@@ -165,15 +179,20 @@ class RegressionSeries(CstarPerfClient):
             return {}
 
         average_performance = {}
-        operations = jobs[0].get_operations()
+        operations = map(lambda j: j.get_operations(), jobs)
+        operations = set([o for ol in operations for o in ol])
 
         for operation in operations:
             average_performance[operation] = {}
             jobs_tmp = list(jobs)
 
             # Remove jobs that don't have the metrics for op rate
-            for job in jobs_tmp:
-                if 'op rate' not in job.metrics[operation]:
+            for job in jobs:
+                if operation not in job.metrics:
+                    logger.warning("Removing job '{}'. operation '{}' not found in stats".format(
+                        job.job_id, operation))
+                    jobs_tmp.remove(job)
+                elif 'op rate' not in job.metrics[operation]:
                     logger.warning("Removing job '{}' for operation '{}' due to missing stats".format(
                         job.job_id, operation))
                     jobs_tmp.remove(job)
