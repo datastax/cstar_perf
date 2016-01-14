@@ -93,9 +93,39 @@ def stop_perf_agent():
         '"{}", {}'.format("[^/]perf record -F", 'child_process=True')
     )
 
-    logger.info("Waiting 10 seconds to for the flamegraph generation")
-    time.sleep(10)
     flamegraph_directory = get_flamegraph_directory()
+    fab.run('sudo chmod o+r {}'.format(os.path.join(flamegraph_directory, '*')))
+
+
+@fab.parallel
+def generate_flamegraph(rev_num):
+    logger.info("Generate Flamegraph")
+    perf_map_agent_path, flamegraph_path = get_flamegraph_paths()
+    java_home = common_module.config['jdk7_home']
+    flamegraph_directory = get_flamegraph_directory()
+
+    perf_data_file = os.path.join(flamegraph_directory, 'perf_revision_{}.data'.format(rev_num + 1))
+    flamegraph_file = os.path.join(flamegraph_directory, 'flamegraph_revision_{}.svg'.format(rev_num + 1))
+    stacks_file = os.path.join(flamegraph_directory, 'perf.stacks')
+    collapsed_file = os.path.join(flamegraph_directory, 'perf.collapsed')
+
+    # Generate java symbol map
+    output = common_module.run_python_script(
+        'utils',
+        'find_process_pid',
+        '"{}"'.format("java.*Cassandra")
+    )
+    cassandra_pids = common_module.parse_output(output)
+    for host, pid in cassandra_pids.iteritems():
+        with common_module.fab.settings(hosts=[host]):
+            fab.run('PATH={java_home}/bin:$PATH JAVA_HOME={java_home} {perf_path}/bin/create-java-perf-map.sh {pid}'.format(
+                java_home=java_home, perf_path=perf_map_agent_path, pid=pid[0]))
+
+    fab.run('sudo perf script -i {} > {}'.format(perf_data_file, stacks_file))
+    fab.run(('{fg_path}/stackcollapse-perf.pl {stacks} | '
+             'tee {collapsed} | {fg_path}/flamegraph.pl --color=java > {fg_output}'
+         ).format(fg_dir=flamegraph_directory, fg_output=flamegraph_file,
+                  stacks=stacks_file, collapsed=collapsed_file, fg_path=flamegraph_path))
     fab.run('sudo chmod o+r {}'.format(os.path.join(flamegraph_directory, '*')))
 
 
@@ -120,7 +150,9 @@ def start_perf_agent(rev_num):
         'PERF_RECORD_SECONDS': PERF_RECORDING_DURATION,
         'PERF_JAVA_TMP': flamegraph_directory,
         'PERF_DATA_FILE': os.path.join(flamegraph_directory, 'perf_revision_{}.data'.format(rev_num + 1)),
-        'PERF_FLAME_OUTPUT': os.path.join(flamegraph_directory, 'flamegraph_revision_{}.svg'.format(rev_num + 1))
+        'PERF_FLAME_OUTPUT': os.path.join(flamegraph_directory, 'flamegraph_revision_{}.svg'.format(rev_num + 1)),
+        'STACKS': "{}/perf.stacks".format(flamegraph_directory),
+        'COLLAPSED': "{}/perf.collapsed".format(flamegraph_directory)
     }
 
     for host, pid in cassandra_pids.iteritems():

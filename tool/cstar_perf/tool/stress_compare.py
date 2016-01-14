@@ -276,6 +276,7 @@ def stress_compare(revisions,
         if flamegraph.is_enabled(revision_config):
             # Generate and Copy node flamegraphs
             execute(flamegraph.stop_perf_agent)
+            execute(flamegraph.generate_flamegraph, rev_num)
             flamegraph_dir = os.path.join(os.path.expanduser('~'),'.cstar_perf', 'flamegraph')
             flamegraph_test_dir = os.path.join(flamegraph_dir, last_stress_operation_id)
             retrieve_flamegraph(flamegraph_test_dir, rev_num+1)
