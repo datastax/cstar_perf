@@ -114,6 +114,7 @@ def start_perf_agent(rev_num):
     flamegraph_directory = get_flamegraph_directory()
 
     env_vars = {
+        'PATH': "{}:{}".format(os.path.join(java_home, 'bin'), "$PATH"),
         'JAVA_HOME': java_home,
         'FLAMEGRAPH_DIR': flamegraph_path,
         'PERF_RECORD_SECONDS': PERF_RECORDING_DURATION,
