@@ -124,6 +124,8 @@ def get_bin_path():
 def bootstrap(config):
     filename = os.path.join(dse_cache, dse_tarball)
     dest = os.path.join(dse_builds, dse_tarball)
+    # remove build folder if it exists
+    fab.run('rm -rf {}'.format(os.path.join(dse_builds, dse_tarball.replace('-bin.tar.gz', ''))))
 
     # Upload the binaries
     fab.run('mkdir -p {dse_builds}'.format(dse_builds=dse_builds))
