@@ -150,6 +150,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "            <option value='cqlsh'>cqlsh</option>" +
         "            <option value='bash'>bash</option>" +
         "            <option id='{operation_id}-spark_cass_stress_select' value='spark_cassandra_stress'>spark-cassandra-stress</option>" +
+        "            <option value='ctool'>ctool</option>" +
         "          </select>" +
         "        </div>" +
         "      </div>" +
@@ -207,6 +208,15 @@ var addOperationDiv = function(animate, operationDefaults){
         "        </div>" +
         "      </div>" +
         "            " +
+        "      <div class='form-group type ctool'>" +
+        "        <label class='col-md-3 control-label'" +
+        "        for='{operation_id}-command'>ctool Command</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <input id='{operation_id}-command' type='text'" +
+        "                 class='form-control input-md command-ctool' value='{command_ctool}' required=''>" +
+        "        </div>" +
+        "      </div>" +
+        "      " +
         "      <div class='form-group type spark_cassandra_stress'>" +
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-command'>Spark Cassandra Stress Command</label>  " +
@@ -333,6 +343,11 @@ var addOperationDiv = function(animate, operationDefaults){
     } else {
         newOperation.script_bash = "df -h";
     }
+    if (newOperation.operationType === 'ctool' && operationDefaults.command) {
+        newOperation.command_ctool = operationDefaults.command;
+    } else {
+        newOperation.command_ctool = "info cstar_perf";
+    }
     if (newOperation.operationType === 'spark_cassandra_stress' && operationDefaults.script) {
         newOperation.script_spark_cassandra_stress = operationDefaults.script;
     } else {
@@ -345,7 +360,7 @@ var addOperationDiv = function(animate, operationDefaults){
         newDiv.hide();
     $("#schedule-operations").append(newDiv);
     $("#"+operation_id+"-type").change(function(){
-        var validOperations = ['stress', 'nodetool', 'cqlsh', 'bash', 'spark_cassandra_stress'];
+        var validOperations = ['stress', 'nodetool', 'cqlsh', 'bash', 'spark_cassandra_stress', 'ctool'];
         if (validOperations.indexOf(this.value) < 0) {
             console.log(this.value + ' not a valid selection')
         }
@@ -466,6 +481,9 @@ var createJob = function() {
         if (op === "nodetool") {
             jobSpec['command'] = operation.find(".command-nodetool").val();
             jobSpec['nodes'] = operation.find(".nodes-nodetool").val() || [];
+        }
+        if (op === "ctool") {
+            jobSpec['command'] = operation.find(".command-ctool").val();
         }
         if (op === "cqlsh") {
             jobSpec['script'] = operation.find(".script-cqlsh").val();
@@ -630,7 +648,7 @@ var update_cluster_selections = function(callback) {
                 alert("Warning - cluster JVM selection changed")
             }
         });
-        
+
         if (callback != null) {
             callback();
         }
