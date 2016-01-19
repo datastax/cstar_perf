@@ -749,13 +749,29 @@ def python(script):
     script_path = '~/fab/scripts/{script_name}.py'.format(script_name=uuid.uuid1())
     fab.put(script, script_path)
     output = StringIO()
-    fab.run('python {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
-    output.seek(0)
-    return output.read().splitlines()
+    with fab.settings(warn_only=True):
+        retval = fab.run(
+            'python {script_path}'.format(script_path=script_path),
+            stdout=output, stderr=output
+        )
+        output.seek(0)
+        output = output.read()
+
+    if retval.return_code != 0:
+        logger.info(output)
+        raise Exception('Error while running python script')
+
+    return output.splitlines()
 
 
 def run_python_script(script_name, function_name, parameters):
     """Run a python function on the host"""
+
+    logger.info('Running {}.{} with parameters "{}"'.format(
+        script_name,
+        function_name,
+        parameters
+    ))
     resource_package = __name__
     resource_path = os.path.join('scripts', '{}.py'.format(script_name))
     script = pkg_resources.resource_string(resource_package, resource_path)
