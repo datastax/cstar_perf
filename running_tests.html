@@ -62,6 +62,7 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#running-tests-from-the-web-frontend">Running tests from the web frontend</a></li>
+<li><a class="reference internal" href="#collect-metrics-using-ctool-perf-monitoring">Collect metrics using Ctool perf_monitoring</a></li>
 </ul>
 </li>
 </ul>
@@ -235,6 +236,29 @@ it will be run on all nodes.</li>
 <div class="section" id="running-tests-from-the-web-frontend">
 <h2>Running tests from the web frontend<a class="headerlink" href="#running-tests-from-the-web-frontend" title="Permalink to this headline">¶</a></h2>
 </div>
+<div class="section" id="collect-metrics-using-ctool-perf-monitoring">
+<h2>Collect metrics using Ctool perf_monitoring<a class="headerlink" href="#collect-metrics-using-ctool-perf-monitoring" title="Permalink to this headline">¶</a></h2>
+<p>Using the ctool command, you can collect the test metrics with &#8216;ctool perf_monitoring&#8217;.</p>
+<p>First, you need to setup a graphite/grafana ec2 instance. cstar_perf will push its metrics data to
+this server:</p>
+<div class="highlight-python"><div class="highlight"><pre>ctool  launch -p trusty cstar_perf_monitoring 1
+</pre></div>
+</div>
+<p>Log in the server and create the data directory:</p>
+<div class="highlight-python"><div class="highlight"><pre>sudo mkdir /mnt/cass_data_disks/
+sudo chown automaton /mnt/cass_data_disks/
+</pre></div>
+</div>
+<p>Install the perf_monitoring requirements:</p>
+<div class="highlight-python"><div class="highlight"><pre>ctool perf_monitoring --install-only graphite
+</pre></div>
+</div>
+<p>Note the public ip address of the graphite node and use the following template for your job
+definition. Don&#8217;t forget to replace the ip address:</p>
+<blockquote>
+<div><img alt="_static/ctool_metrics_template.png" src="_static/ctool_metrics_template.png" />
+</div></blockquote>
+</div>
 </div>
 
 
@@ -260,7 +284,7 @@ it will be run on all nodes.</li>
     </div>
     <div class="footer" role="contentinfo">
         &copy; Copyright 2014, DataStax.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.2.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>

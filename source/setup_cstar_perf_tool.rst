@@ -261,3 +261,47 @@ Enable flamegraph feature in your cluster configuration::
 
   # The flamegraph working directory default to /tmp/flamegraph if not specified.
 
+
+Ctool Command
+-------------
+
+It is possible to run a ctool on the cstar_perf cluster when running tests. This has been mainly
+implemented to use ctool metrics with cstar_perf. Follow these intructions to enable the feature:
+
+Install automaton::
+
+  git clone https://github.com/riptano/automaton.git
+
+Configure the cluster using ctool setup_existing. Create a json config file::
+
+  {
+    "cluster_name": "cstar_perf",
+    "private_key_path": "/home/cstar/.ssh/id_rsa",
+    "ssh_user": "cstar",
+    "hosts": [
+        {
+            "host_name": "172.17.0.2",
+            "ip_address": "172.17.0.2",
+            "private_host_name": "172.17.0.2",
+            "private_ip_address": "172.17.0.2"
+        }
+    ]
+  }
+
+Then setup the existing cluster::
+
+  cd automaton
+  PYTHONPATH=. ./bin/ctool setup_existing ctool_cluster.json
+
+Add the following configuration in your ~/.automaton.conf file::
+
+  [ssh]
+  user = cstar
+  force_user = true
+
+Enable ctool feature by adding the automaton path in your cluster configuration::
+
+  "automaton_path": "/home/cstar/automaton/"
+
+Test the ctool feature using the frontend by selecting the 'ctool' operation and use "info cstar_perf"
+as command.

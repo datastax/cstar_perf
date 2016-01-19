@@ -116,6 +116,11 @@ environment on a fresh OSX machine.</p>
 <div class="highlight-python"><div class="highlight"><pre>docker-machine start cstar-perf
 </pre></div>
 </div>
+<p>Connect to docker-machine image and add symlink for later:</p>
+<div class="highlight-python"><div class="highlight"><pre>docker-machine ssh cstar-perf
+ln -sv /usr/local/bin/docker /usr/bin
+</pre></div>
+</div>
 <p>Setup environment vars for docker (must be run when starting a new shell:</p>
 <div class="highlight-python"><div class="highlight"><pre>eval &quot;$(docker-machine env cstar-perf)&quot;
 </pre></div>
@@ -276,7 +281,7 @@ environment using real hardware.</p>
     </div>
     <div class="footer" role="contentinfo">
         &copy; Copyright 2014, DataStax.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.2.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>

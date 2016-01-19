@@ -147,3 +147,27 @@ Example::
 
 Running tests from the web frontend
 -----------------------------------
+
+Collect metrics using Ctool perf_monitoring
+-------------------------------------------
+
+Using the ctool command, you can collect the test metrics with 'ctool perf_monitoring'.
+
+First, you need to setup a graphite/grafana ec2 instance. cstar_perf will push its metrics data to
+this server::
+
+  ctool  launch -p trusty cstar_perf_monitoring 1
+
+Log in the server and create the data directory::
+
+  sudo mkdir /mnt/cass_data_disks/
+  sudo chown automaton /mnt/cass_data_disks/
+
+Install the perf_monitoring requirements::
+
+  ctool perf_monitoring --install-only graphite
+
+Note the public ip address of the graphite node and use the following template for your job
+definition. Don't forget to replace the ip address:
+
+  .. image:: _static/ctool_metrics_template.png

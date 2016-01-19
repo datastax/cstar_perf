@@ -34,6 +34,11 @@ Create a docker base virtual machine -- adjusting the cpu and memory based on yo
 Start the docker-machine image::
 
     docker-machine start cstar-perf
+    
+Connect to docker-machine image and add symlink for later::
+
+    docker-machine ssh cstar-perf
+    ln -sv /usr/local/bin/docker /usr/bin
 
 Setup environment vars for docker (must be run when starting a new shell::
 
