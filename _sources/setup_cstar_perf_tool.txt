@@ -262,6 +262,22 @@ Enable flamegraph feature in your cluster configuration::
   # The flamegraph working directory default to /tmp/flamegraph if not specified.
 
 
+Yourkit Profiler
+----------------
+
+It is possible to enable the yourkit profiler when running tests. The snapshot will be available as
+artifact at the end of the test. Some details:
+
+ * The yourkit agent has to be uploaded on the nodes manually due to the license
+ * The telemetry window is 1 hour
+ * The yourkit profiler options used are: "onexit=memory,onexit=snapshot"
+
+Enable yourkit feature in your cluster configuration::
+
+  "yourkit_profiler": true,
+  "yourkit_agentpath": "/path/to/yjp-2014-build-14112/bin/linux-x86-64/libyjpagent.so",
+  "yourkit_directory": "/path/to/Snapshots/",
+
 Ctool Command
 -------------
 

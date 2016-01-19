@@ -58,6 +58,7 @@
 <li><a class="reference internal" href="#configuration">Configuration</a></li>
 <li><a class="reference internal" href="#test-cstar-perf-bootstrap">Test cstar_perf_bootstrap</a></li>
 <li><a class="reference internal" href="#flamegraph">Flamegraph</a></li>
+<li><a class="reference internal" href="#yourkit-profiler">Yourkit Profiler</a></li>
 <li><a class="reference internal" href="#ctool-command">Ctool Command</a></li>
 </ul>
 </li>
@@ -336,6 +337,24 @@ sudo pip install sh
 &quot;flamegraph_directory&quot;: &quot;/mnt/data/cstar_perf/flamegraph&quot;
 
 # The flamegraph working directory default to /tmp/flamegraph if not specified.
+</pre></div>
+</div>
+</div>
+<div class="section" id="yourkit-profiler">
+<h2>Yourkit Profiler<a class="headerlink" href="#yourkit-profiler" title="Permalink to this headline">¶</a></h2>
+<p>It is possible to enable the yourkit profiler when running tests. The snapshot will be available as
+artifact at the end of the test. Some details:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The yourkit agent has to be uploaded on the nodes manually due to the license</li>
+<li>The telemetry window is 1 hour</li>
+<li>The yourkit profiler options used are: &#8220;onexit=memory,onexit=snapshot&#8221;</li>
+</ul>
+</div></blockquote>
+<p>Enable yourkit feature in your cluster configuration:</p>
+<div class="highlight-python"><div class="highlight"><pre>&quot;yourkit_profiler&quot;: true,
+&quot;yourkit_agentpath&quot;: &quot;/path/to/yjp-2014-build-14112/bin/linux-x86-64/libyjpagent.so&quot;,
+&quot;yourkit_directory&quot;: &quot;/path/to/Snapshots/&quot;,
 </pre></div>
 </div>
 </div>
