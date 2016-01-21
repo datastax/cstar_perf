@@ -240,17 +240,16 @@ def bash(script, nodes=None, user=None):
         user = common.fab.env.user
     with common.fab.settings(user=user, hosts=nodes):
         return execute(common.bash, script)
-        
+
+
 def cqlsh(script, node):
     """Run a cqlsh script on a node"""
     global cqlsh_path
-    cmd = "{cqlsh_path} --no-color {host}".format(cqlsh_path=cqlsh_path, host=node)
-    proc = subprocess.Popen(shlex.split(cmd),
-                            stdout=subprocess.PIPE,
-                            stdin=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
-    output = proc.communicate(script)
-    return output[0]
+    script = script.replace('\n', ' ')
+    cmd = '{cqlsh_path} --no-color {host} -e "{script}"'.format(cqlsh_path=cqlsh_path, host=node, script=script)
+
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+        return execute(fab.run, cmd)[node] 
 
 
 def spark_cassandra_stress(script, node):
