@@ -10,6 +10,7 @@ import fab_flamegraph as flamegraph
 import fab_profiler as profiler
 from fabric import api as fab
 from fabric.tasks import execute
+from command import Ctool
 import os
 import sys
 import time
@@ -28,7 +29,7 @@ logging.basicConfig()
 logger = logging.getLogger('stress_compare')
 logger.setLevel(logging.INFO)
 
-OPERATIONS = ['stress','nodetool','cqlsh','bash', 'spark_cassandra_stress']
+OPERATIONS = ['stress','nodetool','cqlsh','bash', 'ctool', 'spark_cassandra_stress']
 
 flamegraph.set_common_module(common)
 profiler.set_common_module(common)
@@ -61,6 +62,8 @@ def validate_operations_list(operations):
         elif op['type'] == 'spark_cassandra_stress':
             assert op.has_key('script'), "spark_cassandra_stress is missing parameters"
             assert op.has_key('node'), "spark_cassandra_stress missing node to run on"
+        elif op['type'] == 'ctool':
+            assert op.has_key('command'), "ctool is missing parameters"
 
 
 def stress_compare(revisions,
@@ -249,6 +252,13 @@ def stress_compare(revisions,
                     output = spark_cassandra_stress(operation['script'], node)
                     stats['output'] = output
                     logger.info("spark_cassandra_stress finished")
+
+                elif operation['type'] == 'ctool':
+                    logger.info("Running ctool with parameters: {command}".format(command=operation['command']))
+                    ctool = Ctool(operation['command'], common.config)
+                    output = execute(ctool.run)
+                    stats['output'] = output
+                    logger.info("ctool finished")
 
                 end = datetime.datetime.now()
                 stats['end_date'] = end.isoformat()
