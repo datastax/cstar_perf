@@ -321,3 +321,35 @@ def test_commitlog_sync_settings():
                       'concurrent_writes: 64'])
     test_simple_profile(title='Batch Commitlog', yaml=yaml,
                         load_rows='10M', read_rows='10M', series='commitlog_sync')
+
+
+def materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAULT_CLUSTER_NAME,
+                           rows='50M', threads=300, series='materialized_views_write_3_mv'):
+    config = create_baseline_config(title, series, rolling_window_revisions())
+    config['cluster'] = cluster
+    config['operations'] = [
+        {'operation': 'stress',
+         'stress_revision': 'apache/trunk',
+         'command': ('user profile=http://cassci.datastax.com/userContent/cstar_perf_regression/users-rf3-3mv.yaml '
+                     'ops\(insert=1\) n={rows}M -rate threads={threads}').format(rows=rows, threads=threads),
+         'wait_for_compaction': False}
+    ]
+
+    scheduler = Scheduler(CSTAR_SERVER)
+    scheduler.schedule(config)
+
+
+def materialized_view_1_mv(title='Materialized Views (1 MV)', cluster=DEFAULT_CLUSTER_NAME,
+                           rows='50M', threads=300, series='materialized_views_write_1_mv'):
+    config = create_baseline_config(title, series, rolling_window_revisions())
+    config['cluster'] = cluster
+    config['operations'] = [
+        {'operation': 'stress',
+         'stress_revision': 'apache/trunk',
+         'command': ('user profile=http://cassci.datastax.com/userContent/cstar_perf_regression/users-rf3-1mv.yaml '
+                     'ops\(insert=1\) n={rows}M -rate threads={threads}').format(rows=rows, threads=threads),
+         'wait_for_compaction': False}
+    ]
+
+    scheduler = Scheduler(CSTAR_SERVER)
+    scheduler.schedule(config)
