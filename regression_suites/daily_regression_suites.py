@@ -323,7 +323,7 @@ def create_baseline_config(title=None, series=None, revisions=standard_rolling_w
 #                         load_rows='10M', read_rows='10M', series='commitlog_sync')
 
 
-def materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAULT_CLUSTER_NAME,
+def test_materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAULT_CLUSTER_NAME,
                            rows='50M', threads=300, series='materialized_views_write_3_mv'):
     config = create_baseline_config(title, series, rolling_window_revisions())
     config['cluster'] = cluster
@@ -339,7 +339,7 @@ def materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAULT_CL
     scheduler.schedule(config)
 
 
-def materialized_view_1_mv(title='Materialized Views (1 MV)', cluster=DEFAULT_CLUSTER_NAME,
+def test_materialized_view_1_mv(title='Materialized Views (1 MV)', cluster=DEFAULT_CLUSTER_NAME,
                            rows='50M', threads=300, series='materialized_views_write_1_mv'):
     config = create_baseline_config(title, series, rolling_window_revisions())
     config['cluster'] = cluster
