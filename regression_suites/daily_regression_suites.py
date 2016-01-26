@@ -124,203 +124,203 @@ def create_baseline_config(title=None, series=None, revisions=standard_rolling_w
     return config
 
 
-def test_upgrading_versions(title='RollingUpgrade', cluster=DEFAULT_CLUSTER_NAME, series='rolling_upgrade'):
-    config = create_baseline_config(title, series, rolling_upgrade_version_revisions())
-    config['cluster'] = cluster
-    config['num_nodes'] = "3",
-    config['leave_data'] = True
-    config['operations'] = [
-        {
-            'operation': 'nodetool',
-            'command': 'version'
-        },
-        {
-            'operation': 'nodetool',
-            'command': 'upgradesstables',
-            "wait_for_compaction": True
-        },
-        {
-            'operation': 'nodetool',
-            'command': 'status'
-        },
-        {
-            'operation': 'stress',
-            "command": "write n=25M -rate threads=100",
-            "wait_for_compaction": True,
-            'nodes': NODES
-        },
-        {
-            'operation': 'stress',
-            "command": "read n=25M -rate threads=100",
-            "wait_for_compaction": True,
-            'nodes': NODES
-        },
-        {
-            'operation': 'nodetool',
-            'command': 'flush',
-            "wait_for_compaction": True
-        },
-    ]
+# def test_upgrading_versions(title='RollingUpgrade', cluster=DEFAULT_CLUSTER_NAME, series='rolling_upgrade'):
+#     config = create_baseline_config(title, series, rolling_upgrade_version_revisions())
+#     config['cluster'] = cluster
+#     config['num_nodes'] = "3",
+#     config['leave_data'] = True
+#     config['operations'] = [
+#         {
+#             'operation': 'nodetool',
+#             'command': 'version'
+#         },
+#         {
+#             'operation': 'nodetool',
+#             'command': 'upgradesstables',
+#             "wait_for_compaction": True
+#         },
+#         {
+#             'operation': 'nodetool',
+#             'command': 'status'
+#         },
+#         {
+#             'operation': 'stress',
+#             "command": "write n=25M -rate threads=100",
+#             "wait_for_compaction": True,
+#             'nodes': NODES
+#         },
+#         {
+#             'operation': 'stress',
+#             "command": "read n=25M -rate threads=100",
+#             "wait_for_compaction": True,
+#             'nodes': NODES
+#         },
+#         {
+#             'operation': 'nodetool',
+#             'command': 'flush',
+#             "wait_for_compaction": True
+#         },
+#     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
-
-
-def test_simple_profile(title='Read/Write', cluster=DEFAULT_CLUSTER_NAME, load_rows='65M', read_rows='65M',
-                        threads=300, yaml=None, series='read_write'):
-    """Test the basic stress profile with default C* settings"""
-    config = create_baseline_config(title, series)
-    config['cluster'] = cluster
-    config['operations'] = [
-        {'operation': 'stress',
-         'stress_revision': 'apache/trunk',
-         'command': 'write n={load_rows} -rate threads={threads}'.format(**locals()),
-         'wait_for_compaction': True},
-        {'operation': 'stress',
-         'stress_revision': 'apache/trunk',
-         'command': 'read n={read_rows} -rate threads={threads}'.format(**locals()),
-         'wait_for_compaction': True},
-        {'operation': 'stress',
-         'stress_revision': 'apache/trunk',
-         'command': 'read n={read_rows} -rate threads={threads}'.format(**locals()),
-         'wait_for_compaction': True}
-    ]
-    if yaml:
-        config['yaml'] = yaml
-
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+#     scheduler = Scheduler(CSTAR_SERVER)
+#     scheduler.schedule(config)
 
 
-def compaction_profile(title='Compaction', cluster=DEFAULT_CLUSTER_NAME, rows='65M', threads=300):
-    config = create_baseline_config(title, 'compaction')
-    config['cluster'] = cluster
-    config['operations'] = [
-        {'operation': 'stress',
-         'stress_revision': 'apache/trunk',
-         'command': 'write n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
-         'wait_for_compaction': True},
-        {'operation': 'nodetool',
-         'command': 'flush'},
-        {'operation': 'nodetool',
-         'command': 'compact'},
-        {'operation': 'stress',
-         'stress_revision': 'apache/trunk',
-         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
-         'wait_for_compaction': True},
-        {'operation': 'stress',
-         'stress_revision': 'apache/trunk',
-         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
-         'wait_for_compaction': True}
-    ]
+# def test_simple_profile(title='Read/Write', cluster=DEFAULT_CLUSTER_NAME, load_rows='65M', read_rows='65M',
+#                         threads=300, yaml=None, series='read_write'):
+#     """Test the basic stress profile with default C* settings"""
+#     config = create_baseline_config(title, series)
+#     config['cluster'] = cluster
+#     config['operations'] = [
+#         {'operation': 'stress',
+#          'stress_revision': 'apache/trunk',
+#          'command': 'write n={load_rows} -rate threads={threads}'.format(**locals()),
+#          'wait_for_compaction': True},
+#         {'operation': 'stress',
+#          'stress_revision': 'apache/trunk',
+#          'command': 'read n={read_rows} -rate threads={threads}'.format(**locals()),
+#          'wait_for_compaction': True},
+#         {'operation': 'stress',
+#          'stress_revision': 'apache/trunk',
+#          'command': 'read n={read_rows} -rate threads={threads}'.format(**locals()),
+#          'wait_for_compaction': True}
+#     ]
+#     if yaml:
+#         config['yaml'] = yaml
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
-
-
-def test_compaction_profile():
-    compaction_profile(rows='10M')
+#     scheduler = Scheduler(CSTAR_SERVER)
+#     scheduler.schedule(config)
 
 
-def repair_profile(title='Repair', cluster=DEFAULT_CLUSTER_NAME, rows='65M', threads=300, series=None):
-    config = create_baseline_config(title, series)
-    config['cluster'] = cluster
-    config['operations'] = [
-        {'operation': 'stress',
-         'stress_revision': 'apache/trunk',
-         'command': 'write n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
-         'wait_for_compaction': True},
-        {'operation': 'nodetool',
-         'command': 'flush'},
-        {'operation': 'nodetool',
-         'command': 'repair'},
-        {'operation': 'stress',
-         'stress_revision': 'apache/trunk',
-         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
-         'wait_for_compaction': True},
-        {'operation': 'stress',
-         'stress_revision': 'apache/trunk',
-         'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
-         'wait_for_compaction': True}
-    ]
+# def compaction_profile(title='Compaction', cluster=DEFAULT_CLUSTER_NAME, rows='65M', threads=300):
+#     config = create_baseline_config(title, 'compaction')
+#     config['cluster'] = cluster
+#     config['operations'] = [
+#         {'operation': 'stress',
+#          'stress_revision': 'apache/trunk',
+#          'command': 'write n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+#          'wait_for_compaction': True},
+#         {'operation': 'nodetool',
+#          'command': 'flush'},
+#         {'operation': 'nodetool',
+#          'command': 'compact'},
+#         {'operation': 'stress',
+#          'stress_revision': 'apache/trunk',
+#          'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+#          'wait_for_compaction': True},
+#         {'operation': 'stress',
+#          'stress_revision': 'apache/trunk',
+#          'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+#          'wait_for_compaction': True}
+#     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
-
-
-def test_repair_profile():
-    repair_profile(rows='10M', series='repair_10M')
+#     scheduler = Scheduler(CSTAR_SERVER)
+#     scheduler.schedule(config)
 
 
-def compaction_strategies_profile(title='Compaction Strategy', cluster=DEFAULT_CLUSTER_NAME, rows='65M',
-                                  threads=300, strategy=None, series=None):
-    config = create_baseline_config(title, series)
-    config['cluster'] = cluster
-    for r in config['revisions']:
-        r['options'] = {'use_vnodes': False, 'token_allocation': 'non-vnodes'}
-
-    schema_options = 'replication\(factor=3\)'
-    if strategy:
-        schema_options += ' compaction\(strategy={strategy}\)'.format(strategy=strategy)
-
-    config['operations'] = [
-        {
-            'operation': 'stress',
-            'stress_revision': 'apache/trunk',
-            'command': 'write n={rows} cl=QUORUM -rate threads={threads} -schema {schema_options}'
-                .format(rows=rows, threads=threads, schema_options=schema_options),
-            'wait_for_compaction': True
-        },
-        {
-            'operation': 'nodetool',
-            'command': 'flush',
-            'wait_for_compaction': True
-        },
-        {
-            'operation': 'nodetool',
-            'command': 'compact',
-            'wait_for_compaction': True
-        },
-        {
-            'operation': 'stress',
-            'stress_revision': 'apache/trunk',
-            'command': 'read n={rows} cl=QUORUM -rate threads={threads}'.format(rows=rows, threads=threads),
-            'wait_for_compaction': True
-        },
-        {
-            'operation': 'stress',
-            'stress_revision': 'apache/trunk',
-            'command': 'read n={rows} cl=QUORUM -rate threads={threads}'.format(rows=rows, threads=threads),
-            'wait_for_compaction': True
-        }
-    ]
-
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+# def test_compaction_profile():
+#     compaction_profile(rows='10M')
 
 
-def test_STCS_profile():
-    compaction_strategies_profile(title='STCS', strategy='org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy',
-                                  rows='10M', series='compaction_stcs')
+# def repair_profile(title='Repair', cluster=DEFAULT_CLUSTER_NAME, rows='65M', threads=300, series=None):
+#     config = create_baseline_config(title, series)
+#     config['cluster'] = cluster
+#     config['operations'] = [
+#         {'operation': 'stress',
+#          'stress_revision': 'apache/trunk',
+#          'command': 'write n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+#          'wait_for_compaction': True},
+#         {'operation': 'nodetool',
+#          'command': 'flush'},
+#         {'operation': 'nodetool',
+#          'command': 'repair'},
+#         {'operation': 'stress',
+#          'stress_revision': 'apache/trunk',
+#          'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+#          'wait_for_compaction': True},
+#         {'operation': 'stress',
+#          'stress_revision': 'apache/trunk',
+#          'command': 'read n={rows} -rate threads={threads}'.format(rows=rows, threads=threads),
+#          'wait_for_compaction': True}
+#     ]
+
+#     scheduler = Scheduler(CSTAR_SERVER)
+#     scheduler.schedule(config)
 
 
-def test_DTCS_profile():
-    compaction_strategies_profile(title='DTCS', strategy='org.apache.cassandra.db.compaction.DateTieredCompactionStrategy',
-                                  rows='10M', series='compaction_dtcs')
+# def test_repair_profile():
+#     repair_profile(rows='10M', series='repair_10M')
 
 
-def test_LCS_profile():
-    compaction_strategies_profile(title='LCS', strategy='org.apache.cassandra.db.compaction.LeveledCompactionStrategy',
-                                  rows='10M', series='compaction_lcs')
+# def compaction_strategies_profile(title='Compaction Strategy', cluster=DEFAULT_CLUSTER_NAME, rows='65M',
+#                                   threads=300, strategy=None, series=None):
+#     config = create_baseline_config(title, series)
+#     config['cluster'] = cluster
+#     for r in config['revisions']:
+#         r['options'] = {'use_vnodes': False, 'token_allocation': 'non-vnodes'}
+
+#     schema_options = 'replication\(factor=3\)'
+#     if strategy:
+#         schema_options += ' compaction\(strategy={strategy}\)'.format(strategy=strategy)
+
+#     config['operations'] = [
+#         {
+#             'operation': 'stress',
+#             'stress_revision': 'apache/trunk',
+#             'command': 'write n={rows} cl=QUORUM -rate threads={threads} -schema {schema_options}'
+#                 .format(rows=rows, threads=threads, schema_options=schema_options),
+#             'wait_for_compaction': True
+#         },
+#         {
+#             'operation': 'nodetool',
+#             'command': 'flush',
+#             'wait_for_compaction': True
+#         },
+#         {
+#             'operation': 'nodetool',
+#             'command': 'compact',
+#             'wait_for_compaction': True
+#         },
+#         {
+#             'operation': 'stress',
+#             'stress_revision': 'apache/trunk',
+#             'command': 'read n={rows} cl=QUORUM -rate threads={threads}'.format(rows=rows, threads=threads),
+#             'wait_for_compaction': True
+#         },
+#         {
+#             'operation': 'stress',
+#             'stress_revision': 'apache/trunk',
+#             'command': 'read n={rows} cl=QUORUM -rate threads={threads}'.format(rows=rows, threads=threads),
+#             'wait_for_compaction': True
+#         }
+#     ]
+
+#     scheduler = Scheduler(CSTAR_SERVER)
+#     scheduler.schedule(config)
 
 
-def test_commitlog_sync_settings():
-    yaml = '\n'.join(['commitlog_sync: batch',
-                      'commitlog_sync_batch_window_in_ms: 2',
-                      'commitlog_sync_period_in_ms: null',
-                      'concurrent_writes: 64'])
-    test_simple_profile(title='Batch Commitlog', yaml=yaml,
-                        load_rows='10M', read_rows='10M', series='commitlog_sync')
+# def test_STCS_profile():
+#     compaction_strategies_profile(title='STCS', strategy='org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy',
+#                                   rows='10M', series='compaction_stcs')
+
+
+# def test_DTCS_profile():
+#     compaction_strategies_profile(title='DTCS', strategy='org.apache.cassandra.db.compaction.DateTieredCompactionStrategy',
+#                                   rows='10M', series='compaction_dtcs')
+
+
+# def test_LCS_profile():
+#     compaction_strategies_profile(title='LCS', strategy='org.apache.cassandra.db.compaction.LeveledCompactionStrategy',
+#                                   rows='10M', series='compaction_lcs')
+
+
+# def test_commitlog_sync_settings():
+#     yaml = '\n'.join(['commitlog_sync: batch',
+#                       'commitlog_sync_batch_window_in_ms: 2',
+#                       'commitlog_sync_period_in_ms: null',
+#                       'concurrent_writes: 64'])
+#     test_simple_profile(title='Batch Commitlog', yaml=yaml,
+#                         load_rows='10M', read_rows='10M', series='commitlog_sync')
 
 
 def materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAULT_CLUSTER_NAME,
