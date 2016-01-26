@@ -331,7 +331,7 @@ def test_materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAU
         {'operation': 'stress',
          'stress_revision': 'apache/trunk',
          'command': ('user profile=http://cassci.datastax.com/userContent/cstar_perf_regression/users-rf3-3mv.yaml '
-                     'ops\(insert=1\) n={rows}M -rate threads={threads}').format(rows=rows, threads=threads),
+                     'ops\(insert=1\) n={rows} -rate threads={threads}').format(rows=rows, threads=threads),
          'wait_for_compaction': False}
     ]
 
@@ -347,7 +347,7 @@ def test_materialized_view_1_mv(title='Materialized Views (1 MV)', cluster=DEFAU
         {'operation': 'stress',
          'stress_revision': 'apache/trunk',
          'command': ('user profile=http://cassci.datastax.com/userContent/cstar_perf_regression/users-rf3-1mv.yaml '
-                     'ops\(insert=1\) n={rows}M -rate threads={threads}').format(rows=rows, threads=threads),
+                     'ops\(insert=1\) n={rows} -rate threads={threads}').format(rows=rows, threads=threads),
          'wait_for_compaction': False}
     ]
 
