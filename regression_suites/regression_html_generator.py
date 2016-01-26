@@ -57,6 +57,10 @@ def generate_graphs(cached=False):
         {'name': 'Initial read P99.9', 'op': '5_read', 'metric': '99.9th_latency'}
     ]
 
+    mv_operation = [
+        {'name': 'write', 'op': '1_user', 'metric': 'op_rate'}
+    ]
+
     series_list = {
         'daily_regressions_trunk-compaction': compaction_operation,
         'daily_regressions_trunk-commitlog_sync': simple_operation,
@@ -65,7 +69,9 @@ def generate_graphs(cached=False):
         'daily_regressions_trunk-compaction_lcs': compaction_operation,
         'daily_regressions_trunk-compaction_stcs': compaction_operation,
         'daily_regressions_trunk-compaction_dtcs': compaction_operation,
-        'daily_regressions_trunk-rolling_upgrade': rolling_upgrade
+        'daily_regressions_trunk-rolling_upgrade': rolling_upgrade,
+        'daily_regressions_trunk-materialized_views_write_3_mv': mv_operation,
+        'daily_regressions_trunk-materialized_views_write_1_mv': mv_operation
     }
 
     retval = ""
