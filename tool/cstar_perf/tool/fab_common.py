@@ -440,6 +440,8 @@ def destroy(leave_data=False, kill_delay=0):
         fab.run('rm -rf {saved_caches_directory}/*'.format(saved_caches_directory=config['saved_caches_directory']))
         fab.run('rm -rf {commitlog}/*'.format(commitlog=config['commitlog_directory']))
         fab.run('rm -rf {flushdir}/*'.format(flushdir=config['flush_directory']))
+        if config.get('hints_directory'):
+            fab.run('rm -rf {hints_directory}/*'.format(hints_directory=config.get('hints_directory')))
     fab.run('rm -rf {log_dir}'.format(log_dir=config['log_dir']))
     fab.run('rm -f /tmp/fincore.stats.log')
 
