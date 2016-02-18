@@ -465,8 +465,12 @@ def start():
     # Turn on GC logging:
     fab.run("mkdir -p ~/fab/cassandra/logs")
     log_dir = fab.run("readlink -m {log_dir}".format(log_dir=config['log_dir']))
+    try:
+        ip_address = cluster_config['hosts'][fab.env.host]['internal_ip']
+    except:
+        ip_address = fab.env.host
     env = "JVM_OPTS=\"$JVM_OPTS -Djava.rmi.server.hostname={hostname} -Xloggc:{log_dir}/gc.log\"\n\n".format(
-        hostname=fab.env.host, log_dir=log_dir) + env
+        hostname=ip_address, log_dir=log_dir) + env
     # Enable JMX without authentication
     env = "JVM_OPTS=\"$JVM_OPTS -Dcom.sun.management.jmxremote.port=7199 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false\"\n" + env
 
