@@ -251,7 +251,7 @@ def get_clusters(cluster_regex='all', all_metadata=False):
             data = get_container_data(container)
             try:
                 labels = data['Config']['Labels']
-                if labels['cstar_node'] == 'true':
+                if labels and labels['cstar_node'] == 'true':
                     container_name = data['Name'] = data['Name'].lstrip('/')
                     node_num = labels['node'] = int(labels['node'])
                     if cluster_regex.lower() == 'all$' or re.match(cluster_regex, labels['cluster_name']):
