@@ -30,7 +30,7 @@ GIT_REPOS = [
     ('stef1927',      'git://github.com/stef1927/cassandra.git'),
     ('driftx',        'git://github.com/driftx/cassandra.git'),
     ('jeffjirsa',     'git://github.com/jeffjirsa/cassandra.git'),
-    ('aboudreault',   'git://github.com/aboudreault/cassandra.git')
+    ('aboudreault',   'git://github.com/aboudreault/cassandra.git'),
     ('pauloricardomg','git://github.com/pauloricardomg/cassandra')
 ]
 
