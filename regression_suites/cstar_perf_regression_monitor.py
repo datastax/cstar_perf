@@ -248,9 +248,10 @@ class RegressionMonitor(CstarPerfClient):
                                  server=self.server) for s in series]
 
     def run(self):
-        series = self._get_series()
+        series = [s for s in self._get_series() if 'daily_regressions' in s.name]
 
         q = Queue()
+
         for s in series:
             q.put(s)
 
