@@ -75,6 +75,8 @@ def get_cassandra_config_options(config):
     if out.failed:
         fab.abort('Failed to run Jython Config parser : ' + out.stderr)
     opts = yaml.load(out)
+    # CASSANDRA-11217 brought in a 'log' method and locals() contains 'log' which taints our cassandra.yaml. Delete it.
+    del opts['log']
     p = re.compile("^[a-z][^A-Z]*$")
     return [o for o in opts if p.match(o)]
 
