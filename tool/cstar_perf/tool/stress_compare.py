@@ -2,7 +2,7 @@ from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash,
                        log_stats, log_set_title, log_add_data, retrieve_logs, restart,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
                        drop_page_cache, wait_for_compaction, setup_stress, clean_stress,
-                       get_localhost, retrieve_flamegraph, retrieve_yourkit)
+                       get_localhost, retrieve_flamegraph, retrieve_yourkit, dsetool_cmd, dse_cmd)
 from benchmark import config as fab_config, cstar, dse, set_cqlsh_path, set_nodetool_path, spark_cassandra_stress
 import fab_common as common
 import fab_cassandra as cstar
@@ -29,7 +29,7 @@ logging.basicConfig()
 logger = logging.getLogger('stress_compare')
 logger.setLevel(logging.INFO)
 
-OPERATIONS = ['stress','nodetool','cqlsh','bash', 'ctool', 'spark_cassandra_stress']
+OPERATIONS = ['stress','nodetool','cqlsh','bash', 'ctool', 'spark_cassandra_stress', 'dse', 'dsetool']
 
 flamegraph.set_common_module(common)
 profiler.set_common_module(common)
@@ -259,6 +259,28 @@ def stress_compare(revisions,
                     output = execute(ctool.run)
                     stats['output'] = output
                     logger.info("ctool finished")
+
+                elif operation['type'] == 'dsetool':
+                    if 'nodes' not in operation:
+                        operation['nodes'] = 'all'
+                    if operation['nodes'] in ['all','ALL']:
+                        nodes = [n for n in fab_config['hosts']]
+                    else:
+                        nodes = operation['nodes']
+
+                    dsetool_options = operation['script']
+                    logger.info("Running dsetool {command} on {nodes}".format(nodes=operation['nodes'], command=dsetool_options))
+                    stats['command'] = dsetool_options
+                    output = dsetool_cmd(nodes=nodes, options=dsetool_options)
+                    stats['output'] = output
+                    logger.info("dsetool command finished on all nodes")
+
+                elif operation['type'] == 'dse':
+                    logger.info("Running dse command on {node}".format(node=operation['node']))
+                    output = dse_cmd(node=operation['node'], options=operation['script'])
+                    stats['output'] = output.split("\n")
+                    stats['command'] = operation['script']
+                    logger.info("dse commands finished")
 
                 end = datetime.datetime.now()
                 stats['end_date'] = end.isoformat()

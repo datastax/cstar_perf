@@ -2,27 +2,27 @@
 Bootstrap Cassandra onto a cluster and benchmark stress.
 """
 
-import argparse
-import shlex
 import subprocess
 import tempfile
-import os, sys
+import os
 import time
 import datetime
 from pprint import pprint
-from fabric.tasks import execute
-import fabric.api as fab
 import uuid
 import re
 import json
-import threading
 import socket
 import getpass
 import logging
-import yaml
-import sh
 import itertools
 import shutil
+
+from fabric.tasks import execute
+import fabric.api as fab
+import yaml
+
+import sh
+
 
 # Import the default config first:r
 import fab_common as common
@@ -249,7 +249,24 @@ def cqlsh(script, node):
     cmd = '{cqlsh_path} --no-color {host} -e "{script}"'.format(cqlsh_path=cqlsh_path, host=node, script=script)
 
     with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
-        return execute(fab.run, cmd)[node] 
+        return execute(fab.run, cmd)[node]
+
+
+def dse_cmd(node, options):
+    cmd = "JAVA_HOME={java_home} {dse_cmd} {options}".format(java_home=JAVA_HOME,
+                                                             dse_cmd=os.path.join(dse.get_bin_path(), 'dse'),
+                                                             options=options)
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node, warn_only=True):
+        return execute(fab.run, cmd)[node]
+
+
+def dsetool_cmd(nodes, options):
+    """Run a dsetool command simultaneously on each node specified"""
+    cmd = 'JAVA_HOME={java_home} {dsetool_cmd} {options}'.format(java_home=JAVA_HOME,
+                                                                 dsetool_cmd=os.path.join(dse.get_bin_path(),
+                                                                                          'dsetool'), options=options)
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=nodes, warn_only=True):
+        return execute(fab.run, cmd)
 
 
 def spark_cassandra_stress(script, node):
@@ -286,6 +303,7 @@ def nodetool_multi(nodes, command):
     """Run a nodetool command simultaneously on each node specified"""
     with common.fab.settings(hosts=nodes):
         return execute(common.multi_nodetool, command)
+
 
 def wait_for_compaction(nodes=None, check_interval=30, idle_confirmations=3,
                         compaction_throughput=16, allowed_connection_errors=10):
