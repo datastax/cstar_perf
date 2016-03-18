@@ -307,6 +307,11 @@ def bootstrap(git_fetch=True, revision_override=None):
 
     # Get the canonical list of options from the c* source code:
     cstar_config_opts = product.get_cassandra_config_options(config)
+    # CASSANDRA-11217 brought in a 'log' method and locals() contains 'log' which taints our cassandra.yaml. Delete it.
+    try:
+        cstar_config_opts.remove('log')
+    except ValueError:
+        pass
 
     if product.name == 'dse':
         dse_config_options = product.get_dse_config_options(config)
