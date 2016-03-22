@@ -38,7 +38,7 @@
 
 
 import cassandra
-from cassandra.cluster import Cluster
+from cassandra.cluster import Cluster, Session
 import json
 import uuid
 import logging
@@ -46,6 +46,8 @@ import datetime
 import zmq
 from collections import namedtuple
 import base64
+
+Session.default_timeout = 45
 
 from flask.ext.scrypt import generate_password_hash, generate_random_salt, check_password_hash
 
@@ -330,7 +332,7 @@ class Model(object):
             name = "Unknown artifact"
         if hasattr(artifact, 'encode'):
             artifact = artifact.encode("hex")
-        session.execute(self.__prepared_statements['update_test_artifact'], (artifact, available, object_id, test_id, artifact_type, name))
+        session.execute(self.__prepared_statements['update_test_artifact'], (artifact, available, object_id, test_id, artifact_type, name), timeout=60)
         return test_id
 
     def insert_artifact_chunk(self, object_id, chunk_id, chunk_size, chunk_sha, object_chunk, total_chunks, object_size, object_sha):
