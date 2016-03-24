@@ -26,7 +26,8 @@ var drawGraph = function() {
     var series_summary_metrics = {
         'op_rate' : 'op rate',
         '99th_latency' : 'latency 99th percentile',
-        '99.9th_latency' : 'latency 99.9th percentile'
+        '99.9th_latency' : 'latency 99.9th percentile',
+        'elapsed_time' : 'Elapsed time'
     };
 
     if (rendering_series_graph) {
