@@ -527,7 +527,7 @@ def get_series_graph( series, start_timestamp, end_timestamp, operation, metric)
 def get_series_graph_png( series, start_timestamp, end_timestamp, operation, metric):
     host = socket.gethostname()
     graphURL = "http://" + host + construct_series_graph_url( series, start_timestamp, end_timestamp, operation, metric )
-    return Response(response=screenshot.get_graph_png(graphURL, x_crop=900, y_crop=650),
+    return Response(response=screenshot.get_graph_png(graphURL, x_crop=900, y_crop=750),
                     status=200,
                     mimetype='application/png')
 
@@ -537,7 +537,7 @@ def get_series_graph_png_cached( series, age, operation, metric, expires, invali
     start_timestamp = max(0, end_timestamp - int(age))
     graphURL = "http://" + host + construct_series_graph_url( series, start_timestamp, end_timestamp, operation, metric )
     def loader():
-        return screenshot.get_graph_png(graphURL, x_crop=900, y_crop=650)
+        return screenshot.get_graph_png(graphURL, x_crop=900, y_crop=750)
 
     cache_key = series + "/" + age + "/" + operation + "/" + metric
     return stupid_cache.stupid_cache_get("/tmp", cache_key, loader, expires, invalidate)
