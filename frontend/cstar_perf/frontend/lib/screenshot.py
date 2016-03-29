@@ -56,6 +56,8 @@ def start_selenium_grid(docker_image='selenium/standalone-chrome'):
                              '-d',
                              '-p',
                              '127.0.0.1:4444:4444',
+                             '-v',
+                             '/dev/shm:/dev/shm',
                              '--name',
                              'cstar_perf_selenium',
                              docker_image])
