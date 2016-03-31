@@ -1,6 +1,8 @@
 import datetime
-from util import get_sha_from_build_days_ago, get_tagged_releases
+
 from cstar_perf.frontend.client.schedule import Scheduler
+from util import get_sha_from_build_days_ago, get_tagged_releases
+
 # import json
 
 REVISION = 'apache/trunk'
@@ -14,21 +16,6 @@ NODES = ['blade-11-6a', 'blade-11-7a', 'blade-11-8a']
 #
 #     def schedule(self, config):
 #         print(json.dumps(config, sort_keys=True, indent=4, separators=(',', ': ')))
-
-
-def stable_oldstable_revisions():
-    stable = get_tagged_releases('stable')[0]
-    oldstable = get_tagged_releases('oldstable')[0]
-    return [
-        {
-            "revision": "refs/tags/{}".format(stable),
-            "label": "Stable: {}".format(stable)
-        },
-        {
-            "revision": "refs/tags/{}".format(oldstable),
-            "label": "Old Stable: {}".format(oldstable)
-        }
-    ]
 
 
 def rolling_window_revisions():
@@ -94,7 +81,7 @@ def rolling_upgrade_version_revisions():
 
 
 def standard_rolling_window_revisions():
-    return rolling_window_revisions() + stable_oldstable_revisions()
+    return rolling_window_revisions()
 
 
 def create_baseline_config(title=None, series=None, revisions=standard_rolling_window_revisions()):
