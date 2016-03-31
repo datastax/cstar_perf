@@ -1,7 +1,7 @@
 import datetime
 
 from cstar_perf.frontend.client.schedule import Scheduler
-from util import get_sha_from_build_days_ago, get_tagged_releases
+from util import get_sha_from_build_days_ago
 
 # import json
 
@@ -35,40 +35,41 @@ def rolling_window_revisions():
 
 
 def rolling_upgrade_version_revisions():
-    stable = get_tagged_releases('stable')[0]
-    oldstable = get_tagged_releases('oldstable')[0]
+    cassandra_2_2 = 'cassandra-2.2'
+    cassandra_3_0 = 'cassandra-3.0'
+
     return [
         {
-            "revision": "refs/tags/{}".format(oldstable),
-            "label": "step_0_  3 Old Stable Nodes: {}".format(oldstable),
+            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "label": "step_0_  3 {} Nodes".format(cassandra_2_2),
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(oldstable),
-            "label": "step_1_  2 Old Stable Nodes, 1 Stable: {}/{}".format(oldstable, stable),
-            "revision_override": {"refs/tags/{}".format(stable): [NODES[0]]},
+            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "label": "step_1_  2 {} Nodes, 1 {} Node".format(cassandra_2_2, cassandra_3_0),
+            "revision_override": {"refs/tags/{}".format(cassandra_3_0): [NODES[0]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(oldstable),
-            "label": "step_2_  1 Old Stable Nodes, 2 Stable: {}/{}".format(oldstable, stable),
-            "revision_override": {"refs/tags/{}".format(stable): [NODES[0], NODES[1]]},
+            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "label": "step_2_  1 {} Nodes, 2 {} Nodes".format(cassandra_2_2, cassandra_3_0),
+            "revision_override": {"refs/tags/{}".format(cassandra_3_0): [NODES[0], NODES[1]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(stable),
-            "label": "step_3_  3 Stable Nodes: {}".format(stable),
+            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "label": "step_3_  3 {} Nodes".format(cassandra_3_0),
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(stable),
-            "label": "step_4_  2 Stable Nodes, 1 Trunk: {}".format(stable),
+            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "label": "step_4_  2 {} Nodes, 1 Trunk Node".format(cassandra_3_0),
             "revision_override": {'apache/trunk': [NODES[0]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(stable),
-            "label": "step_5_  1 Stable Nodes, 2 Trunk: {}".format(stable),
+            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "label": "step_5_  1 {} Nodes, 2 Trunk Nodes".format(cassandra_3_0),
             "revision_override": {'apache/trunk': [NODES[0], NODES[1]]},
             "cluster_name": "updating_cluster"
         },
