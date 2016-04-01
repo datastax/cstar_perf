@@ -5,7 +5,6 @@ from util import get_sha_from_build_days_ago
 
 # import json
 
-REVISION = 'apache/trunk'
 CSTAR_SERVER = "cstar.datastax.com"
 DEFAULT_CLUSTER_NAME = 'blade_11_b'
 NODES = ['blade-11-6a', 'blade-11-7a', 'blade-11-8a']
@@ -19,18 +18,27 @@ NODES = ['blade-11-6a', 'blade-11-7a', 'blade-11-8a']
 
 
 def rolling_window_revisions():
-    day_deltas = [7, 14]
-    old_shas = dict(zip(day_deltas,
-                        get_sha_from_build_days_ago('http://' + CSTAR_SERVER,
-                                                    day_deltas=day_deltas,
-                                                    revision=REVISION)))
+    def retrieve_sha(branch, days_ago):
+        return get_sha_from_build_days_ago('http://' + CSTAR_SERVER, days_ago=days_ago, revision=branch)
 
-    dev_revisions = dict({0: REVISION}, **old_shas)
+    # these are the branches we want to test current perf and historical perf on
+    rolling_window_branches = ['apache/trunk', 'apache/cassandra-2.2', 'apache/cassandra-3.0']
+    branch_history_refs = {}
+
+    for branch_name in rolling_window_branches:
+        branch_history_refs[branch_name] = {
+            0: branch_name,
+            7: retrieve_sha(branch_name, days_ago=7),
+            14: retrieve_sha(branch_name, days_ago=14)
+        }
+
     revisions = []
-    for days_ago, revision in sorted(dev_revisions.items()):
-        label = REVISION if days_ago == 0 else '{REVISION} ~{days_ago} days ago'.format(REVISION=REVISION,
-                                                                                        days_ago=days_ago)
-        revisions.append({'revision': revision, 'label': label})
+    for branch, refmap in branch_history_refs.items():
+        for days_ago, revision in sorted(refmap.items()):
+            if revision is not None:
+                label = branch if days_ago == 0 else '{branch} ~{days_ago} days ago'.format(branch=branch, days_ago=days_ago)
+                revisions.append({'revision': revision, 'label': label})
+
     return revisions
 
 
@@ -256,7 +264,7 @@ def compaction_strategies_profile(title='Compaction Strategy', cluster=DEFAULT_C
             'operation': 'stress',
             'stress_revision': 'apache/trunk',
             'command': 'write n={rows} cl=QUORUM -rate threads={threads} -schema {schema_options}'
-                .format(rows=rows, threads=threads, schema_options=schema_options),
+            .format(rows=rows, threads=threads, schema_options=schema_options),
             'wait_for_compaction': True
         },
         {
