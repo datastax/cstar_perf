@@ -1,20 +1,30 @@
 import datetime
+import json
+import os
 
 from cstar_perf.frontend.client.schedule import Scheduler
 from util import get_sha_from_build_days_ago
-
-# import json
 
 CSTAR_SERVER = "cstar.datastax.com"
 DEFAULT_CLUSTER_NAME = 'blade_11_b'
 NODES = ['blade-11-6a', 'blade-11-7a', 'blade-11-8a']
 
-# class Scheduler(object):
-#     def __init__(self, server):
-#         self.server = server
-#
-#     def schedule(self, config):
-#         print(json.dumps(config, sort_keys=True, indent=4, separators=(',', ': ')))
+
+class DummyScheduler(object):
+    def __init__(self, server):
+        self.server = server
+
+    def schedule(self, config):
+        print("dummy scheduler json:")
+        print(json.dumps(config, sort_keys=True, indent=4, separators=(',', ': ')))
+
+
+def schedule_job(config):
+    if os.environ.get('ENABLE_CSTAR_DUMMY_SCHEDULER', '').lower() in ('yes', 'true'):
+        scheduler_cls = DummyScheduler
+    else:
+        scheduler_cls = Scheduler
+    return scheduler_cls(CSTAR_SERVER).schedule(config)
 
 
 def rolling_window_revisions():
@@ -158,8 +168,7 @@ def test_upgrading_versions(title='RollingUpgrade', cluster=DEFAULT_CLUSTER_NAME
         },
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def test_simple_profile(title='Read/Write', cluster=DEFAULT_CLUSTER_NAME, load_rows='65M', read_rows='65M',
@@ -184,8 +193,7 @@ def test_simple_profile(title='Read/Write', cluster=DEFAULT_CLUSTER_NAME, load_r
     if yaml:
         config['yaml'] = yaml
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def compaction_profile(title='Compaction', cluster=DEFAULT_CLUSTER_NAME, rows='65M', threads=300):
@@ -210,8 +218,7 @@ def compaction_profile(title='Compaction', cluster=DEFAULT_CLUSTER_NAME, rows='6
          'wait_for_compaction': True}
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def test_compaction_profile():
@@ -240,8 +247,7 @@ def repair_profile(title='Repair', cluster=DEFAULT_CLUSTER_NAME, rows='65M', thr
          'wait_for_compaction': True}
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def test_repair_profile():
@@ -291,8 +297,7 @@ def compaction_strategies_profile(title='Compaction Strategy', cluster=DEFAULT_C
         }
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def test_STCS_profile():
@@ -320,7 +325,7 @@ def test_commitlog_sync_settings():
 
 
 def test_materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAULT_CLUSTER_NAME,
-                           rows='50M', threads=300, series='materialized_views_write_3_mv'):
+                                rows='50M', threads=300, series='materialized_views_write_3_mv'):
     config = create_baseline_config(title, series, rolling_window_revisions())
     config['cluster'] = cluster
     config['operations'] = [
@@ -331,12 +336,11 @@ def test_materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAU
          'wait_for_compaction': False}
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def test_materialized_view_1_mv(title='Materialized Views (1 MV)', cluster=DEFAULT_CLUSTER_NAME,
-                           rows='50M', threads=300, series='materialized_views_write_1_mv'):
+                                rows='50M', threads=300, series='materialized_views_write_1_mv'):
     config = create_baseline_config(title, series, rolling_window_revisions())
     config['cluster'] = cluster
     config['operations'] = [
@@ -347,5 +351,4 @@ def test_materialized_view_1_mv(title='Materialized Views (1 MV)', cluster=DEFAU
          'wait_for_compaction': False}
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
