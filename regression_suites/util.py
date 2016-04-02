@@ -74,7 +74,7 @@ def get_cstar_jobs_uuids(cstar_server, series=None):
     return uuids
 
 
-def get_sha_from_build_days_ago(cstar_server, day_deltas, revision):
+def get_sha_from_build_days_ago(cstar_server, days_ago, revision):
     print 'getting sha from {}'.format(revision)
 
     test_uuids = []
@@ -84,38 +84,32 @@ def get_sha_from_build_days_ago(cstar_server, day_deltas, revision):
             test_uuids.extend(uuids_from_series)
     test_uuids = list(map(UUID, ['{' + u + '}' for u in test_uuids]))
 
-    closest_shas = []
+    td = datetime.datetime.now() - datetime.timedelta(days=days_ago)
+    print 'finding sha closest to {}'.format(td)
+    test_ids_by_distance_asc = list(sorted(test_uuids,
+                                           key=uuid_absolute_distance_from_datetime(td)))
 
-    for days_ago in day_deltas:
-        td = datetime.datetime.now() - datetime.timedelta(days=days_ago)
-        print 'finding sha closest to {}'.format(td)
-        test_ids_by_distance_asc = list(sorted(test_uuids,
-                                               key=uuid_absolute_distance_from_datetime(td)))
+    for test_id in test_ids_by_distance_asc[:30]:
+        print 'trying {}'.format(test_id)
+        stats_url = '/'.join(
+            [cstar_server, 'tests', 'artifacts', str(test_id), 'stats', 'stats.{}.json'.format(str(test_id))])
+        try:
+            stats_json = requests.get(stats_url).text
+        except requests.exceptions.ConnectionError as e:
+            print "didn't work :( {}".format(e)
+            continue
+        try:
+            stats_data = json.loads(stats_json)
+        except ValueError as e:
+            print "didn't work :( {}".format(e)
+            continue
 
-        for test_id in test_ids_by_distance_asc[:30]:
-            print 'trying {}'.format(test_id)
-            stats_url = '/'.join(
-                [cstar_server, 'tests', 'artifacts', str(test_id), 'stats', 'stats.{}.json'.format(str(test_id))])
-            try:
-                stats_json = requests.get(stats_url).text
-            except requests.exceptions.ConnectionError as e:
-                print "didn't work :( {}".format(e)
-                continue
-            try:
-                stats_data = json.loads(stats_json)
-            except ValueError as e:
-                print "didn't work :( {}".format(e)
-                continue
-
-            shas = get_shas_from_stats(stats_data)
-            sha_set = shas.get(revision)
-            if sha_set and len(sha_set) == 1:
-                sha = next(iter(sha_set))
-                print '    appending {}'.format(sha)
-                closest_shas.append(sha)
-                break
-
-    return closest_shas
+        shas = get_shas_from_stats(stats_data)
+        sha_set = shas.get(revision)
+        if sha_set and len(sha_set) == 1:
+            sha = next(iter(sha_set))
+            print '    appending {}'.format(sha)
+            return sha
 
 # when executing this file and not importing it, run the tests
 if __name__ == '__main__':
