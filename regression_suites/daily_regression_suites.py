@@ -1,87 +1,93 @@
 import datetime
-from util import get_sha_from_build_days_ago, get_tagged_releases
-from cstar_perf.frontend.client.schedule import Scheduler
-# import json
+import json
+import os
 
-REVISION = 'apache/trunk'
+from cstar_perf.frontend.client.schedule import Scheduler
+from util import get_sha_from_build_days_ago
+
 CSTAR_SERVER = "cstar.datastax.com"
 DEFAULT_CLUSTER_NAME = 'blade_11_b'
 NODES = ['blade-11-6a', 'blade-11-7a', 'blade-11-8a']
 
-# class Scheduler(object):
-#     def __init__(self, server):
-#         self.server = server
-#
-#     def schedule(self, config):
-#         print(json.dumps(config, sort_keys=True, indent=4, separators=(',', ': ')))
+
+class DummyScheduler(object):
+    def __init__(self, server):
+        self.server = server
+
+    def schedule(self, config):
+        print("dummy scheduler json:")
+        print(json.dumps(config, sort_keys=True, indent=4, separators=(',', ': ')))
 
 
-def stable_oldstable_revisions():
-    stable = get_tagged_releases('stable')[0]
-    oldstable = get_tagged_releases('oldstable')[0]
-    return [
-        {
-            "revision": "refs/tags/{}".format(stable),
-            "label": "Stable: {}".format(stable)
-        },
-        {
-            "revision": "refs/tags/{}".format(oldstable),
-            "label": "Old Stable: {}".format(oldstable)
-        }
-    ]
+def schedule_job(config):
+    if os.environ.get('ENABLE_CSTAR_DUMMY_SCHEDULER', '').lower() in ('yes', 'true'):
+        scheduler_cls = DummyScheduler
+    else:
+        scheduler_cls = Scheduler
+    return scheduler_cls(CSTAR_SERVER).schedule(config)
 
 
 def rolling_window_revisions():
-    day_deltas = [7, 14]
-    old_shas = dict(zip(day_deltas,
-                        get_sha_from_build_days_ago('http://' + CSTAR_SERVER,
-                                                    day_deltas=day_deltas,
-                                                    revision=REVISION)))
+    def retrieve_sha(branch, days_ago):
+        return get_sha_from_build_days_ago('http://' + CSTAR_SERVER, days_ago=days_ago, revision=branch)
 
-    dev_revisions = dict({0: REVISION}, **old_shas)
+    # these are the branches we want to test current perf and historical perf on
+    rolling_window_branches = ['apache/trunk', 'apache/cassandra-2.2', 'apache/cassandra-3.0']
+    branch_history_refs = {}
+
+    for branch_name in rolling_window_branches:
+        branch_history_refs[branch_name] = {
+            0: branch_name,
+            7: retrieve_sha(branch_name, days_ago=7),
+            14: retrieve_sha(branch_name, days_ago=14)
+        }
+
     revisions = []
-    for days_ago, revision in sorted(dev_revisions.items()):
-        label = REVISION if days_ago == 0 else '{REVISION} ~{days_ago} days ago'.format(REVISION=REVISION,
-                                                                                        days_ago=days_ago)
-        revisions.append({'revision': revision, 'label': label})
+    for branch, refmap in branch_history_refs.items():
+        for days_ago, revision in sorted(refmap.items()):
+            if revision is not None:
+                label = branch if days_ago == 0 else '{branch} ~{days_ago} days ago'.format(branch=branch, days_ago=days_ago)
+                revisions.append({'revision': revision, 'label': label})
+
     return revisions
 
 
 def rolling_upgrade_version_revisions():
-    stable = get_tagged_releases('stable')[0]
-    oldstable = get_tagged_releases('oldstable')[0]
+    cassandra_2_2 = 'cassandra-2.2'
+    cassandra_3_0 = 'cassandra-3.0'
+
     return [
         {
-            "revision": "refs/tags/{}".format(oldstable),
-            "label": "step_0_  3 Old Stable Nodes: {}".format(oldstable),
+            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "label": "step_0_  3 {} Nodes".format(cassandra_2_2),
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(oldstable),
-            "label": "step_1_  2 Old Stable Nodes, 1 Stable: {}/{}".format(oldstable, stable),
-            "revision_override": {"refs/tags/{}".format(stable): [NODES[0]]},
+            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "label": "step_1_  2 {} Nodes, 1 {} Node".format(cassandra_2_2, cassandra_3_0),
+            "revision_override": {"refs/tags/{}".format(cassandra_3_0): [NODES[0]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(oldstable),
-            "label": "step_2_  1 Old Stable Nodes, 2 Stable: {}/{}".format(oldstable, stable),
-            "revision_override": {"refs/tags/{}".format(stable): [NODES[0], NODES[1]]},
+            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "label": "step_2_  1 {} Nodes, 2 {} Nodes".format(cassandra_2_2, cassandra_3_0),
+            "revision_override": {"refs/tags/{}".format(cassandra_3_0): [NODES[0], NODES[1]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(stable),
-            "label": "step_3_  3 Stable Nodes: {}".format(stable),
+            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "label": "step_3_  3 {} Nodes".format(cassandra_3_0),
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(stable),
-            "label": "step_4_  2 Stable Nodes, 1 Trunk: {}".format(stable),
+            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "label": "step_4_  2 {} Nodes, 1 Trunk Node".format(cassandra_3_0),
             "revision_override": {'apache/trunk': [NODES[0]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(stable),
-            "label": "step_5_  1 Stable Nodes, 2 Trunk: {}".format(stable),
+            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "label": "step_5_  1 {} Nodes, 2 Trunk Nodes".format(cassandra_3_0),
             "revision_override": {'apache/trunk': [NODES[0], NODES[1]]},
             "cluster_name": "updating_cluster"
         },
@@ -94,7 +100,7 @@ def rolling_upgrade_version_revisions():
 
 
 def standard_rolling_window_revisions():
-    return rolling_window_revisions() + stable_oldstable_revisions()
+    return rolling_window_revisions()
 
 
 def create_baseline_config(title=None, series=None, revisions=standard_rolling_window_revisions()):
@@ -162,8 +168,7 @@ def test_upgrading_versions(title='RollingUpgrade', cluster=DEFAULT_CLUSTER_NAME
         },
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def test_simple_profile(title='Read/Write', cluster=DEFAULT_CLUSTER_NAME, load_rows='65M', read_rows='65M',
@@ -188,8 +193,7 @@ def test_simple_profile(title='Read/Write', cluster=DEFAULT_CLUSTER_NAME, load_r
     if yaml:
         config['yaml'] = yaml
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def compaction_profile(title='Compaction', cluster=DEFAULT_CLUSTER_NAME, rows='65M', threads=300):
@@ -214,8 +218,7 @@ def compaction_profile(title='Compaction', cluster=DEFAULT_CLUSTER_NAME, rows='6
          'wait_for_compaction': True}
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def test_compaction_profile():
@@ -244,8 +247,7 @@ def repair_profile(title='Repair', cluster=DEFAULT_CLUSTER_NAME, rows='65M', thr
          'wait_for_compaction': True}
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def test_repair_profile():
@@ -268,7 +270,7 @@ def compaction_strategies_profile(title='Compaction Strategy', cluster=DEFAULT_C
             'operation': 'stress',
             'stress_revision': 'apache/trunk',
             'command': 'write n={rows} cl=QUORUM -rate threads={threads} -schema {schema_options}'
-                .format(rows=rows, threads=threads, schema_options=schema_options),
+            .format(rows=rows, threads=threads, schema_options=schema_options),
             'wait_for_compaction': True
         },
         {
@@ -295,8 +297,7 @@ def compaction_strategies_profile(title='Compaction Strategy', cluster=DEFAULT_C
         }
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def test_STCS_profile():
@@ -324,7 +325,7 @@ def test_commitlog_sync_settings():
 
 
 def test_materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAULT_CLUSTER_NAME,
-                           rows='50M', threads=300, series='materialized_views_write_3_mv'):
+                                rows='50M', threads=300, series='materialized_views_write_3_mv'):
     config = create_baseline_config(title, series, rolling_window_revisions())
     config['cluster'] = cluster
     config['operations'] = [
@@ -335,12 +336,11 @@ def test_materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAU
          'wait_for_compaction': False}
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)
 
 
 def test_materialized_view_1_mv(title='Materialized Views (1 MV)', cluster=DEFAULT_CLUSTER_NAME,
-                           rows='50M', threads=300, series='materialized_views_write_1_mv'):
+                                rows='50M', threads=300, series='materialized_views_write_1_mv'):
     config = create_baseline_config(title, series, rolling_window_revisions())
     config['cluster'] = cluster
     config['operations'] = [
@@ -351,5 +351,4 @@ def test_materialized_view_1_mv(title='Materialized Views (1 MV)', cluster=DEFAU
          'wait_for_compaction': False}
     ]
 
-    scheduler = Scheduler(CSTAR_SERVER)
-    scheduler.schedule(config)
+    schedule_job(config)

@@ -1,23 +1,20 @@
 import datetime
-from util import get_tagged_releases, get_branches
+
 from cstar_perf.frontend.client.schedule import Scheduler
 
 CSTAR_SERVER = "cstar.datastax.com"
 
+
 def create_baseline_config(title=None):
     """Creates a config for testing the latest dev build(s) against stable and oldstable"""
-    
-    dev_revisions = ['apache/trunk'] + get_branches()[:2]
-    stable = get_tagged_releases('stable')[0]
-    oldstable = get_tagged_releases('oldstable')[0]
 
+    dev_revisions = ['apache/trunk', 'apache/cassandra-3.0', 'apache/cassandra-2.2']
     config = {}
-
     config['revisions'] = revisions = []
+
     for r in dev_revisions:
-        revisions.append({'revision': r, 'label': r +' (dev)'})
-    revisions.append({'revision': stable, 'label': stable+' (stable)'})
-    revisions.append({'revision': oldstable, 'label': oldstable+' (oldstable)'})
+        revisions.append({'revision': r, 'label': r + ' (dev)'})
+
     for r in revisions:
         r['options'] = {'use_vnodes': True}
         r['java_home'] = "~/fab/jvms/jdk1.7.0_71" if 'oldstable' in r['label'] else "~/fab/jvms/jdk1.8.0_45"
@@ -28,6 +25,7 @@ def create_baseline_config(title=None):
         config['title'] += ' - {title}'.format(title=title)
 
     return config
+
 
 def test_simple_profile(title='Read/Write', cluster='blade_11', load_rows=65000000, read_rows=65000000, threads=300, yaml=None):
     """Test the basic stress profile with default C* settings"""
