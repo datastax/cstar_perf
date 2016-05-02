@@ -124,7 +124,7 @@ log4j.logger.org.apache.thrift.server.TNonblockingServer=ERROR
 
 # An error will be raised if a user try to modify these c* config.
 # They can only be set in the cluster config.
-DENIED_CSTAR_CONFIG = ['commitlog_directory', 'data_file_directories', 'saved_caches_directory']
+DENIED_CSTAR_CONFIG = ['commitlog_directory', 'data_file_directories', 'saved_caches_directory', 'cdc_directory', 'cdc_overflow_directory']
 
 ################################################################################
 ### Setup Configuration:
@@ -169,6 +169,8 @@ def setup(my_config=None):
         'commitlog_directory': '/var/lib/cassandra/commitlog',
         'saved_caches_directory': '/var/lib/cassandra/saved_caches',
         'flush_directory': '/var/lib/cassandra/flush',
+        'cdc_directory': '/var/lib/cassandra/cdc',
+        'cdc_overflow_directory': '/var/lib/cassandra/cdc_overflow',
         # Log file:
         'log_dir': '~/fab/cassandra/logs',
         # Device readahead setting. None means use system default.
@@ -416,6 +418,14 @@ def bootstrap(git_fetch=True, revision_override=None):
     fab.put(fincore_script, '~/fab/fincore_capture.py')
     return rev_id
 
+
+def _clean_up_cdc_directories():
+    if config.get('cdc_overflow_directory'):
+        fab.run('rm -rf {overflow_dir}/*'.format(overflow_dir=config['cdc_overflow_directory']))
+    if config.get('cdc_directory'):
+        fab.run('rm -rf {cdc_dir}/*'.format(cdc_dir=config['cdc_directory']))
+
+
 @fab.parallel
 def destroy(leave_data=False, kill_delay=0):
     """Uninstall Cassandra and clean up data and logs"""
@@ -424,6 +434,8 @@ def destroy(leave_data=False, kill_delay=0):
     if leave_data:
         fab.run('JAVA_HOME={java_home} {nodetool_cmd} drain'.format(java_home=config['java_home'], nodetool_cmd=_nodetool_cmd()), quiet=True)
         fab.run('rm -rf {commitlog}/*'.format(commitlog=config['commitlog_directory']))
+        _clean_up_cdc_directories()
+
     if kill_delay:
         fab.run('killall java', quiet=True)
         time.sleep(kill_delay)   # kill delay waiting the jvm to exit, profiling stuff require some time to be dumped
@@ -448,6 +460,7 @@ def destroy(leave_data=False, kill_delay=0):
         fab.run('rm -rf {flushdir}/*'.format(flushdir=config['flush_directory']))
         if config.get('hints_directory'):
             fab.run('rm -rf {hints_directory}/*'.format(hints_directory=config.get('hints_directory')))
+        _clean_up_cdc_directories()
     fab.run('rm -rf {log_dir}'.format(log_dir=config['log_dir']))
     fab.run('rm -f /tmp/fincore.stats.log')
 
