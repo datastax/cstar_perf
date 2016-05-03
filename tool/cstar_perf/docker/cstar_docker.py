@@ -390,7 +390,7 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
         # Setup C* and add it to the supervisor to start on boot:
         def setup_cassandra():
             __update_node_ip_addresses(cluster_name, static_ips={host:'127.0.0.1'})
-            fab.run("cstar_perf_bootstrap -v cassandra-2.1.8")
+            fab.run("cstar_perf_bootstrap -v cassandra-2.2.6")
         with fab.settings(hosts=ip):
             fab_execute(setup_cassandra)
         def setup_boot_items():
