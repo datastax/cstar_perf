@@ -30,7 +30,7 @@ sockets = Sockets(app)
 cassandra_hosts = [h.strip() for h in app_config.get('server', 'cassandra_hosts').split(",")]
 from cassandra.cluster import Cluster
 auth_provider = auth_provider_if_configured(app_config)
-cluster = Cluster(contact_points=cassandra_hosts, auth_provider=auth_provider)
+cluster = Cluster(contact_points=cassandra_hosts, auth_provider=auth_provider, connect_timeout=30)
 
 keyspace = app_config.get('server', 'cassandra_keyspace') if app_config.has_option('server', 'cassandra_keyspace') else 'cstar_perf'
 db = Model(cluster=cluster, keyspace=keyspace, email_notifications=app_config.has_section('smtp'))

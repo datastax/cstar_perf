@@ -22,7 +22,7 @@ def run_server():
     from cassandra.cluster import Cluster
 
     auth_provider = auth_provider_if_configured(config)
-    cluster = Cluster(contact_points=cassandra_hosts, auth_provider=auth_provider)
+    cluster = Cluster(contact_points=cassandra_hosts, auth_provider=auth_provider, connect_timeout=30)
 
     keyspace = config.get('server', 'cassandra_keyspace') if config.has_option('server', 'cassandra_keyspace') else 'cstar_perf'
     db = Model(cluster=cluster, keyspace=keyspace)

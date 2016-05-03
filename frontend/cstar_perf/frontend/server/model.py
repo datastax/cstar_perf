@@ -124,7 +124,7 @@ class Model(object):
         'insert_api_pubkey': "INSERT INTO api_pubkeys (name, user_type, pubkey) VALUES (?, ?, ?);"
     }
 
-    def __init__(self, cluster=Cluster(['127.0.0.1']), keyspace='cstar_perf', email_notifications=False):
+    def __init__(self, cluster=Cluster(['127.0.0.1'], connect_timeout=30), keyspace='cstar_perf', email_notifications=False):
         """Instantiate DB model object for interacting with the C* backend.
 
         cluster - Python driver object for accessing Cassandra
