@@ -46,6 +46,9 @@ def setup_fab_dir(jdk_roots=['/usr/lib/jvm']):
     version_re = re.compile("^(openjdk|java) version \"(.*)\"$", re.MULTILINE)
     # Find available JDKs:
     for root in jdk_roots:
+        # I found that sometimes running the 'find' command without doing an 'ls' on the root dir would not find
+        # any JDK homes when executing inside a Docker container
+        fab.run('ls -la {jdk_root}'.format(jdk_root=root))
         homes = fab.run("find {root} -maxdepth 1 -mindepth 1 -type d".format(root=root), quiet=True).strip().split()
         for home in homes:
             # Find java binary and test that it runs:

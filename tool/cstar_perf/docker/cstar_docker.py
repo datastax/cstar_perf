@@ -43,6 +43,7 @@ RUN \
   apt-get update && \
   apt-get -y upgrade && \
   apt-get install -y \
+      sudo \
       build-essential \
       software-properties-common \
       git \
@@ -487,6 +488,8 @@ def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False, first_c
         "data_file_directories": ['/data/cstar_perf/data'],
         "commitlog_directory": '/data/cstar_perf/commitlog',
         "saved_caches_directory": '/data/cstar_perf/saved_caches',
+        'cdc_directory': '/data/cstar_perf/cdc',
+        'cdc_overflow_directory': '/data/cstar_perf/cdc_overflow',
         "docker": True
     }
     
