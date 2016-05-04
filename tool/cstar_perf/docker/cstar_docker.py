@@ -203,7 +203,7 @@ def check_if_build_necessary(exit_if_not_ready=True):
         
 def get_container_data(container):
     inspect_cmd = shlex.split("docker inspect {}".format(container))
-    p = subprocess.Popen(inspect_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(inspect_cmd, stdout=subprocess.PIPE)
     try:
         return json.loads(p.communicate()[0])[0]
     except IndexError:
@@ -355,7 +355,7 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
         run_cmd = run_cmd + ' ' + docker_image_name
         log.debug(run_cmd)
         p=subprocess.Popen(shlex.split(run_cmd),
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                           stdout=subprocess.PIPE)
         container_id = p.communicate()[0].strip()
         node_data[node_name] = get_container_data(container_id)
     hosts = OrderedDict()
@@ -521,7 +521,7 @@ def destroy(cluster_regex):
             log.info('Destroying {} containers...'.format(cluster_regex))
         for container in containers:
             destroy_cmd = shlex.split("docker rm -f {}".format(container))
-            subprocess.call(destroy_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            subprocess.call(destroy_cmd, stdout=subprocess.PIPE)
 
 def associate(frontend_name, cluster_names, with_dse=False):
 
@@ -643,7 +643,7 @@ def start(cluster_name):
     cluster = clusters[cluster_name]
     for container in cluster:
         start_cmd = shlex.split("docker start {}".format(container))
-        subprocess.call(start_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.call(start_cmd, stdout=subprocess.PIPE)
     __update_node_ip_addresses(cluster_name)
 
 def stop(cluster_name):
@@ -652,7 +652,7 @@ def stop(cluster_name):
     cluster = clusters[cluster_name]
     for container in cluster:
         stop_cmd = shlex.split("docker stop {}".format(container))
-        subprocess.call(stop_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.call(stop_cmd, stdout=subprocess.PIPE)
 
 def list_clusters():
     """List clusters"""
