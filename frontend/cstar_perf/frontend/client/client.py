@@ -759,8 +759,8 @@ def create_credentials():
     else:
         while True:
             cluster_name = raw_input('Enter a name for this cluster: ')
-            if not re.match(r'^[a-zA-Z0-9_]+$', cluster_name):
-                print("Cluster name must be of the characters a-z, A-Z, 0-9, and _")
+            if not re.match(r'^[a-zA-Z0-9_-]+$', cluster_name):
+                print("Cluster name must be of the characters a-z, A-Z, 0-9, _ and -")
                 continue
             break
         config.set('cluster', 'name', cluster_name)
