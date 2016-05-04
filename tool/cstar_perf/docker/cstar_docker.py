@@ -145,6 +145,9 @@ RUN echo "[unix_http_server]" > /supervisord.conf && \
     echo "autorestart=true"                                                                 >> /supervisord.conf && \
     echo "redirect_stderr=true"                                                             >> /supervisord.conf
 
+### install the C* driver without any extensions to speed up installation time
+RUN CASS_DRIVER_NO_EXTENSIONS=1 pip install cassandra-driver
+
 CMD ["supervisord", "-n", "-c", "/supervisord.conf"]
 """
 
@@ -290,6 +293,9 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
            install_tool=True, frontend=False, mount_host_src=False, verbose=False,
            client_double_duty=False):
     """Launch cluster nodes, return metadata (ip addresses etc) for the nodes"""
+    if '_' in cluster_name:
+        raise ValueError('Please use a cluster name without underscores. The cluster name is also used for the hostname and newer docker versions do not support underscores in the hostname!')
+
     assert num_nodes > 0, "Cannot start a cluster with {} nodes".format(num_nodes)
     if frontend:
         assert num_nodes == 1 and client_double_duty, "Can only start a frontend with a single node"
@@ -324,7 +330,8 @@ def launch(num_nodes, cluster_name='cnode', destroy_existing=False,
         log.info('Launching a {} node cluster with a separate client node ...'.format(num_nodes))
     node_data = OrderedDict()
     for i in range(num_nodes):
-        node_name = "%s_%02d" % (cluster_name,i)
+        # newer docker versions don't support underscores in the hostname
+        node_name = "%s-%02d" % (cluster_name, i)
         ssh_path = os.path.split(get_ssh_key_pair()[0])[0]
         run_cmd = ('docker run --ulimit memlock=100000000:100000000 --privileged --label cstar_node=true --label '
             'cluster_name={cluster_name} --label cluster_type={cluster_type} --label node={node_num} '
