@@ -19,7 +19,7 @@ DEFAULT_WINDOW_TIME = 90  # days
 DEFAULT_NUMBER_LAST_RUNS = 7  # 5 last runs since we remove the fastest and slowest
 MAJOR_REVISIONS = ['apache/trunk', 'apache/cassandra-3.0', 'apache/cassandra-2.2', 'apache/cassandra-2.1']
 
-ADMINS = ['ryan@datastax.com', 'alan.boudreault@datastax.com']
+ADMINS = ['jim.witschey@datastax.com', 'michael.shuler@datastax.com']
 
 
 class CstarPerfClient(object):
