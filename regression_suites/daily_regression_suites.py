@@ -27,12 +27,13 @@ def schedule_job(config):
     return scheduler_cls(CSTAR_SERVER).schedule(config)
 
 
-def rolling_window_revisions():
+def rolling_window_revisions(rolling_window_branches=None):
     def retrieve_sha(branch, days_ago):
         return get_sha_from_build_days_ago('http://' + CSTAR_SERVER, days_ago=days_ago, revision=branch)
 
     # these are the branches we want to test current perf and historical perf on
-    rolling_window_branches = ['apache/trunk', 'apache/cassandra-2.2', 'apache/cassandra-3.0']
+    if rolling_window_branches is None:
+        rolling_window_branches = []
     branch_history_refs = {}
 
     for branch_name in rolling_window_branches:
@@ -58,35 +59,35 @@ def rolling_upgrade_version_revisions():
 
     return [
         {
-            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "revision": "refs/heads/{}".format(cassandra_2_2),
             "label": "step_0_  3 {} Nodes".format(cassandra_2_2),
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "revision": "refs/heads/{}".format(cassandra_2_2),
             "label": "step_1_  2 {} Nodes, 1 {} Node".format(cassandra_2_2, cassandra_3_0),
-            "revision_override": {"refs/tags/{}".format(cassandra_3_0): [NODES[0]]},
+            "revision_override": {"refs/heads/{}".format(cassandra_3_0): [NODES[0]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "revision": "refs/heads/{}".format(cassandra_2_2),
             "label": "step_2_  1 {} Nodes, 2 {} Nodes".format(cassandra_2_2, cassandra_3_0),
-            "revision_override": {"refs/tags/{}".format(cassandra_3_0): [NODES[0], NODES[1]]},
+            "revision_override": {"refs/heads/{}".format(cassandra_3_0): [NODES[0], NODES[1]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "revision": "refs/heads/{}".format(cassandra_3_0),
             "label": "step_3_  3 {} Nodes".format(cassandra_3_0),
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "revision": "refs/heads/{}".format(cassandra_3_0),
             "label": "step_4_  2 {} Nodes, 1 Trunk Node".format(cassandra_3_0),
             "revision_override": {'apache/trunk': [NODES[0]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "revision": "refs/heads/{}".format(cassandra_3_0),
             "label": "step_5_  1 {} Nodes, 2 Trunk Nodes".format(cassandra_3_0),
             "revision_override": {'apache/trunk': [NODES[0], NODES[1]]},
             "cluster_name": "updating_cluster"
@@ -100,7 +101,11 @@ def rolling_upgrade_version_revisions():
 
 
 def standard_rolling_window_revisions():
-    return rolling_window_revisions()
+    return rolling_window_revisions(['apache/trunk', 'apache/cassandra-2.2', 'apache/cassandra-3.0'])
+
+
+def materialized_view_rolling_window_revisions():
+    return rolling_window_revisions(['apache/trunk', 'apache/cassandra-3.0'])
 
 
 def create_baseline_config(title=None, series=None, revisions=standard_rolling_window_revisions()):
@@ -326,7 +331,7 @@ def test_commitlog_sync_settings():
 
 def test_materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAULT_CLUSTER_NAME,
                                 rows='50M', threads=300, series='materialized_views_write_3_mv'):
-    config = create_baseline_config(title, series, rolling_window_revisions())
+    config = create_baseline_config(title, series, materialized_view_rolling_window_revisions())
     config['cluster'] = cluster
     config['operations'] = [
         {'operation': 'stress',
@@ -341,7 +346,7 @@ def test_materialized_view_3_mv(title='Materialized Views (3 MV)', cluster=DEFAU
 
 def test_materialized_view_1_mv(title='Materialized Views (1 MV)', cluster=DEFAULT_CLUSTER_NAME,
                                 rows='50M', threads=300, series='materialized_views_write_1_mv'):
-    config = create_baseline_config(title, series, rolling_window_revisions())
+    config = create_baseline_config(title, series, materialized_view_rolling_window_revisions())
     config['cluster'] = cluster
     config['operations'] = [
         {'operation': 'stress',

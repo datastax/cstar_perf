@@ -19,7 +19,7 @@ DEFAULT_WINDOW_TIME = 90  # days
 DEFAULT_NUMBER_LAST_RUNS = 7  # 5 last runs since we remove the fastest and slowest
 MAJOR_REVISIONS = ['apache/trunk', 'apache/cassandra-3.0', 'apache/cassandra-2.2', 'apache/cassandra-2.1']
 
-ADMINS = ['ryan@datastax.com', 'alan.boudreault@datastax.com']
+ADMINS = ['jim.witschey@datastax.com', 'michael.shuler@datastax.com']
 
 
 class CstarPerfClient(object):
@@ -155,8 +155,8 @@ class RegressionSeries(CstarPerfClient):
         return self.__str__()
 
     def __str__(self):
-        return "{}: {} tests)".format(
-            self.name, len(self.job))
+        return "({}: {} tests)".format(
+            self.name, len(self.jobs))
 
     def fetch(self):
         url = self.build_url('get_series', name=self.name,
@@ -248,9 +248,10 @@ class RegressionMonitor(CstarPerfClient):
                                  server=self.server) for s in series]
 
     def run(self):
-        series = self._get_series()
+        series = [s for s in self._get_series() if 'daily_regressions' in s.name]
 
         q = Queue()
+
         for s in series:
             q.put(s)
 
