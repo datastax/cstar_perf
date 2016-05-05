@@ -155,8 +155,8 @@ class RegressionSeries(CstarPerfClient):
         return self.__str__()
 
     def __str__(self):
-        return "{}: {} tests)".format(
-            self.name, len(self.job))
+        return "({}: {} tests)".format(
+            self.name, len(self.jobs))
 
     def fetch(self):
         url = self.build_url('get_series', name=self.name,
