@@ -58,35 +58,35 @@ def rolling_upgrade_version_revisions():
 
     return [
         {
-            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "revision": "refs/heads/{}".format(cassandra_2_2),
             "label": "step_0_  3 {} Nodes".format(cassandra_2_2),
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "revision": "refs/heads/{}".format(cassandra_2_2),
             "label": "step_1_  2 {} Nodes, 1 {} Node".format(cassandra_2_2, cassandra_3_0),
-            "revision_override": {"refs/tags/{}".format(cassandra_3_0): [NODES[0]]},
+            "revision_override": {"refs/heads/{}".format(cassandra_3_0): [NODES[0]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(cassandra_2_2),
+            "revision": "refs/heads/{}".format(cassandra_2_2),
             "label": "step_2_  1 {} Nodes, 2 {} Nodes".format(cassandra_2_2, cassandra_3_0),
-            "revision_override": {"refs/tags/{}".format(cassandra_3_0): [NODES[0], NODES[1]]},
+            "revision_override": {"refs/heads/{}".format(cassandra_3_0): [NODES[0], NODES[1]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "revision": "refs/heads/{}".format(cassandra_3_0),
             "label": "step_3_  3 {} Nodes".format(cassandra_3_0),
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "revision": "refs/heads/{}".format(cassandra_3_0),
             "label": "step_4_  2 {} Nodes, 1 Trunk Node".format(cassandra_3_0),
             "revision_override": {'apache/trunk': [NODES[0]]},
             "cluster_name": "updating_cluster"
         },
         {
-            "revision": "refs/tags/{}".format(cassandra_3_0),
+            "revision": "refs/heads/{}".format(cassandra_3_0),
             "label": "step_5_  1 {} Nodes, 2 Trunk Nodes".format(cassandra_3_0),
             "revision_override": {'apache/trunk': [NODES[0], NODES[1]]},
             "cluster_name": "updating_cluster"
