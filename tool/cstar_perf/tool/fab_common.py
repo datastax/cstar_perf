@@ -491,7 +491,7 @@ def start():
     env = "JVM_OPTS=\"$JVM_OPTS -Djava.rmi.server.hostname={hostname} -Xloggc:{log_dir}/gc.log\"\n\n".format(
         hostname=ip_address, log_dir=log_dir) + env
     # Enable JMX without authentication
-    env = "JVM_OPTS=\"$JVM_OPTS -Dcom.sun.management.jmxremote.port=7199 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false\"\n" + env
+    env = "JVM_OPTS=\"$JVM_OPTS -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false\"\n" + env
 
     # Flamegraph
     if flamegraph.is_enabled(config):
