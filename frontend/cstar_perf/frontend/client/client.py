@@ -324,13 +324,15 @@ class JobRunner(object):
             with open(stats_path) as stats:
                 stats = json.loads(stats.read())
                 for rev in stats['revisions']:
-                    system_logs.append(os.path.join(log_dir, "{name}.tar.gz".format(name=rev['last_log'])))
-                    fg_path = os.path.join(flamegraph_dir, "{name}.tar.gz".format(name=rev['last_log']))
-                    yourkit_path = os.path.join(yourkit_dir, "{name}.tar.gz".format(name=rev['last_log']))
-                    if os.path.exists(fg_path):
-                        flamegraph_logs.append(fg_path)
-                    if os.path.exists(yourkit_path):
-                        yourkit_logs.append(yourkit_path)
+                    last_log_rev_id = rev.get('last_log')
+                    if last_log_rev_id:
+                        system_logs.append(os.path.join(log_dir, "{name}.tar.gz".format(name=last_log_rev_id)))
+                        fg_path = os.path.join(flamegraph_dir, "{name}.tar.gz".format(name=last_log_rev_id))
+                        yourkit_path = os.path.join(yourkit_dir, "{name}.tar.gz".format(name=last_log_rev_id))
+                        if os.path.exists(fg_path):
+                            flamegraph_logs.append(fg_path)
+                        if os.path.exists(yourkit_path):
+                            yourkit_logs.append(yourkit_path)
                 with open(summary_path, 'w') as summary:
                     hadStats = False
                     for op in stats['stats']:
