@@ -237,7 +237,7 @@ cstar_perf. Next steps include creating some :doc:`test definitions
 Flamegraph
 ----------
 
-It is possible to generate flamegraphs when running tests. Follow these intructions to enable the feature:
+It is possible to generate flamegraphs when running tests. Follow these instructions to enable the feature:
 
 Install system dependencies on all workers of the cluster::
 
@@ -260,6 +260,8 @@ Enable flamegraph feature in your cluster configuration::
   "flamegraph_directory": "/mnt/data/cstar_perf/flamegraph"
 
   # The flamegraph working directory default to /tmp/flamegraph if not specified.
+
+In case you update your kernel, you might also need to install the matching version of ``linux-tools`` as described above.
 
 
 Yourkit Profiler
