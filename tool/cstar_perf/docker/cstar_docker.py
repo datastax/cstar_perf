@@ -147,7 +147,7 @@ RUN echo "[unix_http_server]" > /supervisord.conf && \
     echo "redirect_stderr=true"                                                             >> /supervisord.conf
 
 ### install the C* driver without any extensions to speed up installation time
-RUN CASS_DRIVER_NO_EXTENSIONS=1 pip install cassandra-driver
+RUN CASS_DRIVER_NO_EXTENSIONS=1 pip install cassandra-driver==3.2.2
 
 CMD ["supervisord", "-n", "-c", "/supervisord.conf"]
 """
