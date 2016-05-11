@@ -461,7 +461,7 @@ def destroy(leave_data=False, kill_delay=0):
         if config.get('hints_directory'):
             fab.run('rm -rf {hints_directory}/*'.format(hints_directory=config.get('hints_directory')))
         _clean_up_cdc_directories()
-    fab.run('rm -rf {log_dir}'.format(log_dir=config['log_dir']))
+    fab.run('rm -rf {log_dir}/*'.format(log_dir=config['log_dir']))
     fab.run('rm -f /tmp/fincore.stats.log')
 
 @fab.parallel
