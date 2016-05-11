@@ -83,13 +83,13 @@ def user_in_role(role, user=None):
 
 def requires_auth(role):
     """Ensures the current user has the appropriate authorization before
-    running the wrapped function"""
+    running the wrapped function. In case the role is set, it will also check if the given user has the required role."""
     def decorator(function):
         @functools.wraps(function)
         def wrapper(*args, **kw):
             # Do the check:
             if user_is_authenticated():
-                if user_in_role(role):
+                if not role or user_in_role(role):
                     return function(*args, **kw)
             return make_response(render_template('access_denied.jinja2.html'), 401)
         return wrapper
@@ -555,7 +555,7 @@ def get_series_graph_png_cached_invalidating( series, age, operation, metric):
                     mimetype='application/png')
 
 @app.route('/api/tests/status/id/<test_id>')
-@requires_auth('user')
+@requires_auth(role=None)  # we don't need to check if the user has a role
 def get_test_status(test_id):
     """Retrieve the status for a test"""
     try:
@@ -580,7 +580,7 @@ def get_clusters_by_name(cluster_name):
 
 
 @app.route('/api/tests/progress/id/<test_id>', methods=['POST'])
-@requires_auth('user')
+@requires_auth(role=None)  # we don't need to check if the user has a role
 def set_progress_message_on_test(test_id):
     msg = request.get_json()['progress_msg']
     db.update_test_progress_msg(test_id, msg)

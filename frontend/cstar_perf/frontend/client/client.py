@@ -724,13 +724,17 @@ class JobCancellationTracker(threading.Thread):
         log.info("Starting to watch for job status changes on the server for: {}".format(self.test_id))
 
     def run(self):
-        self.api_client.login()
         while not self.stop_requested:
             time.sleep(self.check_interval)
             # Check job status:
-            status = self.api_client.get('/tests/status/id/'+self.test_id)
-            if status.get('status', None) in ('cancelled', 'cancel_pending'):
-                self.kill_jobs()                
+            try:
+                status = self.api_client.get('/tests/status/id/' + self.test_id)
+            except Exception as e:
+                log.error(e.message)
+                status = None
+            log.debug('JobCancellationTracker -- status is: {s}'.format(s=status))
+            if status and status.get('status', None) in ('cancelled', 'cancel_pending'):
+                self.kill_jobs()
 
     def stop(self):
         self.stop_requested = True
