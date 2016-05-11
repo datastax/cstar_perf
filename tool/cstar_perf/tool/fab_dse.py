@@ -84,9 +84,11 @@ def download_binaries():
     password = config['dse_password'] if 'dse_password' in config else None
     url = urljoin(dse_url, dse_tarball)
 
-    # Fetch the SHA of the tarball:
+    # Fetch the SHA of the tarball: download_file_contents returns the request.text of the url.
+    # the sha file has the format '874c11f7634974fb41006d30199b55b59fd124db ?./dse-5.0.0-bin.tar.gz'
+    # so we split on the space and then check that the sha hexidecimal is 40 characters
     correct_sha = download_file_contents(url+'.sha', username, password).split(" ")[0]
-    assert(len(correct_sha) == 64, 'Failed to download sha file: {}'.format(correct_sha))
+    assert(len(correct_sha) == 40), 'Failed to download sha file: {}'.format(correct_sha)
 
     if os.path.exists(filename):
         logger.info("Already in cache: {}".format(filename))
