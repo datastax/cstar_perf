@@ -560,39 +560,39 @@ var drawGraph = function() {
             });
 
             renderLegendText(3, function(title) {
-                return padTextEnd('op rate', 26) + " : " + data_by_title[title]['op rate'];
+                return padTextEnd('Op rate', 26) + " : " + data_by_title[title]['Op rate'];
             });
 
             renderLegendText(4, function(title) {
-                return padTextEnd('partition rate', 26) + " : " + data_by_title[title]['partition rate'];
+                return padTextEnd('Partition rate', 26) + " : " + data_by_title[title]['Partition rate'];
             });
 
             renderLegendText(5, function(title) {
-                return padTextEnd('row rate', 26) + ' : ' + data_by_title[title]['row rate'];
+                return padTextEnd('Row rate', 26) + ' : ' + data_by_title[title]['Row rate'];
             });
 
             renderLegendText(7, function(title) {
-                return padTextEnd('latency mean', 26) + ' : ' + data_by_title[title]['latency mean'];
+                return padTextEnd('Latency mean', 26) + ' : ' + data_by_title[title]['Latency mean'];
             });
 
             renderLegendText(8, function(title) {
-                return padTextEnd('latency median', 26) + ' : ' + data_by_title[title]['latency median'];
+                return padTextEnd('Latency median', 26) + ' : ' + data_by_title[title]['Latency median'];
             });
 
             renderLegendText(9, function(title) {
-                return padTextEnd('latency 95th percentile', 26) + ' : ' + data_by_title[title]['latency 95th percentile'];
+                return padTextEnd('Latency 95th percentile', 26) + ' : ' + data_by_title[title]['Latency 95th percentile'];
             });
 
             renderLegendText(10, function(title) {
-                return padTextEnd('latency 99th percentile', 26) + ' : ' + data_by_title[title]['latency 99th percentile'];
+                return padTextEnd('Latency 99th percentile', 26) + ' : ' + data_by_title[title]['Latency 99th percentile'];
             });
 
             renderLegendText(11, function(title) {
-                return padTextEnd('latency 99.9th percentile', 26) + ' : ' + data_by_title[title]['latency 99.9th percentile'];
+                return padTextEnd('Latency 99.9th percentile', 26) + ' : ' + data_by_title[title]['Latency 99.9th percentile'];
             });
 
             renderLegendText(12, function(title) {
-                return padTextEnd('latency max', 26) + ' : ' + data_by_title[title]['latency max'];
+                return padTextEnd('Latency max', 26) + ' : ' + data_by_title[title]['Latency max'];
             });
 
             renderLegendText(13, function(title) {
