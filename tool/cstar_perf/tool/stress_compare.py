@@ -24,6 +24,7 @@ import subprocess
 import shlex
 import shutil
 import sh
+import distutils.util
 
 logging.basicConfig()
 logger = logging.getLogger('stress_compare')
@@ -109,14 +110,14 @@ def stress_compare(revisions,
 
     pristine_config = copy.copy(fab_config)
 
-    # initial_destroy settting can be set in the job
-    # configuration, or manually in the call to this function. Either
-    # is fine, but they shouldn't conflict. If they do, ValueError is
-    # raised.
+    # initial_destroy setting can be set in the job
+    # configuration, or manually in the call to this function.
+    # Either is fine, but they shouldn't conflict. If they do,
+    # ValueError is raised.
     if initial_destroy == True and pristine_config.get('initial_destroy', None) == False:
         raise ValueError('setting for initial_destroy conflicts in job config and stress_compare() call')
     else:
-        initial_destroy = pristine_config.get('initial_destroy', initial_destroy)
+        initial_destroy = bool(distutils.util.strtobool(str(pristine_config.get('initial_destroy', initial_destroy))))
 
     if initial_destroy:
         logger.info("Cleaning up from prior runs of stress_compare ...")
@@ -144,14 +145,14 @@ def stress_compare(revisions,
         config['subtitle'] = subtitle
         product = dse if config.get('product') == 'dse' else cstar
 
-        # leave_data settting can be set in the revision
+        # leave_data setting can be set in the revision
         # configuration, or manually in the call to this function.
         # Either is fine, but they shouldn't conflict. If they do,
         # ValueError is raised.
         if leave_data == True and revision_config.get('leave_data', None) == False:
             raise ValueError('setting for leave_data conflicts in job config and stress_compare() call')
         else:
-            leave_data = revision_config.get('leave_data', leave_data)
+            leave_data = bool(distutils.util.strtobool(str(revision_config.get('leave_data', leave_data))))
 
         logger.info("Bringing up {revision} cluster...".format(revision=revision))
 
@@ -162,7 +163,10 @@ def stress_compare(revisions,
 
         # Only fetch from git on the first run:
         git_fetch = True if rev_num == 0 else False
-        revision_config['git_id'] = git_id = bootstrap(config, destroy=True, leave_data=leave_data, git_fetch=git_fetch)
+        revision_config['git_id'] = git_id = bootstrap(config,
+                                                       destroy=initial_destroy,
+                                                       leave_data=leave_data,
+                                                       git_fetch=git_fetch)
 
         if flamegraph.is_enabled(revision_config):
             execute(flamegraph.ensure_stopped_perf_agent)
