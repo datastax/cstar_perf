@@ -246,7 +246,7 @@ setup()
 setup(cluster_config)
 
 @fab.parallel
-def bootstrap(git_fetch=True, revision_override=None):
+def bootstrap(git_fetch=True, revision_override=None, replace_existing_dse_install=True):
     """Install and configure the specified product on each host
 
     Returns the git id for the version checked out.
@@ -264,7 +264,7 @@ def bootstrap(git_fetch=True, revision_override=None):
     product = dse if config['product'] == 'dse' else cstar
 
     if product.name == 'dse':
-        rev_id = dse.bootstrap(config)
+        rev_id = dse.bootstrap(config, replace_existing_dse_install=replace_existing_dse_install)
     else:
         rev_id = cstar.bootstrap(config, git_fetch=git_fetch, revision_override=revision_override)
 
