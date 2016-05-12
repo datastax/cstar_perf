@@ -27,8 +27,8 @@
     <link rel="next" title="Setup cstar_perf.tool" href="setup_cstar_perf_tool.html" />
     <link rel="prev" title="cstar_perf" href="index.html" /> 
   </head>
-  <body role="document">
-    <div class="related" role="navigation" aria-label="related navigation">
+  <body>
+    <div class="related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -40,10 +40,10 @@
         <li class="right" >
           <a href="index.html" title="cstar_perf"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
@@ -61,14 +61,12 @@
   <h4>Next topic</h4>
   <p class="topless"><a href="setup_cstar_perf_tool.html"
                         title="next chapter">Setup cstar_perf.tool</a></p>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="_sources/setup_dev_environment.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/setup_dev_environment.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
@@ -87,12 +85,12 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body" role="main">
+          <div class="body">
             
   <div class="section" id="setting-up-a-cstar-perf-development-environment">
 <h1>Setting up a cstar_perf development environment<a class="headerlink" href="#setting-up-a-cstar-perf-development-environment" title="Permalink to this headline">¶</a></h1>
 <p>If you want to start hacking on cstar_perf, the best way to do that is
-with the built-in <code class="docutils literal"><span class="pre">cstar_docker</span></code> command. This will setup a cluster,
+with the built-in <tt class="docutils literal"><span class="pre">cstar_docker</span></tt> command. This will setup a cluster,
 client node, and frontend node automatically for you in separate
 Docker containers. This means you can setup an entire cstar_perf
 environment for development or testing, all on a single machine.</p>
@@ -174,7 +172,7 @@ with the virtualenv activated:</p>
 </pre></div>
 </div>
 <p>Launch a cluster to run the client and Cassandra nodes:</p>
-<div class="highlight-python"><div class="highlight"><pre>cstar_docker launch test_cluster 1 -m
+<div class="highlight-python"><div class="highlight"><pre>cstar_docker launch test-cluster 1 -m
 </pre></div>
 </div>
 <p>The above command launches a single node to act as a Cassandra
@@ -191,7 +189,7 @@ source code will immediately be available in the docker containers as
 well. (Without the -m, fresh cstar_perf code will be cloned from
 <a class="reference external" href="http://github.com/datastax/cstar_perf">http://github.com/datastax/cstar_perf</a>)</p>
 <p>Launch a node for the frontend:</p>
-<div class="highlight-python"><div class="highlight"><pre>cstar_docker frontend test_frontend -m
+<div class="highlight-python"><div class="highlight"><pre>cstar_docker frontend test-frontend -m
 </pre></div>
 </div>
 <hr class="docutils" />
@@ -210,7 +208,7 @@ ssh your_cstar_perf_server -L 8000:localhost:8000 -N &amp;
 <p>Then you should be able to load <a class="reference external" href="http://localhost:8000">http://localhost:8000</a> normally.</p>
 <p><strong>If your base machine is OSX:</strong></p>
 <p>You can load the frontend by it&#8217;s IP address.  This can be found by:</p>
-<div class="highlight-python"><div class="highlight"><pre>docker inspect test_frontend_00 | grep &quot;IPAddress&quot;
+<div class="highlight-python"><div class="highlight"><pre>docker inspect test-frontend_00 | grep &quot;IPAddress&quot;
 </pre></div>
 </div>
 <p>And visiting that IP on port 8000. ex: <a class="reference external" href="http://172.17.0.4:8000/">http://172.17.0.4:8000/</a></p>
@@ -218,7 +216,7 @@ ssh your_cstar_perf_server -L 8000:localhost:8000 -N &amp;
 <p>At this point, the frontend can&#8217;t run any tests because it still
 doesn&#8217;t know about the test cluster. To link the frontend to the test
 cluster, use the associate command:</p>
-<div class="highlight-python"><div class="highlight"><pre>cstar_docker associate test_frontend test_cluster
+<div class="highlight-python"><div class="highlight"><pre>cstar_docker associate test-frontend test-cluster
 </pre></div>
 </div>
 <p>Now you are ready to run tests directly from the frontend web page.
@@ -241,12 +239,12 @@ or destroy them.</p>
 in the docker container.  If you make edits that need a restart to either
 the client or server service, ssh in a use <a class="reference external" href="http://supervisord.org/">supervisord</a>.</p>
 <p>server restart:</p>
-<div class="highlight-python"><div class="highlight"><pre>cstar_docker ssh test_frontend
+<div class="highlight-python"><div class="highlight"><pre>cstar_docker ssh test-frontend
 sudo supervisorctl -c /supervisord.conf restart cstar_perf_server
 </pre></div>
 </div>
 <p>client restart:</p>
-<div class="highlight-python"><div class="highlight"><pre>cstar_docker ssh test_cluster
+<div class="highlight-python"><div class="highlight"><pre>cstar_docker ssh test-cluster
 sudo supervisorctl -c /supervisord.conf restart cstar_perf_client
 </pre></div>
 </div>
@@ -264,7 +262,7 @@ environment using real hardware.</p>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related" role="navigation" aria-label="related navigation">
+    <div class="related">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -276,12 +274,12 @@ environment using real hardware.</p>
         <li class="right" >
           <a href="index.html" title="cstar_perf"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">cstar_perf 1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer" role="contentinfo">
+    <div class="footer">
         &copy; Copyright 2014, DataStax.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

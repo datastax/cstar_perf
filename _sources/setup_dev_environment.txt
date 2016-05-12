@@ -98,7 +98,7 @@ Build the cstar_perf docker base image::
 
 Launch a cluster to run the client and Cassandra nodes::
 
-    cstar_docker launch test_cluster 1 -m
+    cstar_docker launch test-cluster 1 -m
 
 The above command launches a single node to act as a Cassandra
 cluster, and an additional node for the cstar_perf client. For
@@ -117,7 +117,7 @@ http://github.com/datastax/cstar_perf)
 
 Launch a node for the frontend::
 
-    cstar_docker frontend test_frontend -m
+    cstar_docker frontend test-frontend -m
 
 -------
 
@@ -140,7 +140,7 @@ Then you should be able to load http://localhost:8000 normally.
 
 You can load the frontend by it's IP address.  This can be found by::
 
-    docker inspect test_frontend_00 | grep "IPAddress"
+    docker inspect test-frontend_00 | grep "IPAddress"
 
 And visiting that IP on port 8000. ex: http://172.17.0.4:8000/
 
@@ -150,7 +150,7 @@ At this point, the frontend can't run any tests because it still
 doesn't know about the test cluster. To link the frontend to the test
 cluster, use the associate command::
 
-    cstar_docker associate test_frontend test_cluster
+    cstar_docker associate test-frontend test-cluster
 
 Now you are ready to run tests directly from the frontend web page.
 Click Login in the upper right hand corner and enter the default
@@ -177,12 +177,12 @@ the client or server service, ssh in a use supervisord_.
 
 server restart::
 
-    cstar_docker ssh test_frontend
+    cstar_docker ssh test-frontend
     sudo supervisorctl -c /supervisord.conf restart cstar_perf_server
 
 client restart::
 
-    cstar_docker ssh test_cluster
+    cstar_docker ssh test-cluster
     sudo supervisorctl -c /supervisord.conf restart cstar_perf_client
 
 -------
