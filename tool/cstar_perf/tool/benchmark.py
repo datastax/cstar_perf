@@ -16,6 +16,7 @@ import getpass
 import logging
 import itertools
 import shutil
+import distutils.util
 
 from fabric.tasks import execute
 import fabric.api as fab
@@ -123,7 +124,7 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     if leave_data == True and cfg.get('leave_data', None) == False:
         raise ValueError('setting for leave_data conflicts in job config and bootstrap() call')
     else:
-        leave_data = cfg.get('leave_data', leave_data)
+        leave_data = bool(distutils.util.strtobool(str(cfg.get('leave_data', leave_data))))
 
     # Set device readahead:
     if cfg['blockdev_readahead'] is not None:
@@ -142,8 +143,9 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
 
     product = dse if common.config['product'] == 'dse' else cstar
 
+    replace_existing_dse_install = bool(distutils.util.strtobool(str(cfg.get('replace_existing_dse_install', 'True'))))
     # dse setup and binaries download (local)
-    if product == dse:
+    if product == dse and replace_existing_dse_install:
         dse.setup(common.config)
 
     set_nodetool_path(os.path.join(product.get_bin_path(), 'nodetool'))
@@ -154,7 +156,7 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
     hosts = get_all_hosts(common.fab.env)
     if not cfg.get('revision_override'):
         with common.fab.settings(hosts=hosts):
-            git_ids = execute(common.bootstrap, git_fetch=git_fetch)
+            git_ids = execute(common.bootstrap, git_fetch=git_fetch, replace_existing_dse_install=replace_existing_dse_install)
     else:
         # revision_override is only supported for the product cassandra
         if product.name != 'cassandra':

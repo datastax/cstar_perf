@@ -123,23 +123,27 @@ def get_bin_path():
     dse_home = 'DSE_HOME={dse_path}'.format(dse_path=get_dse_path())
     return os.path.join('{dse_home} {dse_path}'.format(dse_home=dse_home, dse_path=get_dse_path()), 'bin')
 
-def bootstrap(config):
-    filename = os.path.join(dse_cache, dse_tarball)
-    dest = os.path.join(dse_builds, dse_tarball)
-    # remove build folder if it exists
-    fab.run('rm -rf {}'.format(os.path.join(dse_builds, dse_tarball.replace('-bin.tar.gz', ''))))
 
-    # Upload the binaries
-    fab.run('mkdir -p {dse_builds}'.format(dse_builds=dse_builds))
-    fab.put(filename, dest)
+def bootstrap(config, replace_existing_dse_install=True):
+    if replace_existing_dse_install:
+        filename = os.path.join(dse_cache, dse_tarball)
+        dest = os.path.join(dse_builds, dse_tarball)
 
-    # Extract the binaries
-    fab.run('tar -C {dse_builds} -xf {dest}'.format(dse_builds=dse_builds, dest=dest))
+        # remove build folder if it exists
+        fab.run('rm -rf {}'.format(os.path.join(dse_builds, dse_tarball.replace('-bin.tar.gz', ''))))
 
-    # Symlink current build to ~/fab/dse
-    fab.run('ln -sf {} ~/fab/dse'.format(os.path.join(dse_builds, dse_tarball.replace('-bin.tar.gz', ''))))
+        # Upload the binaries
+        fab.run('mkdir -p {dse_builds}'.format(dse_builds=dse_builds))
+        fab.put(filename, dest)
+
+        # Extract the binaries
+        fab.run('tar -C {dse_builds} -xf {dest}'.format(dse_builds=dse_builds, dest=dest))
+
+        # Symlink current build to ~/fab/dse
+        fab.run('ln -sf {} ~/fab/dse'.format(os.path.join(dse_builds, dse_tarball.replace('-bin.tar.gz', ''))))
 
     return config['revision']
+
 
 def start(config):
     _configure_spark_env(config)
