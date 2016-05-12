@@ -743,8 +743,8 @@ class JobCancellationTracker(threading.Thread):
         """Kill cstar_perf_stress and cassandra-stress"""
         for proc in psutil.process_iter():
             if proc.name().startswith("cstar_perf_stre"):
-                log.info("Killing cstar_perf_stress - pid:{}".format(proc.pid))
-                proc.kill()
+                log.info("Terminating cstar_perf_stress - pid:{}".format(proc.pid))
+                proc.terminate()
             if proc.name() == "java":
                 if "org.apache.cassandra.stress.Stress" in " ".join(proc.cmdline()):
                     log.info("Killing cassandra-stress - pid:{}".format(proc.pid))
