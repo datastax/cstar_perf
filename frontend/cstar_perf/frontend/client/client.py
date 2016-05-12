@@ -237,8 +237,12 @@ class JobRunner(object):
                 with open(os.path.join(job_dir, 'failure.json'), 'w') as f:
                     json.dump({"message":message, "stacktrace":stacktrace}, f)
                 break
-
-            self.__job_done(job['test_id'], status=status_to_submit, message=message, stacktrace=stacktrace)
+            job_id = job['test_id']
+            if status_to_submit == 'completed' and JobStatusRetriever.get_job_status(test_id=job_id, api_endpoint_url=urlparse.urlparse(self.ws_endpoint).netloc) == 'cancel_pending':
+                log.info('Job {job_id} was previously pending a cancel - setting job status to cancelled in the db'.format(job_id=job_id))
+                self.__job_done(job_id, status='cancelled')
+            else:
+                self.__job_done(job_id, status=status_to_submit, message=message, stacktrace=stacktrace)
             
     def perform_job(self, job):
         """Perform a job the server gave us, stream output and artifacts to the given websocket."""
@@ -611,7 +615,13 @@ class JobRunner(object):
                 # again:
                 self.stream_artifacts(job_id)
                 if self.__ws_client.in_sync():
-                    self.__job_done(job_id, status='completed')
+                    # in case the job is in cancel_pending status and artifacts were stored, we need to set the job status to
+                    # 'cancelled' in the db
+                    if JobStatusRetriever.get_job_status(test_id=job_id, api_endpoint_url=urlparse.urlparse(self.ws_endpoint).netloc) == 'cancel_pending':
+                        log.info('Job {job_id} was previously pending a cancel - setting job status to cancelled in the db'.format(job_id=job_id))
+                        self.__job_done(job_id, status='cancelled')
+                    else:
+                        self.__job_done(job_id, status='completed')
                     with open(os.path.join(job_dir, '0.job_status'), 'w') as f:
                         f.write('server_complete')                    
             else:
@@ -713,6 +723,20 @@ class UpdateServerProgressMessageHandler(RegexMatchingEventHandler):
         api_client.post('/tests/progress/id/{}'.format(self._job['test_id']), data=json.dumps({'progress_msg': msg}))
 
 
+class JobStatusRetriever(object):
+
+    @staticmethod
+    def get_job_status(test_id, api_endpoint_url):
+        api_client = APIClient(api_endpoint_url)
+        try:
+            status = api_client.get('/tests/status/id/' + test_id)
+        except Exception as e:
+            log.error(e.message)
+            status = None
+        log.debug('JobStatusRetriever -- status of test_id {test_id} is: {s}'.format(s=status, test_id=test_id))
+        return status.get('status') if status else None
+
+
 class JobCancellationTracker(threading.Thread):
     """Thread to poll test status changes on the server and kill jobs if requested"""
     def __init__(self, server, test_id, check_interval=60):
@@ -732,7 +756,7 @@ class JobCancellationTracker(threading.Thread):
             except Exception as e:
                 log.error(e.message)
                 status = None
-            log.debug('JobCancellationTracker -- status is: {s}'.format(s=status))
+            log.debug('JobCancellationTracker -- status of test_id {test_id} is: {s}'.format(s=status, test_id=self.test_id))
             if status and status.get('status', None) in ('cancelled', 'cancel_pending'):
                 self.kill_jobs()
 

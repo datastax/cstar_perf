@@ -42,7 +42,7 @@ $(document).ready(function() {
             });
         });
         field.parent().append(btn);
-    } else if (field.text() === 'failed') {
+    } else if (field.text() === 'failed' || field.text() === 'cancelled') {
         field.addClass('error')
     } else if (field.text() === 'completed') {
         field.addClass('success')
