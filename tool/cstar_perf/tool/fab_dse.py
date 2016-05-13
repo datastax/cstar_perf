@@ -27,6 +27,9 @@ DSE_NODE_TYPE_TO_STARTUP_PARAM = {'spark': '-k',
                                   'spark-hadoop': '-k -t',
                                   'search-analytics': '-s -k'}
 
+# this is used with pgrep / pkill
+DSE_PROCESS_CHECK_STR = '.*java.*dse.*cassandra|.*java.*dse.*spark|.*java.*dse.*executor'
+
 name = 'dse'
 
 
@@ -116,8 +119,10 @@ def get_dse_path():
 def get_dse_conf_path():
     return os.path.join(get_dse_path(), 'resources', 'dse', 'conf')
 
+
 def get_cassandra_path():
     return os.path.join(get_dse_path(), 'resources/cassandra/')
+
 
 def get_bin_path():
     dse_home = 'DSE_HOME={dse_path}'.format(dse_path=get_dse_path())
@@ -156,12 +161,19 @@ def start(config):
         node_type=DSE_NODE_TYPE_TO_STARTUP_PARAM.get(dse_node_type, ''))
     fab.run(cmd)
 
+
 def stop(clean, config):
-    fab.run('jps | grep DseDaemon | cut -d" " -f1 | xargs kill -9', quiet=True)
+    if clean:
+        fab.run('JAVA_HOME={java_home} {dse_bin_path}/nodetool drain'.format(
+            java_home=config['java_home'], dse_bin_path=get_bin_path()))
+        fab.run('pkill -f "{dse_process}"'.format(dse_process=DSE_PROCESS_CHECK_STR))
+    else:
+        fab.run('pkill -9 -f "{dse_process}"'.format(dse_process=DSE_PROCESS_CHECK_STR))
+
 
 def is_running():
-    jps = fab.run('jps | grep DseDaemon"', quiet=True)
-    return True if jps.return_code == 0 else False
+    pgrep = fab.run('pgrep -f "{dse_process}"'.format(dse_process=DSE_PROCESS_CHECK_STR), quiet=True)
+    return True if pgrep else False
 
 
 def _download_jython_if_necessary():
@@ -201,6 +213,7 @@ def get_dse_config_options(config):
 
     """
     return _get_config_options(config=config, config_class='com.datastax.bdp.config.Config')
+
 
 def _checkout_dse_branch_and_build_tarball_from_source(branch):
     global dse_cache, dse_tarball, config
