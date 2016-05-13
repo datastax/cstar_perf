@@ -290,8 +290,22 @@ var drawGraph = function() {
                 }
             };
 
+            var summaryTableNames = new Set(["op rate", "partition rate", "row rate", "latency mean", "latency median",
+                "latency 95th percentile", "latency 99th percentile", "latency 99.9th percentile", "latency max",
+                "total partitions", "total operation time"]);
+
             //Parse the dates:
             data.forEach(function(d) {
+                // CASSANDRA-11352 slightly changed the format of the stress result table.
+                // For new test runs, data is already written into the DB, where we use all lowercase names for the
+                // stress results table. However, there are already test runs in the DB that do not have all
+                // lowercase names and those numbers won't be shown in the graph.
+                for (var key in d) {
+                    var lowercaseKey = key.toLowerCase();
+                    if (key !== lowercaseKey && summaryTableNames.has(lowercaseKey)) {
+                        d[lowercaseKey] = d[key]
+                    }
+                }
                 d.date = new Date(Date.parse(d.date));
             });
         }
@@ -596,7 +610,7 @@ var drawGraph = function() {
             });
 
             renderLegendText(13, function(title) {
-                return padTextEnd('Total operation time', 26) + ' : ' + data_by_title[title]['Total operation time'];
+                return padTextEnd('total operation time', 26) + ' : ' + data_by_title[title]['total operation time'];
             });
 
             renderLegendText(14, function(title) {
