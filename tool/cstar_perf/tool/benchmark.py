@@ -535,8 +535,8 @@ def stress(cmd, revision_tag, stress_sha, stats=None):
             continue
         # Collect aggregates:
         try:
-            stat, value  = line.split(":", 1)
-            stats[stat.strip()] = value.strip()
+            stat, value = line.split(":", 1)
+            stats[stat.strip().lower()] = value.strip()
         except ValueError:
             logger.info("Unable to parse aggregate line: '{}'".format(line))
     log.close()
