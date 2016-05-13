@@ -102,7 +102,7 @@ class CstarTestJob(CstarPerfClient):
             s = self.metrics[operation_name]
             for m in self.metrics_list:
                 try:
-                    s[m] = float(operation['op rate'].split(' ')[0])
+                    s[m] = float(operation['op rate'].split(' ')[0].replace(',',''))
                 except KeyError:
                     pass
 
