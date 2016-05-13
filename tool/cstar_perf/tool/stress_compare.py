@@ -95,8 +95,6 @@ class GracefulTerminationHandler(object):
     def __exit__(self, type, value, tb):
         logger.info('GracefulTerminationHandler -- __exit__')
         self.release()
-        logger.info('GracefulTerminationHandler -- exiting with code 1')
-        sys.exit(1)
 
     def release(self):
         if self.released:
