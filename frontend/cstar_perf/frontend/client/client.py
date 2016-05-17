@@ -37,7 +37,7 @@ from cstar_perf.frontend import CLIENT_CONFIG_PATH, KEEPALIVE_MARKER, EOF_MARKER
 from cstar_perf.frontend.lib.crypto import APIKey, BadConfigFileException
 from cstar_perf.frontend.lib.util import random_token, timeout, TimeoutError, format_bytesize, cd, generate_object_id, sha256_of_file
 from cstar_perf.frontend.lib.socket_comms import Command, Response, CommandResponseBase, receive_data, UnauthenticatedError
-from cstar_perf.tool.stress_compare import stress_compare
+from cstar_perf.tool.benchmark import CSTAR_PERF_LOGS_DIR
 from api_client import APIClient
 
 logging.basicConfig(level=logging.DEBUG)
@@ -320,7 +320,7 @@ class JobRunner(object):
         system_logs = []
         flamegraph_logs = []
         yourkit_logs = []
-        log_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'logs')
+        log_dir = CSTAR_PERF_LOGS_DIR
         flamegraph_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'flamegraph')
         yourkit_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'yourkit')
         #Create a stats summary file without voluminous interval data
@@ -356,7 +356,9 @@ class JobRunner(object):
         # Make a new tarball containing all the revision logs:
         tmptardir = tempfile.mkdtemp()
         try:
-            self._append_startup_logs_to_archivable_system_logs(job['test_id'], log_dir, system_logs)
+            startup_log_tarball = self._maybe_get_startup_log_tarball(job['test_id'], log_dir)
+            if startup_log_tarball:
+                system_logs.append(startup_log_tarball)
             job_log_dir = os.path.join(tmptardir, 'cassandra_logs.{test_id}'.format(test_id=job['test_id']))
             os.mkdir(job_log_dir)
             for x, syslog in enumerate(system_logs, 1):
@@ -445,16 +447,19 @@ class JobRunner(object):
             with open(os.path.join(job_dir, '0.job_status'), 'w') as f:
                 f.write(final_status)
 
-    def _append_startup_logs_to_archivable_system_logs(self, job_id, log_dir, system_logs):
+    def _maybe_get_startup_log_tarball(self, job_id, log_dir):
         """
         In case something went wrong during startup of C*, we will basically only have a single tarball
         with the startup log.
+        :param job_id: The id of the cstar_perf job
+        :param log_dir: The log directory
+        :return: The full path to the startup log tarball if it exists, otherwise None.
         """
         startup_logs_tarball = os.path.join(log_dir, "{name}.tar.gz".format(name=job_id))
         if os.path.exists(startup_logs_tarball):
             log.info('Found tarball with startup log at {loc}'.format(loc=startup_logs_tarball))
-            system_logs.append(startup_logs_tarball)
-            log.info('log file locations that will be archived: {logs}'.format(logs=system_logs))
+            return startup_logs_tarball
+        return None
 
     def stream_artifacts(self, job_id):
         """Stream all job artifacts

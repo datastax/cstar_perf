@@ -2,7 +2,7 @@ from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash,
                        log_stats, log_set_title, log_add_data, retrieve_logs, restart,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
                        drop_page_cache, wait_for_compaction, setup_stress, clean_stress,
-                       get_localhost, retrieve_flamegraph, retrieve_yourkit, dsetool_cmd, dse_cmd)
+                       get_localhost, retrieve_flamegraph, retrieve_yourkit, dsetool_cmd, dse_cmd, CSTAR_PERF_LOGS_DIR)
 from benchmark import config as fab_config, cstar, dse, set_cqlsh_path, set_nodetool_path, spark_cassandra_stress, retrieve_logs_and_create_tarball
 import fab_common as common
 import fab_cassandra as cstar
@@ -332,8 +332,7 @@ def stress_compare(revisions,
 
                 if capture_fincore:
                     stop_fincore_capture()
-                    logs_dir = os.path.join(os.path.expanduser('~'),'.cstar_perf','logs')
-                    log_dir = os.path.join(logs_dir, stats['id'])
+                    log_dir = os.path.join(CSTAR_PERF_LOGS_DIR, stats['id'])
                     retrieve_fincore_logs(log_dir)
                     # Restart fincore capture if this is not the last
                     # operation:

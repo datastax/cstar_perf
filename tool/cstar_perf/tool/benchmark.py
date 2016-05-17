@@ -48,6 +48,8 @@ CASSANDRA_STRESS_PATH = os.path.expanduser("~/fab/stress/")
 CASSANDRA_STRESS_DEFAULT   = os.path.expanduser("~/fab/stress/default/tools/bin/cassandra-stress")
 JAVA_HOME          = os.path.expanduser("~/fab/java")
 
+CSTAR_PERF_LOGS_DIR = os.path.join(os.path.expanduser('~'), '.cstar_perf', 'logs')
+
 antcmd = sh.Command(os.path.join(HOME, 'fab/ant/bin/ant'))
 
 global nodetool_path, cqlsh_path
@@ -211,21 +213,17 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
 def _extract_job_id():
     # this will have a string looking as following: /home/cstar/.cstar_perf/jobs/<jobid>/stats.<jobid>.json
     stats_log = common.config.get('log')
-    # will give us: /home/cstar/.cstar_perf/jobs/<jobid>
-    log_dir = stats_log[0:stats_log.rindex('/')]
     # will give us: <jobid>
-    job_id = log_dir[log_dir.rindex('/') + 1:]
-    return job_id
+    return stats_log.split(os.path.sep)[-2]
 
 
 def retrieve_logs_and_create_tarball(job_id):
-    logs_dir = os.path.join(os.path.expanduser('~'),'.cstar_perf','logs')
-    log_dir = os.path.join(logs_dir, job_id)
+    log_dir = os.path.join(CSTAR_PERF_LOGS_DIR, job_id)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     retrieve_logs(log_dir)
     # Tar them for archiving:
-    subprocess.Popen(shlex.split('tar cfvz {id}.tar.gz {id}'.format(id=job_id)), cwd=logs_dir).communicate()
+    subprocess.Popen(shlex.split('tar cfvz {id}.tar.gz {id}'.format(id=job_id)), cwd=CSTAR_PERF_LOGS_DIR).communicate()
     shutil.rmtree(log_dir)
 
 
