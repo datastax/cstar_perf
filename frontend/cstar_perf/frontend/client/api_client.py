@@ -34,7 +34,7 @@ class APIClient(object):
             r = self.session.get(self.endpoint + path, **kwargs)
         if r.status_code == 200:
             return r.json()
-        error = u'Request failed to {} - {} {}'.format(path, r, body).encode("utf-8")
+        error = u'Request failed to {} - {} {}'.format(self.endpoint + path, r, body).encode("utf-8")
         raise RuntimeError(error)
 
     def post(self, path, data=None, **kwargs):
