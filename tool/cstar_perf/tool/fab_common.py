@@ -444,7 +444,7 @@ def destroy(leave_data=False, kill_delay=0):
     fab.run('rm -rf fab/cassandra')
     fab.run('rm -rf fab/dse')
     fab.run('rm -rf fab/scripts')
-    fab.run('rm -f fab/nohup.log')
+    fab.run('rm -f ~/nohup.out')
 
     # Ensure directory configurations look sane
     assert type(config['data_file_directories']) == list
@@ -622,10 +622,19 @@ def configure_hostnames():
 
 @fab.parallel
 def copy_logs(local_directory):
-    cfg = config['hosts'][fab.env.host]
-    host_log_dir = os.path.join(local_directory, cfg['hostname'])
-    os.mkdir(host_log_dir)
-    fab.get(os.path.join(config['log_dir'],'*'), host_log_dir)
+    # put the whole code in a with block and do not fail immediately in case a logging dir cannot be found
+    # E.g. if the C* JVM cannot start because of invalid settings, the C* system.log dir won't be available
+    # and this piece of code will fail. However, in this case we want to be able to at least copy
+    # the startup log (nohup.out) to see what went wrong
+    with fab.settings(warn_only=True):
+        cfg = config['hosts'][fab.env.host]
+        host_log_dir = os.path.join(local_directory, cfg['hostname'])
+        if not os.path.exists(host_log_dir):
+            os.makedirs(host_log_dir)
+        # copy the node's startup log
+        fab.get(os.path.expanduser("~/nohup.out"), host_log_dir)
+        # copy the node's system.log
+        fab.get(os.path.join(config['log_dir'], '*'), host_log_dir)
 
 @fab.parallel
 def start_fincore_capture(interval=10):

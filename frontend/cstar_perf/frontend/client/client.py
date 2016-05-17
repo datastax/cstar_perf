@@ -356,6 +356,7 @@ class JobRunner(object):
         # Make a new tarball containing all the revision logs:
         tmptardir = tempfile.mkdtemp()
         try:
+            self._append_startup_logs_to_archivable_system_logs(job['test_id'], log_dir, system_logs)
             job_log_dir = os.path.join(tmptardir, 'cassandra_logs.{test_id}'.format(test_id=job['test_id']))
             os.mkdir(job_log_dir)
             for x, syslog in enumerate(system_logs, 1):
@@ -443,6 +444,17 @@ class JobRunner(object):
         finally:
             with open(os.path.join(job_dir, '0.job_status'), 'w') as f:
                 f.write(final_status)
+
+    def _append_startup_logs_to_archivable_system_logs(self, job_id, log_dir, system_logs):
+        """
+        In case something went wrong during startup of C*, we will basically only have a single tarball
+        with the startup log.
+        """
+        startup_logs_tarball = os.path.join(log_dir, "{name}.tar.gz".format(name=job_id))
+        if os.path.exists(startup_logs_tarball):
+            log.info('Found tarball with startup log at {loc}'.format(loc=startup_logs_tarball))
+            system_logs.append(startup_logs_tarball)
+            log.info('log file locations that will be archived: {logs}'.format(logs=system_logs))
 
     def stream_artifacts(self, job_id):
         """Stream all job artifacts

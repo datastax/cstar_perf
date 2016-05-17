@@ -23,6 +23,7 @@ import fabric.api as fab
 import yaml
 
 import sh
+import shlex
 
 
 # Import the default config first:r
@@ -185,13 +186,48 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
 
     execute(common.start)
     time.sleep(15)
-    execute(common.ensure_running, hosts=[common.config['seeds'][0]])
-    time.sleep(30)
+    is_running = True
+    with fab.settings(abort_exception=SystemExit):
+        try:
+            execute(common.ensure_running, hosts=[common.config['seeds'][0]])
+            time.sleep(30)
+        except SystemExit:
+            is_running = False
+
+    if not is_running:
+        try:
+            retrieve_logs_and_create_tarball(job_id=_extract_job_id())
+        except Exception as e:
+            logger.warn(e)
+            pass
+        fab.abort('Cassandra is not up!')
 
     logger.info("Started {product} on {n} nodes with git SHAs: {git_ids}".format(
         product=product.name, n=len(common.fab.env['hosts']), git_ids=git_ids))
     time.sleep(30)
     return git_ids
+
+
+def _extract_job_id():
+    # this will have a string looking as following: /home/cstar/.cstar_perf/jobs/<jobid>/stats.<jobid>.json
+    stats_log = common.config.get('log')
+    # will give us: /home/cstar/.cstar_perf/jobs/<jobid>
+    log_dir = stats_log[0:stats_log.rindex('/')]
+    # will give us: <jobid>
+    job_id = log_dir[log_dir.rindex('/') + 1:]
+    return job_id
+
+
+def retrieve_logs_and_create_tarball(job_id):
+    logs_dir = os.path.join(os.path.expanduser('~'),'.cstar_perf','logs')
+    log_dir = os.path.join(logs_dir, job_id)
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    retrieve_logs(log_dir)
+    # Tar them for archiving:
+    subprocess.Popen(shlex.split('tar cfvz {id}.tar.gz {id}'.format(id=job_id)), cwd=logs_dir).communicate()
+    shutil.rmtree(log_dir)
+
 
 def restart():
     execute(common.stop)
