@@ -139,12 +139,6 @@ def cluster_comms(ws):
             raise UnauthenticatedError("Our peer could not validate our signed auth token")
 
     def get_work(command):
-        # Mark any existing in_process jobs for this cluster as
-        # failed. If the cluster is asking for new work, then these
-        # got dropped on the floor:
-        for test in db.get_in_progress_tests(context['cluster']):
-            db.update_test_status(test['test_id'], 'failed')
-
         # Find the next test scheduled for the client's cluster:
         tests = db.get_scheduled_tests(context['cluster'], limit=1)
         if len(tests) > 0:
