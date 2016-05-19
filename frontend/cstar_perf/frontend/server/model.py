@@ -292,6 +292,7 @@ class Model(object):
         test = self.get_test(test_id)
         original_status = self.get_test_status(test_id)
         # Update tests table:
+        log.info('Updating test status of {test_id}. Original status: {orig}. New status: {status}.'.format(test_id=test_id, orig=original_status, status=status))
         if status == "completed":
             completed_date = uuid.uuid1()
             session.execute(self.__prepared_statements['update_test_set_status_completed'], (status, completed_date, test_id ))
@@ -304,7 +305,7 @@ class Model(object):
         # Add the new status to test_status:
         session.execute(self.__prepared_statements['insert_test_status'], (status, test['cluster'], test_id, test['user'], test['test_definition']['title']))
         self.zmq_socket.send_string("{status} {cluster} {test_id}".format(status=status, cluster=test['cluster'], test_id=test_id))
-        log.info("test status is: {status}".format(status=status))
+        log.info("test status of {test_id} is: {status}".format(status=status, test_id=test_id))
 
         # Send the user an email when the status updates:
         if self.email_notifications and status not in ('scheduled','in_progress') and status != original_status:
