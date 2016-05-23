@@ -33,6 +33,7 @@ GIT_REPOS = [
     ('aboudreault',   'git://github.com/aboudreault/cassandra.git'),
     ('pauloricardomg','git://github.com/pauloricardomg/cassandra'),
     ('qzg',           'git://github.com/qzg/cassandra'),
+    ('nitsanw',       'git://github.com/nitsanw/cassandra'),
 ]
 
 # Additional git remotes can be specified in this file
