@@ -52,6 +52,7 @@ git_repos = [
     ('shawnkumar',    'git://github.com/shawnkumar/cassandra.git'),
     ('mambocab',      'git://github.com/mambocab/cassandra.git'),
     ('jbellis',       'git://github.com/jbellis/cassandra.git'),
+    ('josh-mckenzie', 'git://github.com/josh-mckenzie/cassandra.git'),
     ('marcuse',       'git://github.com/krummas/cassandra.git'),
     ('pcmanus',       'git://github.com/pcmanus/cassandra.git'),
     ('belliottsmith', 'git://github.com/belliottsmith/cassandra.git'),
