@@ -157,7 +157,7 @@ class Model(object):
                 except AttributeError:
                     session = self.cluster.connect(self.keyspace)
             else:
-                session = cluster.connect(self.keyspace)
+                session = self.cluster.connect(self.keyspace)
         except cassandra.InvalidRequest, e:
             # Only attempt to create the schema if we get an error that it
             # doesn't exist:
