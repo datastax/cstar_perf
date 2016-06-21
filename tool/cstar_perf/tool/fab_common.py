@@ -68,6 +68,7 @@ git_repos = [
     ('driftx',        'git://github.com/driftx/cassandra.git'),
     ('qzg',           'git://github.com/qzg/cassandra.git'),
     ('nitsanw',       'git://github.com/nitsanw/cassandra.git'),
+    ('sbtourist',     'git://github.com/sbtourist/cassandra.git'),
 ]
 
 CMD_LINE_HOSTS_SPECIFIED = False
