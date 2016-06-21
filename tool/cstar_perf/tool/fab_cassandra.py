@@ -35,6 +35,7 @@ GIT_REPOS = [
     ('pauloricardomg','git://github.com/pauloricardomg/cassandra'),
     ('qzg',           'git://github.com/qzg/cassandra'),
     ('nitsanw',       'git://github.com/nitsanw/cassandra'),
+    ('sbtourist',     'git://github.com/sbtourist/cassandra'),
 ]
 
 # Additional git remotes can be specified in this file
