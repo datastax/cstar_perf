@@ -19,23 +19,23 @@
 ################################################################################
 from StringIO import StringIO
 import time
+import os
+import re
+import uuid
+import logging
+
 from fabric import api as fab
 from fabric.tasks import execute
-import os
 import yaml
+import pkg_resources
+
 from cluster_config import config as cluster_config
-import re
-import sh
-import uuid
-from util import random_token, get_static_vnode_tokens
-import subprocess
+from util import get_static_vnode_tokens
 from util import random_token
 import fab_dse as dse
 import fab_cassandra as cstar
 import fab_flamegraph as flamegraph
 import fab_profiler as profiler
-import logging
-import pkg_resources
 
 logging.basicConfig()
 logger = logging.getLogger('common')
@@ -75,7 +75,54 @@ CMD_LINE_HOSTS_SPECIFIED = False
 if len(fab.env.hosts) > 0 :
     CMD_LINE_HOSTS_SPECIFIED = True
 
+
 logback_template = """<configuration scan="true">
+  <jmxConfigurator />
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${cassandra.logdir}/system.log</file>
+    <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+      <fileNamePattern>${cassandra.logdir}/system.log.%i.zip</fileNamePattern>
+      <minIndex>1</minIndex>
+      <maxIndex>20</maxIndex>
+    </rollingPolicy>
+    <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+      <maxFileSize>20MB</maxFileSize>
+    </triggeringPolicy>
+    <encoder>
+      <pattern>%-5level [%thread] %date{ISO8601} %F:%L - %msg%n</pattern>
+      <!-- old-style log format
+      <pattern>%5level [%thread] %date{ISO8601} %F (line %L) %msg%n</pattern>
+      -->
+    </encoder>
+  </appender>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%-5level %date{HH:mm:ss,SSS} %msg%n</pattern>
+    </encoder>
+  </appender>
+  <root level="INFO">
+    <appender-ref ref="FILE" />
+    <appender-ref ref="STDOUT" />
+  </root>
+  <logger name="com.thinkaurelius.thrift" level="ERROR"/>
+</configuration>
+"""
+
+log4j_template = """
+log4j.rootLogger=INFO,stdout,R
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%5p %d{HH:mm:ss,SSS} %m%n
+log4j.appender.R=org.apache.log4j.RollingFileAppender
+log4j.appender.R.maxFileSize=20MB
+log4j.appender.R.maxBackupIndex=50
+log4j.appender.R.layout=org.apache.log4j.PatternLayout
+log4j.appender.R.layout.ConversionPattern=%5p [%t] %d{ISO8601} %F (line %L) %m%n
+log4j.appender.R.File=${cassandra.logdir}/system.log
+log4j.logger.org.apache.thrift.server.TNonblockingServer=ERROR
+"""
+
+logback_debug_template = """<configuration scan="true">
   <jmxConfigurator />
   <appender name="SYSTEMLOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
     <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
@@ -215,7 +262,8 @@ def setup(my_config=None):
         # Extra environment settings to prepend to cassandra-env.sh:
         'env': '',
         'java_home': '~/fab/java',
-        'yourkit_profiler': False
+        'yourkit_profiler': False,
+        'debug_logging': False
     }
 
     public_ips = "node0, node1, node2, node3"
@@ -433,12 +481,15 @@ def bootstrap(git_fetch=True, revision_override=None, replace_existing_dse_insta
     fab.put(conf_file, conf_dir+'cassandra.yaml')
 
     # Configure logback:
+    logback_template_config = logback_debug_template if config.get('debug_logging', False) else logback_template
+
     logback_conf = StringIO()
     # Get absolute path to log dir:
     log_dir = fab.run("readlink -m {log_dir}".format(log_dir=config['log_dir']))
-    logback_conf.write(logback_template.replace("${cassandra.logdir}",log_dir))
+
+    logback_conf.write(logback_template_config.replace("${cassandra.logdir}", log_dir))
     logback_conf.seek(0)
-    fab.put(logback_conf, conf_dir+'logback.xml')
+    fab.put(logback_conf, conf_dir + 'logback.xml')
 
     # Configure log4j:
     log4j_conf = StringIO()

@@ -90,7 +90,11 @@ var addRevisionDiv = function(animate){
         "          <div class='checkbox'>" +
         "            <input type='checkbox' class='options-yourkit' id='{revision_id}-options-yourkit'/>" +
         "            <label for='{revision_id}-options-yourkit'>Enable yourkit profiling</label>" +
-        "	  </div>" +
+        "	       </div>" +
+        "          <div class='checkbox'>" +
+        "            <input type='checkbox' class='options-debug-logging' id='{revision_id}-options-debug-logging'/>" +
+        "            <label for='{revision_id}-options-debug-logging'>Enable debug logging (will create a separate debug.log)</label>" +
+        "	       </div>" +
         "        </div>" +
         "      </div>" +
         "" +
@@ -513,7 +517,8 @@ var createJob = function() {
                 'use_vnodes': revision.find(".token-allocation-select").val() != 'non-vnodes',
                 'token_allocation': revision.find(".token-allocation-select").val()
             },
-            yourkit_profiler: revision.find(".options-yourkit").is(":checked")
+            yourkit_profiler: revision.find(".options-yourkit").is(":checked"),
+            debug_logging: revision.find(".options-debug-logging").is(":checked")
         };
     });
 
@@ -600,6 +605,7 @@ var cloneExistingJob = function(job_id) {
                 revision['options'] = {};
             }
             $("#revision-"+rev+"-options-yourkit").prop("checked", revision['yourkit_profiler']);
+            $("#revision-"+rev+"-options-debug-logging").prop("checked", revision['debug_logging']);
             update_cluster_options();
             update_cluster_selections(function(){
                 $("#revision-"+rev+"-jvm").val(revision['java_home']);
