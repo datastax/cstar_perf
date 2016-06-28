@@ -8,6 +8,7 @@ from StringIO import StringIO
 import yaml
 from fabric import api as fab
 from fabric.state import env
+from fabric.tasks import execute
 
 from util import download_file, download_file_contents, digest_file
 
@@ -145,7 +146,7 @@ def bootstrap(config, replace_existing_dse_install=True):
         fab.run('tar -C {dse_builds} -xf {dest}'.format(dse_builds=dse_builds, dest=dest))
 
         # Symlink current build to ~/fab/dse
-        fab.run('ln -sf {} ~/fab/dse'.format(os.path.join(dse_builds, dse_tarball.replace('-bin.tar.gz', ''))))
+        fab.run('ln -sfn {} ~/fab/dse'.format(os.path.join(dse_builds, dse_tarball.replace('-bin.tar.gz', ''))))
 
     return config['revision']
 
@@ -319,3 +320,24 @@ def _configure_spark_env(config):
         spark_env_path = os.path.join(get_dse_path(), 'resources', 'spark', 'conf', 'spark-env.sh')
         fab.run('cat ~/fab/scripts/{spark_env_script} >> {spark_env_path}'.format(spark_env_script=spark_env_script,
                                                                                   spark_env_path=spark_env_path))
+
+
+def make_remote_spark_data_dir(nodes, spark_data_dir=os.path.join('/', 'var', 'lib', 'spark'), remove_existing_spark_data=True):
+    with fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=nodes):
+        if remove_existing_spark_data:
+            execute(fab.sudo, 'rm -rf {spark_data}'.format(spark_data=spark_data_dir))
+        execute(fab.sudo, 'mkdir -p {spark_data}'.format(spark_data=spark_data_dir))
+
+
+def set_permissions_on_spark_data_dir(nodes, spark_data_dir=os.path.join('/', 'var', 'lib', 'spark'), user='cstar'):
+    with fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=nodes):
+        execute(fab.sudo, 'chmod -R 777 {spark_data}'.format(spark_data=spark_data_dir))
+        execute(fab.sudo, 'chown {user}:{user} {spark_data}'.format(user=user, spark_data=spark_data_dir))
+
+
+def setup_spark_data_dir(spark_data_dir, nodes, make_dir=True, set_permissions=True, remove_existing_spark_data=True, user='cstar'):
+    if make_dir:
+        make_remote_spark_data_dir(nodes, spark_data_dir=spark_data_dir,
+                                   remove_existing_spark_data=remove_existing_spark_data)
+    if set_permissions:
+        set_permissions_on_spark_data_dir(nodes, spark_data_dir=spark_data_dir, user=user)
