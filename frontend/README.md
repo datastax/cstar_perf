@@ -18,7 +18,7 @@ Requirements:
 
 Ubuntu dependencies:
 
-    sudo apt-get install python2.7 python2.7-dev python-virtualenv libtool cassandra
+    sudo apt-get install python2.7 python2.7-dev python-virtualenv libtool cassandra curl
 
 Setup a virtual environment:
 

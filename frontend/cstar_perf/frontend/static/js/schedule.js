@@ -154,6 +154,8 @@ var addOperationDiv = function(animate, operationDefaults){
         "            <option value='cqlsh'>cqlsh</option>" +
         "            <option value='bash'>bash</option>" +
         "            <option id='{operation_id}-spark_cassandra_stress_select' value='spark_cassandra_stress'>spark-cassandra-stress</option>" +
+        "            <option id='{operation_id}-solr_create_schema_select' value='solr_create_schema'>solr create-schema.sh</option>" +
+        "            <option id='{operation_id}-solr_run_benchmark_select' value='solr_run_benchmark'>solr run-benchmark.sh</option>" +
         "            <option value='ctool'>ctool</option>" +
         "            <option id='{operation_id}-dsetool_select' value='dsetool'>dsetool</option>" +
         "            <option id='{operation_id}-dse_select' value='dse'>dse</option>" +
@@ -241,6 +243,110 @@ var addOperationDiv = function(animate, operationDefaults){
         "        </div>" +
         "      </div>" +
         "            " +
+        "      <div class='form-group args solr_create_schema'> " +
+        "        <label class='col-md-3 control-label' for='{operation_id}-command'>" +
+        "          Schema</label>" +
+        "        <div class='col-md-9'>" +
+        "          <select class='form-control solr-stress-combo schema-combo' id='{operation_id}-schema-combo'>" +
+        "            <option value='schema.xml'>schema.xml</option>" +
+        "            <option value='schema_geo.xml'>schema_geo.xml</option>" +
+        "            <option value='custom'>custom</option>" +
+        "          </select>" +
+        "          <textarea id='{operation_id}-schema-text' type='text'" +
+        "            class='form-control input-md solr-stress-text schema-text' required=''></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group args solr_create_schema'> " +
+        "        <label class='col-md-3 control-label' for='{operation_id}-command'>" +
+        "          SolrConfig</label>" +
+        "        <div class='col-md-9'>" +
+        "          <select class='form-control solr-stress-combo solrconfig-combo' id='{operation_id}-solrconfig-combo'>" +
+        "            <option value='solrconfig.xml'>solrconfig.xml</option>" +
+        "            <option value='solrconfig-rt.xml'>solrconfig-rt.xml</option>" +
+        "            <option value='custom'>custom</option>" +
+        "          </select>" +
+        "          <textarea id='{operation_id}-solrconfig-text' type='text'" +
+        "            class='form-control input-md solr-stress-text solrconfig-text' required=''></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group args solr_create_schema'> " +
+        "        <label class='col-md-3 control-label' for='{operation_id}-command'>" +
+        "          Table Creation CQL</label>" +
+        "        <div class='col-md-9'>" +
+        "          <select class='form-control solr-stress-combo createtable-combo' id='{operation_id}-createtable-combo'>" +
+        "            <option value='create_table.cql'>create_table.cql</option>" +
+        "            <option value='create_table_geo.cql'>create_table_geo.cql</option>" +
+        "            <option value='create_table_geo_rt.cql'>create_table_geo_rt.cql</option>" +
+        "            <option value='custom'>custom</option>" +
+        "          </select>" +
+        "          <textarea id='{operation_id}-createtable-text' type='text'" +
+        "            class='form-control input-md solr-stress-text createtable-text' required=''></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group args solr_create_schema'> " +
+        "        <label class='col-md-3 control-label' for='{operation_id}-command'>" +
+        "          Core</label>" +
+        "        <div class='col-md-9'>" +
+        "          <select class='form-control solr-stress-combo core-combo' id='{operation_id}-core-combo'>" +
+        "            <option value='demo.solr'>demo.solr</option>" +
+        "            <option value='demo.geo'>demo.geo</option>" +
+        "            <option value='custom'>custom</option>" +
+        "          </select>" +
+        "          <textarea id='{operation_id}-core-text' type='text'" +
+        "            class='form-control input-md solr-stress-text core-text' required=''></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes solr_create_schema'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Node</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select id='{operation_id}-nodes' type='text'" +
+        "               class='form-control input-md node-create-schema node-select'>" +
+        "          </select>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group args solr_run_benchmark'> " +
+        "        <label class='col-md-3 control-label' for='{operation_id}-command'>" +
+        "          --test-data</label>" +
+        "        <div class='col-md-9'>" +
+        "          <select class='form-control solr-stress-combo run-benchmark-combo' id='{operation_id}-run-benchmark-combo'>" +
+        "            <option value='testMixed.txt'>testMixed.txt</option>" +
+        "            <option value='testCqlQuery.txt'>testCqlQuery.txt</option>" +
+        "            <option value='testCqlWrite.txt'>testCqlWrite.txt</option>" +
+        "            <option value='testGenerateIndexLatencyTest.txt'>testGenerateIndexLatencyTest.txt</option>" +
+        "            <option value='testGenerateQueries.txt'>testGenerateQueries.txt</option>" +
+        "            <option value='testLoadGeoCql.txt'>testLoadGeoCql.txt</option>" +
+        "            <option value='testLoadGeoHttp.txt'>testLoadGeoHttp.txt</option>" +
+        "            <option value='testLucRead.txt'>testLucRead.txt</option>" +
+        "            <option value='testMixed.txt'>testMixed.txt</option>" +
+        "            <option value='testPSTMNTS.txt'>testPSTMNTS.txt</option>" +
+        "            <option value='testQuery.txt'>testQuery.txt</option>" +
+        "            <option value='testUpdate.txt'>testUpdate.txt</option>" +
+        "            <option value='testWrite.txt'>testWrite.txt</option>" +
+        "            <option value='custom'>custom</option>" +
+        "          </select>" +
+        "          <textarea id='{operation_id}-run-benchmark-text' type='text'" +
+        "            class='form-control input-md solr-stress-text run-benchmark-text' required=''></textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group args solr_run_benchmark'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Additional Arguments</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <textarea id='{operation_id}-args' type='text'" +
+        "               class='form-control input-md args-run-benchmark' required=''>{solr_run_benchmark_args}</textarea>" +
+        "        </div>" +
+        "      </div>" +
+        "      <div class='form-group nodes solr_run_benchmark'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Node</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select id='{operation_id}-nodes' type='text'" +
+        "               class='form-control input-md node-solr-stress node-select'>" +
+        "          </select>" +
+        "        </div>" +
+        "      </div>" +
+        "            " +       
         "      <div class='form-group type dsetool'>" +
         "        <label class='col-md-3 control-label'" +
         "        for='{operation_id}-command'>dsetool Command</label>  " +
@@ -395,6 +501,11 @@ var addOperationDiv = function(animate, operationDefaults){
     } else {
         newOperation.script_spark_cassandra_stress = "-o 10000 -y 1000 -p 1000 writeperfrow";
     }
+    if (newOperation.operationType === 'solr_run_benchmark' && operationDefaults.script) {
+        newOperation.solr_run_benchmark_args = operationDefaults.script;
+    } else {
+        newOperation.solr_run_benchmark_args = "--clients 1 --loops 1 --solr-core demo.solr --url http://testcluster-01:8983"
+    }
     if (newOperation.operationType === 'dsetool' && operationDefaults.script) {
         newOperation.script_dsetool = operationDefaults.script;
     } else {
@@ -411,7 +522,8 @@ var addOperationDiv = function(animate, operationDefaults){
         newDiv.hide();
     $("#schedule-operations").append(newDiv);
     $("#"+operation_id+"-type").change(function(){
-        var validOperations = ['stress', 'nodetool', 'cqlsh', 'bash', 'spark_cassandra_stress', 'ctool', 'dsetool', 'dse'];
+        var validOperations = ['stress', 'nodetool', 'cqlsh', 'bash', 'spark_cassandra_stress', 'ctool', 'dsetool',
+            'dse', 'solr_create_schema', 'solr_run_benchmark'];
         if (validOperations.indexOf(this.value) < 0) {
             console.log(this.value + ' not a valid selection')
         }
@@ -454,7 +566,7 @@ var maybe_show_dse_operations = function() {
             break;
         }
     }
-    var operation_type = ['spark_cassandra_stress', 'dsetool', 'dse'];
+    var operation_type = ['spark_cassandra_stress', 'dsetool', 'dse', 'solr_create_schema', 'solr_run_benchmark'];
     for (var idx = 0; idx < operation_type.length; idx++) {
         var op = operation_type[idx];
         for (var i = 1; i <= $('.operation-type').length; i++) {
@@ -487,6 +599,17 @@ var maybe_show_dse_options = function(id, value) {
         $("#" + spark_env_div_id).hide();
     }
     maybe_show_dse_operations();
+};
+
+var get_associated_text_id = function(combo_element) {
+    return combo_element.attr('id').replace('combo', 'text')
+};
+
+var get_solr_text = function(combo_element) {
+    if (combo_element.val() === 'custom') {
+        return $('#' + get_associated_text_id(combo_element)).val()
+    }
+    return combo_element.val()
 };
 
 var createJob = function() {
@@ -552,6 +675,18 @@ var createJob = function() {
         if (op === "spark_cassandra_stress") {
             jobSpec['script'] = operation.find(".script-spark-cassandra-stress").val();
             jobSpec['node'] = operation.find(".node-spark-cassandra-stress").val();
+        }
+        if (op === "solr_create_schema") {
+            jobSpec['schema'] = get_solr_text(operation.find(".schema-combo"));
+            jobSpec['solrconfig'] = get_solr_text(operation.find(".solrconfig-combo"));
+            jobSpec['cql'] = get_solr_text(operation.find(".createtable-combo"));
+            jobSpec['core'] = get_solr_text(operation.find(".core-combo"));
+            jobSpec['node'] = operation.find(".node-create-schema").val();
+        }
+        if (op === "solr_run_benchmark") {
+            jobSpec['testdata'] = get_solr_text(operation.find(".run-benchmark-combo"));
+            jobSpec['args'] = operation.find(".args-run-benchmark").val();
+            jobSpec['node'] = operation.find(".node-solr-stress").val();
         }
         if (op === "dsetool") {
             jobSpec['script'] = operation.find(".script-dsetool").val();
@@ -629,6 +764,9 @@ var cloneExistingJob = function(job_id) {
             show_job_json();
         }
 
+        // Since we dynamically added some divs, we need to attach events
+        // that would normally be triggered on document load
+        attachSolrComboEvents()
    });
 };
 
@@ -725,6 +863,16 @@ var updateURLBar = function(query) {
     window.history.replaceState(null,null,parseUri(location).path + "?" + $.param(query));
 };
 
+var attachSolrComboEvents = function() {
+    $('.solr-stress-combo').change(function(e) {
+        var related_text_id = get_associated_text_id($(this))
+        if ($(this).val() === 'custom') {
+            $('#' + related_text_id).show()
+        } else {
+            $('#' + related_text_id).hide()
+        }
+    })
+}
 
 $(document).ready(function() {
     //Add revision button callback:
@@ -783,4 +931,5 @@ $(document).ready(function() {
         e.preventDefault();
     });
 
+    attachSolrComboEvents()
 });

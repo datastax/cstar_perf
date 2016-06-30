@@ -2,7 +2,8 @@ from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash,
                        log_stats, log_set_title, log_add_data, retrieve_logs, restart,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
                        drop_page_cache, wait_for_compaction, setup_stress, clean_stress,
-                       get_localhost, retrieve_flamegraph, retrieve_yourkit, dsetool_cmd, dse_cmd, CSTAR_PERF_LOGS_DIR)
+                       get_localhost, retrieve_flamegraph, retrieve_yourkit, dsetool_cmd, dse_cmd, CSTAR_PERF_LOGS_DIR,
+                       solr_create_schema, solr_run_benchmark)
 from benchmark import config as fab_config, cstar, dse, set_cqlsh_path, set_nodetool_path, spark_cassandra_stress, retrieve_logs_and_create_tarball
 import fab_common as common
 import fab_cassandra as cstar
@@ -28,7 +29,18 @@ logging.basicConfig()
 logger = logging.getLogger('stress_compare')
 logger.setLevel(logging.INFO)
 
-OPERATIONS = ['stress','nodetool','cqlsh','bash', 'ctool', 'spark_cassandra_stress', 'dse', 'dsetool']
+OPERATIONS = [
+    'stress',
+    'nodetool',
+    'cqlsh',
+    'bash',
+    'ctool',
+    'spark_cassandra_stress',
+    'solr_create_schema',
+    'solr_run_benchmark',
+    'dse',
+    'dsetool'
+]
 
 flamegraph.set_common_module(common)
 profiler.set_common_module(common)
@@ -61,6 +73,16 @@ def validate_operations_list(operations):
         elif op['type'] == 'spark_cassandra_stress':
             assert op.has_key('script'), "spark_cassandra_stress is missing parameters"
             assert op.has_key('node'), "spark_cassandra_stress missing node to run on"
+        elif op['type'] == 'solr_create_schema':
+            assert op.has_key('schema')
+            assert op.has_key('solrconfig')
+            assert op.has_key('cql')
+            assert op.has_key('core')
+            assert op.has_key('node')
+        elif op['type'] == 'solr_run_benchmark':
+            assert op.has_key('testdata')
+            assert op.has_key('args')
+            assert op.has_key('node')
         elif op['type'] == 'ctool':
             assert op.has_key('command'), "ctool is missing parameters"
 
@@ -291,6 +313,26 @@ def stress_compare(revisions,
                         output = spark_cassandra_stress(operation['script'], node)
                         stats['output'] = output
                         logger.info("spark_cassandra_stress finished")
+
+                    elif operation['type'] == 'solr_create_schema':
+                        logger.info("Running solr_create_schema")
+                        stats['output'] = solr_create_schema(
+                            operation['schema'],
+                            operation['solrconfig'],
+                            operation['cql'],
+                            operation['core'],
+                            operation['node'],
+                        )
+                        logger.info("solr_create_schema finished")
+
+                    elif operation['type'] == 'solr_run_benchmark':
+                        logger.info("Running solr_run_benchmark")
+                        stats['output'] = solr_run_benchmark(
+                            operation['testdata'],
+                            operation['args'],
+                            operation['node'],
+                        )
+                        logger.info("solr_run_benchmark finished")
 
                     elif operation['type'] == 'ctool':
                         logger.info("Running ctool with parameters: {command}".format(command=operation['command']))

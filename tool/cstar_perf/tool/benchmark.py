@@ -7,6 +7,8 @@ import tempfile
 import os
 import time
 import datetime
+from StringIO import StringIO
+from collections import namedtuple
 from pprint import pprint
 import uuid
 import re
@@ -316,6 +318,80 @@ def spark_cassandra_stress(script, node):
         execute(fab.sudo, 'mkdir -p /var/lib/spark')
         execute(fab.sudo, 'chmod -R 777 /var/lib/spark')
         return execute(fab.run, cmd)
+
+
+def _is_filename(possible_filename, node):
+    # Check for some obvious things that aren't in the solr_stress filenames before doing a remote execute
+    if not possible_filename or any([char in possible_filename for char in ' <>!']):
+        return False
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+        results = execute(fab.run, '[ -f {} ]; echo $?'.format(possible_filename), warn_only=True)
+    return results[node] == '0'
+
+
+def _write_config_file(config_def, file_type, node):
+    tmp_filename = '/tmp/cstar_solr_create_config_{}'.format(file_type)
+    conf_file = StringIO()
+    conf_file.write(config_def)
+    conf_file.seek(0)
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+        execute(fab.put, conf_file, tmp_filename)
+    return tmp_filename
+
+
+def _get_configs(schema_path, node, **configs):
+    config_tuple = namedtuple('Config', 'filename delete_me')
+    for config_type, config_definition in configs.items():
+        possible_filename = os.path.join(schema_path, config_definition)
+        if _is_filename(possible_filename, node):
+            configs[config_type] = config_tuple(possible_filename, False)
+        else:
+            configs[config_type] = config_tuple(_write_config_file(config_definition, config_type, node), True)
+    return configs
+
+
+def _remove_tmp_schema_files(configs, node):
+    for _, config in configs.items():
+        if config.delete_me:
+            with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+                execute(fab.run, 'rm {}'.format(config.filename))
+
+
+def solr_create_schema(schema, solrconfig, cql, core, node):
+    schema_path = os.path.join(dse.get_dse_path(), 'demos', 'solr_stress', 'resources', 'schema')
+    configs = _get_configs(schema_path, node, schema=schema, solrconfig=solrconfig, cql=cql)
+
+    cmd = 'cd {schema_path}; ./create-schema.sh -x {schema} -r {solrconfig} -t {cql} -k {core}'.format(
+        schema_path=schema_path,
+        schema=configs['schema'].filename,
+        solrconfig=configs['solrconfig'].filename,
+        cql=configs['cql'].filename,
+        core=core,
+    )
+
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+        result = execute(fab.run, cmd)
+
+    _remove_tmp_schema_files(configs, node)
+
+    return result
+
+
+def solr_run_benchmark(testdata, args, node):
+    run_benchmark_path = os.path.join(dse.get_dse_path(), 'demos', 'solr_stress')
+    resources_path = os.path.join(run_benchmark_path, 'resources')
+    configs = _get_configs(resources_path, node, testdata=testdata)
+
+    cmd = 'cd {path}; ./run-benchmark.sh --test-data {testdata} {args}'.format(
+        path=run_benchmark_path,
+        testdata=configs['testdata'].filename,
+        args=args)
+
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+        result = execute(fab.run, cmd)
+
+    _remove_tmp_schema_files(configs, node)
+    return result
 
 
 def get_spark_cassandra_stress_path():
