@@ -490,7 +490,8 @@ def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False, first_c
         "saved_caches_directory": '/data/cstar_perf/saved_caches',
         'cdc_directory': '/data/cstar_perf/cdc',
         'cdc_overflow_directory': '/data/cstar_perf/cdc_overflow',
-        "docker": True
+        "docker": True,
+        "hints_directory": "/data/cstar_perf/hints"
     }
     
     with fab.settings(hosts=first_node):
