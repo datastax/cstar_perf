@@ -593,6 +593,10 @@ def start():
                                     partitioner=config['partitioner'],
                                     group=config['token_allocation']))
 
+    # Enable nonlocal JMX and set JMX authentication as necessary for collecting GC stats
+    env += 'LOCAL_JMX=no\n'
+    env += 'JVM_EXTRA_OPTS="$JVM_EXTRA_OPTS -Dcom.sun.management.jmxremote.authenticate=false"\n\n'
+
     env_script = "{name}.sh".format(name=uuid.uuid1())
     env_file = StringIO(env)
     fab.run('mkdir -p ~/fab/scripts')
