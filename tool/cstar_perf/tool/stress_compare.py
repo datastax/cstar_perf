@@ -29,18 +29,7 @@ logging.basicConfig()
 logger = logging.getLogger('stress_compare')
 logger.setLevel(logging.INFO)
 
-OPERATIONS = [
-    'stress',
-    'nodetool',
-    'cqlsh',
-    'bash',
-    'ctool',
-    'spark_cassandra_stress',
-    'solr_create_schema',
-    'solr_run_benchmark',
-    'dse',
-    'dsetool'
-]
+OPERATIONS = ['stress', 'nodetool', 'cqlsh', 'bash', 'ctool', 'spark_cassandra_stress', 'solr_create_schema', 'solr_run_benchmark', 'dse', 'dsetool']
 
 flamegraph.set_common_module(common)
 profiler.set_common_module(common)
