@@ -448,6 +448,7 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
 
         # Post Restart setup
         frontend_name, frontend_ip = get_ips(cluster_name)[0]
+        time.sleep(30)  # Creating frontend users failed with 'users table not available' without sleep
         with fab.settings(hosts=frontend_ip):
             fab_execute(fab_deploy.create_default_frontend_users)
 
