@@ -273,14 +273,14 @@ var addOperationDiv = function(animate, operationDefaults){
         "        <label class='col-md-3 control-label' for='{operation_id}-command'>" +
         "          Table Creation CQL</label>" +
         "        <div class='col-md-9'>" +
-        "          <select class='form-control solr-stress-combo createtable-combo' id='{operation_id}-createtable-combo'>" +
+        "          <select class='form-control solr-stress-combo cql-combo' id='{operation_id}-cql-combo'>" +
         "            <option value='create_table.cql'>create_table.cql</option>" +
         "            <option value='create_table_geo.cql'>create_table_geo.cql</option>" +
         "            <option value='create_table_geo_rt.cql'>create_table_geo_rt.cql</option>" +
         "            <option value='custom'>custom</option>" +
         "          </select>" +
-        "          <textarea id='{operation_id}-createtable-text' type='text'" +
-        "            class='form-control input-md solr-stress-text createtable-text' required=''></textarea>" +
+        "          <textarea id='{operation_id}-cql-text' type='text'" +
+        "            class='form-control input-md solr-stress-text cql-text' required=''></textarea>" +
         "        </div>" +
         "      </div>" +
         "      <div class='form-group args solr_create_schema'> " +
@@ -334,7 +334,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "            for='{operation_id}-command'>Additional Arguments</label>  " +
         "        <div class='col-md-9'>" +
         "          <textarea id='{operation_id}-args' type='text'" +
-        "               class='form-control input-md args-run-benchmark' required=''>{solr_run_benchmark_args}</textarea>" +
+        "               class='form-control input-md args-run-benchmark' required=''>{run_benchmark_args}</textarea>" +
         "        </div>" +
         "      </div>" +
         "      <div class='form-group nodes solr_run_benchmark'>" +
@@ -461,66 +461,52 @@ var addOperationDiv = function(animate, operationDefaults){
         "     </div>";
 
     var operationDefaults = operationDefaults || {};
-    newOperation = {
+    var newOperation = {
         operationType: operationDefaults.operation || "stress",
         operation: schedule.n_operations,
         operation_id: operation_id,
     };
-    if (newOperation.operationType === 'stress' && operationDefaults.command) {
-        newOperation.command_stress = operationDefaults.command
-    } else {
-        newOperation.command_stress = "write n=19M -rate threads=50";
-    }
-    if (newOperation.operationType === 'stress' && operationDefaults.stress_revision) {
-        newOperation.stress_revision = operationDefaults.stress_revision;
-    } else {
-        newOperation.stress_revision = "apache/trunk";
-    }
-    if (newOperation.operationType === 'nodetool' && operationDefaults.command) {
-        newOperation.command_nodetool = operationDefaults.command;
-    } else {
-        newOperation.command_nodetool = "status";
-    }
-    if (newOperation.operationType === 'cqlsh' && operationDefaults.script) {
-        newOperation.script_cqlsh = operationDefaults.script;
-    } else {
-        newOperation.script_cqlsh = "DESCRIBE TABLES;";
-    }
-    if (newOperation.operationType === 'bash' && operationDefaults.script) {
-        newOperation.script_bash = operationDefaults.script;
-    } else {
-        newOperation.script_bash = "df -h";
-    }
-    if (newOperation.operationType === 'ctool' && operationDefaults.command) {
-        newOperation.command_ctool = operationDefaults.command;
-    } else {
-        newOperation.command_ctool = "info cstar_perf";
-    }
-    if (newOperation.operationType === 'spark_cassandra_stress' && operationDefaults.script) {
-        newOperation.script_spark_cassandra_stress = operationDefaults.script;
-    } else {
-        newOperation.script_spark_cassandra_stress = "-o 10000 -y 1000 -p 1000 writeperfrow";
-    }
-    if (newOperation.operationType === 'solr_run_benchmark' && operationDefaults.script) {
-        newOperation.solr_run_benchmark_args = operationDefaults.script;
-    } else {
-        newOperation.solr_run_benchmark_args = "--clients 1 --loops 1 --solr-core demo.solr --url http://testcluster-01:8983"
-    }
-    if (newOperation.operationType === 'dsetool' && operationDefaults.script) {
-        newOperation.script_dsetool = operationDefaults.script;
-    } else {
-        newOperation.script_dsetool = "status";
-    }
-    if (newOperation.operationType === 'dse' && operationDefaults.script) {
-        newOperation.script_dse = operationDefaults.script;
-    } else {
-        newOperation.script_dse = "-v";
-    }
+
+    // Each new entry in this array should contain the following 4 values:
+    //   operationType being set,
+    //   property in operationDefaults to use if it exists
+    //   property to set on newOperation that will be fed to template
+    //   default value to use if operationDefaults property does not exist
+    var property_defaults = [
+        ['stress', 'command', 'command_stress', 'write n=19M -rate threads=50'],
+        ['stress', 'stress_revision', 'stress_revision', 'apache/trunk'],
+        ['nodetool', 'command', 'command_nodetool', 'status'],
+        ['cqlsh', 'script', 'script_cqlsh', 'DESCRIBE TABLES;'],
+        ['bash', 'script', 'script_bash', 'df -h'],
+        ['ctool', 'command', 'command_ctool', 'info cstar_perf'],
+        ['spark_cassandra_stress', 'script', 'script_spark_cassandra_stress', '-o 10000 -y 1000 -p 1000 writeperfrow'],
+        ['dsetool', 'script', 'script_dsetool', 'status'],
+        ['dse', 'script', 'script_dse', '-v'],
+        ['solr_create_schema', 'schema', 'schema', 'schema.xml'],
+        ['solr_create_schema', 'solrconfig', 'solrconfig', 'solrconfig.xml'],
+        ['solr_create_schema', 'cql', 'cql', 'create_table.cql'],
+        ['solr_create_schema', 'core', 'core', 'demo.solr'],
+        ['solr_run_benchmark', 'args', 'run_benchmark_args', '--clients 1 --loops 1 --solr-core demo.solr --url http://testcluster-01:8983'],
+        ['solr_run_benchmark', 'testdata', 'testdata', 'testMixed.txt'],
+    ];
+    property_defaults.forEach(function(row) {
+       if (newOperation.operationType === row[0] && row[1] in operationDefaults) {
+           newOperation[row[2]] = operationDefaults[row[1]]
+       } else {
+           newOperation[row[2]] = row[3]
+       }
+    });
 
     var newDiv = $(template.format(newOperation));
+
     if (animate)
         newDiv.hide();
     $("#schedule-operations").append(newDiv);
+
+    // Comboboxes don't really place nice with templates, so attach the events and set defaults post-creation
+    attach_solr_combo_events();
+    select_solr_defaults(newOperation);
+
     $("#"+operation_id+"-type").change(function(){
         var validOperations = ['stress', 'nodetool', 'cqlsh', 'bash', 'spark_cassandra_stress', 'ctool', 'dsetool',
             'dse', 'solr_create_schema', 'solr_run_benchmark'];
@@ -554,6 +540,28 @@ var addOperationDiv = function(animate, operationDefaults){
         $("#"+operation_id+"-wait-for-compaction").prop("checked", false);
     }
     update_cluster_options(operation_id, operationDefaults)
+};
+
+var select_solr_defaults = function(newOperation) {
+    if (newOperation.operationType === 'solr_create_schema') {
+        var create_schema_args = ["schema", "solrconfig", "cql", "core"];
+        create_schema_args.forEach(function(arg) {
+            if ( $("." + arg + "-combo option[value='" + newOperation[arg] + "']").length == 0) {
+                $("." + arg + "-combo").val("custom").change();
+                $("." + arg + "-text").val(newOperation[arg]);
+            } else {
+                $("." + arg + "-combo").val(newOperation[arg]).change();
+            }
+        });
+    }
+    else if (newOperation.operationType === 'solr_run_benchmark') {
+        if ( $(".run-benchmark-combo option[value='" + newOperation.testdata + "']").length == 0) {
+            $(".run-benchmark-combo").val("custom").change();
+            $(".run-benchmark-text").val(newOperation.testdata);
+        } else {
+            $(".run-benchmark-combo").val(newOperation.testdata).change();
+        }
+    }
 };
 
 var maybe_show_dse_operations = function() {
@@ -679,7 +687,7 @@ var createJob = function() {
         if (op === "solr_create_schema") {
             jobSpec['schema'] = get_solr_text(operation.find(".schema-combo"));
             jobSpec['solrconfig'] = get_solr_text(operation.find(".solrconfig-combo"));
-            jobSpec['cql'] = get_solr_text(operation.find(".createtable-combo"));
+            jobSpec['cql'] = get_solr_text(operation.find(".cql-combo"));
             jobSpec['core'] = get_solr_text(operation.find(".core-combo"));
             jobSpec['node'] = operation.find(".node-create-schema").val();
         }
@@ -763,10 +771,6 @@ var cloneExistingJob = function(job_id) {
         if (query.show_json != undefined) {
             show_job_json();
         }
-
-        // Since we dynamically added some divs, we need to attach events
-        // that would normally be triggered on document load
-        attachSolrComboEvents()
    });
 };
 
@@ -863,16 +867,16 @@ var updateURLBar = function(query) {
     window.history.replaceState(null,null,parseUri(location).path + "?" + $.param(query));
 };
 
-var attachSolrComboEvents = function() {
+var attach_solr_combo_events = function() {
     $('.solr-stress-combo').change(function(e) {
-        var related_text_id = get_associated_text_id($(this))
+        var related_text_id = get_associated_text_id($(this));
         if ($(this).val() === 'custom') {
-            $('#' + related_text_id).show()
+            $('#' + related_text_id).show();
         } else {
-            $('#' + related_text_id).hide()
+            $('#' + related_text_id).hide();
         }
     })
-}
+};
 
 $(document).ready(function() {
     //Add revision button callback:
@@ -930,6 +934,4 @@ $(document).ready(function() {
         show_job_json()
         e.preventDefault();
     });
-
-    attachSolrComboEvents()
 });
