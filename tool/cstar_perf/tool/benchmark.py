@@ -65,7 +65,7 @@ def set_cqlsh_path(path):
     cqlsh_path = path
 
 def get_localhost():
-    ip = socket.gethostname().split(".")[0]
+    ip = socket.gethostbyname(socket.gethostname())
     return (ip, getpass.getuser() + "@" + ip)
 
 def get_all_hosts(env):
