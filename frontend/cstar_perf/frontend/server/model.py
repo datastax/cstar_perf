@@ -351,7 +351,9 @@ class Model(object):
                          chunk_sha,
                          object_chunk,
                          total_chunks,
-                         object_size,
+                         # Workaround. If object size is >= 2^31, the insert
+                         # will fail, so we cap it at (2^31) - 1
+                         min(object_size, int(math.pow(2, 31)) - 1),
                          object_sha)
                         )
 
