@@ -345,7 +345,15 @@ class Model(object):
         object_chunk = object_chunk.encode("hex")
         session = self.get_session()
         session.execute(self.__prepared_statements['insert_chunk_object'],
-                        (object_id, chunk_id, chunk_size, chunk_sha, object_chunk, total_chunks, object_size, object_sha))
+                        (object_id,
+                         chunk_id,
+                         chunk_size,
+                         chunk_sha,
+                         object_chunk,
+                         total_chunks,
+                         object_size,
+                         object_sha)
+                        )
 
     def get_chunk_info(self, object_id):
         session = self.get_session()
