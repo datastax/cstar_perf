@@ -46,6 +46,7 @@ import datetime
 import zmq
 from collections import namedtuple
 import base64
+import math
 
 Session.default_timeout = 45
 
