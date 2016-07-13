@@ -306,6 +306,8 @@ def stress_compare(revisions,
                     elif operation['type'] == 'solr_create_schema':
                         logger.info("Running solr_create_schema")
                         stats['output'] = solr_create_schema(
+                            stats['id'],
+                            operation_i,
                             operation['schema'],
                             operation['solrconfig'],
                             operation['cql'],
@@ -317,6 +319,8 @@ def stress_compare(revisions,
                     elif operation['type'] == 'solr_run_benchmark':
                         logger.info("Running solr_run_benchmark")
                         stats['output'] = solr_run_benchmark(
+                            stats['id'],
+                            operation_i,
                             operation['testdata'],
                             operation['args'],
                             operation['node'],

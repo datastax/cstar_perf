@@ -77,7 +77,7 @@ h3 {
        <td><a href='/tests/artifacts/{{test['test_id']}}/{{artifact['artifact_type']}}/{{artifact['name']}}'>{{artifact['name']}}</a></td>
        <td></td>
      </tr>
-   {% endif %} 
+   {% endif %}
   {% endfor %}
 </td></tr></table>
 {% endif %}
@@ -115,6 +115,7 @@ h3 {
 <tr><th colspan="100%">Operations</th></tr>
 {% for op_n in range(test['test_definition']['operations']|length) %}
   {% set op = test['test_definition']['operations'][op_n] %}
+  {% set cur_artifacts = op_artifacts[op_n + 1] %}
   <tr><td>Operation {{op_n + 1}}</td><td>
     <table class='table'>
       <tr><td class='col-md-2'>Operation</td><td><b>{{op['operation']}}</b></td></tr>
@@ -124,14 +125,32 @@ h3 {
       {% if op['script'] %}
         <tr><td>Script</td><td><code>{{op['script']}}</code></td></tr>
       {% endif %}
+      <!-- Some solr specific stuff here... -->
+      {% if op['args'] %}
+      <tr><td>Args</td><td><code>{{op['args']}}</code></td></tr>
+      {% endif %}
+      {% for solr_artifact in ['schema', 'solrconfig', 'cql', 'testdata'] %}
+        {% if op[solr_artifact] %}
+          {% set link_title = op[solr_artifact] if op[solr_artifact][-4:] in ['.xml', '.txt', '.cql'] else solr_artifact %}
+          {% if cur_artifacts[solr_artifact] %}
+            <tr><td>{{solr_artifact.capitalize()}}</td><td><a href='/tests/artifacts/{{test['test_id']}}/{{cur_artifacts[solr_artifact]['artifact_type']}}/{{cur_artifacts[solr_artifact]['name']}}'>{{link_title}}</a></td></tr>
+          {% else %}
+            <tr><td>Create table script</td><td>{{link_title}} currently unavailable...</a></td></tr>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {% if op['core'] %}
+      <tr><td>Core</td><td><code>{{op['core']}}</code></td></tr>
+      {% endif %}
+      <!-- end of solr specific stuff -->
       {% if op['nodes'] %}
         <tr><td>Nodes</td><td><code>{{op['nodes']}}</code></td></tr>
       {% endif %}
       {% if op['node'] %}
-        <tr><td>node</td><td><code>{{op['node']}}</code></td></tr>
+        <tr><td>Node</td><td><code>{{op['node']}}</code></td></tr>
       {% endif %}
       {% if op.has_key('wait_for_compaction') %}
-        <tr><td>wait for compactions</td><td>{{op['wait_for_compaction']}}</td></tr>
+        <tr><td>Wait for compactions</td><td>{{op['wait_for_compaction']}}</td></tr>
       {% endif %}
     </table>
   </td></tr>

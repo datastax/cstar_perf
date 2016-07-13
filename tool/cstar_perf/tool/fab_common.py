@@ -738,6 +738,11 @@ def copy_fincore_logs(local_directory):
     location = os.path.join(local_directory, "fincore.{host}.log".format(host=cfg['hostname']))
     fab.get('/tmp/fincore.stats.log', location)
 
+
+@fab.parallel
+def copy_artifact(local_path, remote_path):
+    fab.get(remote_path, local_path)
+
 @fab.parallel
 def whoami():
     fab.run('whoami')

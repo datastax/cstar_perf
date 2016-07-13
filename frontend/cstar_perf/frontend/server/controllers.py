@@ -6,7 +6,7 @@ import httplib2
 import os.path
 import uuid
 import socket
-from collections import OrderedDict
+from collections import defaultdict, OrderedDict
 import time
 from datetime import datetime
 from functools import partial
@@ -241,6 +241,8 @@ def view_test(test_id):
         return make_response('Unknown Test {test_id}.'.format(test_id=test_id), 404)
     artifacts = db.get_test_artifacts(test_id)
 
+    operation_artifacts = defaultdict(dict)
+
     has_chart = False
     for a in artifacts:
         if a['artifact_type'] in ['failure','link']:
@@ -248,8 +250,12 @@ def view_test(test_id):
             a['artifact'] = db.get_test_artifact_data(test_id, a['artifact_type'], a['name'])
         if a['artifact_type'] == 'stats':
             has_chart = True
+        if a['name'].startswith('operation'):
+            operation_number = int(a['name'].lstrip('operation')[0])
+            operation_artifacts[operation_number][a['name'].split('_', 1)[1]] = a
+    artifacts[:] = [a for a in artifacts if not a['name'].startswith('operation')]
 
-    return render_template('view_test.jinja2.html', test=test, artifacts=artifacts, has_chart=has_chart)
+    return render_template('view_test.jinja2.html', test=test, artifacts=artifacts, op_artifacts=operation_artifacts, has_chart=has_chart)
 
 @app.route('/tests/artifacts/<test_id>/<artifact_type>')
 @app.route('/tests/artifacts/<test_id>/<artifact_type>/<artifact_name>')

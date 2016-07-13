@@ -329,68 +329,87 @@ def _is_filename(possible_filename, node):
     return results[node] == '0'
 
 
-def _write_config_file(config_def, file_type, node):
-    tmp_filename = '/tmp/cstar_solr_create_config_{}'.format(file_type)
-    conf_file = StringIO()
-    conf_file.write(config_def)
-    conf_file.seek(0)
-    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
-        execute(fab.put, conf_file, tmp_filename)
+def _write_config_file(operation_dir, possible_file, config_def, file_type, node):
+    tmp_filename = os.path.join(operation_dir, file_type)
+    if _is_filename(possible_file, node):
+        with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+            execute(fab.run, 'cp {src} {dst}'.format(src=possible_file, dst=tmp_filename))
+    else:
+        conf_file = StringIO()
+        conf_file.write(config_def)
+        conf_file.seek(0)
+        with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+            execute(fab.put, conf_file, tmp_filename)
     return tmp_filename
 
 
-def _get_configs(schema_path, node, **configs):
-    config_tuple = namedtuple('Config', 'filename delete_me')
+def _get_configs(operation_dir, schema_path, node, **configs):
     for config_type, config_definition in configs.items():
-        possible_filename = os.path.join(schema_path, config_definition)
-        if _is_filename(possible_filename, node):
-            configs[config_type] = config_tuple(possible_filename, False)
-        else:
-            configs[config_type] = config_tuple(_write_config_file(config_definition, config_type, node), True)
+        possible_file = os.path.join(schema_path, config_definition)
+        configs[config_type] = _write_config_file(operation_dir, possible_file, config_definition, config_type, node)
     return configs
 
 
-def _remove_tmp_schema_files(configs, node):
-    for _, config in configs.items():
-        if config.delete_me:
-            with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
-                execute(fab.run, 'rm {}'.format(config.filename))
+def _remove_operation_dir(operation_dir, node):
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+        execute(fab.run, 'rm -r {}'.format(operation_dir))
 
 
-def solr_create_schema(schema, solrconfig, cql, core, node):
+def retrieve_solr_logs(operation_num, configs):
+    local_dir = os.path.join(os.path.expanduser('~'), '.cstar_perf/operation_artifacts')
+    if not os.path.exists(local_dir):
+        os.makedirs(local_dir)
+
+    for filename in configs.values():
+        local_path = os.path.join(local_dir, 'operation{}_{}'.format(operation_num, os.path.basename(filename)))
+        execute(common.copy_artifact, local_path=local_path, remote_path=filename)
+
+
+def _create_operation_working_directory(operation_id, node):
+    operation_dir = '/tmp/{}'.format(operation_id)
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+        execute(fab.run, 'mkdir -p {}'.format(operation_dir))
+    return operation_dir
+
+
+def solr_create_schema(operation_id, operation_num, schema, solrconfig, cql, core, node):
+    operation_dir = _create_operation_working_directory(operation_id, node)
     schema_path = os.path.join(dse.get_dse_path(), 'demos', 'solr_stress', 'resources', 'schema')
-    configs = _get_configs(schema_path, node, schema=schema, solrconfig=solrconfig, cql=cql)
+    configs = _get_configs(operation_dir, schema_path, node, schema=schema, solrconfig=solrconfig, cql=cql)
 
     cmd = 'cd {schema_path}; ./create-schema.sh -x {schema} -r {solrconfig} -t {cql} -k {core}'.format(
         schema_path=schema_path,
-        schema=configs['schema'].filename,
-        solrconfig=configs['solrconfig'].filename,
-        cql=configs['cql'].filename,
+        schema=configs['schema'],
+        solrconfig=configs['solrconfig'],
+        cql=configs['cql'],
         core=core,
     )
 
     with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
         result = execute(fab.run, cmd)
 
-    _remove_tmp_schema_files(configs, node)
+    retrieve_solr_logs(operation_num, configs)
+    _remove_operation_dir(operation_dir, node)
 
     return result
 
 
-def solr_run_benchmark(testdata, args, node):
+def solr_run_benchmark(operation_id, operation_num, testdata, args, node):
+    operation_dir = _create_operation_working_directory(operation_id, node)
     run_benchmark_path = os.path.join(dse.get_dse_path(), 'demos', 'solr_stress')
     resources_path = os.path.join(run_benchmark_path, 'resources')
-    configs = _get_configs(resources_path, node, testdata=testdata)
+    configs = _get_configs(operation_dir, resources_path, node, testdata=testdata)
 
     cmd = 'cd {path}; ./run-benchmark.sh --test-data {testdata} {args}'.format(
         path=run_benchmark_path,
-        testdata=configs['testdata'].filename,
+        testdata=configs['testdata'],
         args=args)
 
     with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
         result = execute(fab.run, cmd)
 
-    _remove_tmp_schema_files(configs, node)
+    retrieve_solr_logs(operation_num, configs)
+    _remove_operation_dir(operation_dir, node)
     return result
 
 

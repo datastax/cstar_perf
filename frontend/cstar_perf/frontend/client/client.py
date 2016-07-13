@@ -323,6 +323,7 @@ class JobRunner(object):
         log_dir = CSTAR_PERF_LOGS_DIR
         flamegraph_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'flamegraph')
         yourkit_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'yourkit')
+        operation_artifacts_dir = os.path.join(os.path.expanduser("~"), '.cstar_perf', 'operation_artifacts')
         #Create a stats summary file without voluminous interval data
         if os.path.isfile(stats_path):
             with open(stats_path) as stats:
@@ -424,6 +425,13 @@ class JobRunner(object):
             finally:
                 shutil.rmtree(tmptardir)
 
+        if os.path.exists(operation_artifacts_dir):
+            for file_ in os.listdir(operation_artifacts_dir):
+                filepath = os.path.join(operation_artifacts_dir, file_)
+                shutil.move(filepath, job_dir)
+            shutil.rmtree(operation_artifacts_dir)
+
+
         ## Stream artifacts
         ## Write final job status to 0.job_status file
         final_status = 'local_complete'
@@ -510,7 +518,9 @@ class JobRunner(object):
                 ('system_logs', 'cassandra_logs.{job_id}.tar.gz', True),
                 ('flamegraph_logs', 'flamegraph_logs.{job_id}.tar.gz', True),
                 ('flamegraph', 'flamegraph_{job_id}*.svg', False),
-                ('yourkit', 'yourkit.{job_id}.tar.gz', True)):
+                ('yourkit', 'yourkit.{job_id}.tar.gz', True),
+                ('operations', 'operation*', False),
+        ):
             stream(kind, pattern, binary)
 
         return namedtuple('StreamedArtifacts', 'streamed failed missing')(streamed, failed, missing)
