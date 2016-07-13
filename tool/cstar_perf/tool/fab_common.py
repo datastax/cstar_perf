@@ -70,6 +70,7 @@ git_repos = [
     ('nitsanw',       'git://github.com/nitsanw/cassandra.git'),
     ('sbtourist',     'git://github.com/sbtourist/cassandra.git'),
     ('mshuler',       'git://github.com/mshuler/cassandra.git'),
+    ('thobbs',        'git://github.com/thobbs/cassandra.git'),
 ]
 
 CMD_LINE_HOSTS_SPECIFIED = False
