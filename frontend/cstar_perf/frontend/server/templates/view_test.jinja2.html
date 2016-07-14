@@ -129,13 +129,13 @@ h3 {
       {% if op['args'] %}
       <tr><td>Args</td><td><code>{{op['args']}}</code></td></tr>
       {% endif %}
-      {% for solr_artifact in ['schema', 'solrconfig', 'cql', 'testdata'] %}
-        {% if op[solr_artifact] %}
-          {% set link_title = op[solr_artifact] if op[solr_artifact][-4:] in ['.xml', '.txt', '.cql'] else solr_artifact %}
+      {% for solr_artifact in ['schema', 'solrconfig', 'cql', 'testdata', 'exceptions.log'] %}
+        {% if cur_artifacts.has_key(solr_artifact) %}
+          {% set link_title = op[solr_artifact] if op.has_key(solr_artifact) and op[solr_artifact][-4:] in ['.xml', '.txt', '.cql', '.log'] else solr_artifact %}
           {% if cur_artifacts[solr_artifact] %}
             <tr><td>{{solr_artifact.capitalize()}}</td><td><a href='/tests/artifacts/{{test['test_id']}}/{{cur_artifacts[solr_artifact]['artifact_type']}}/{{cur_artifacts[solr_artifact]['name']}}'>{{link_title}}</a></td></tr>
           {% else %}
-            <tr><td>Create table script</td><td>{{link_title}} currently unavailable...</a></td></tr>
+            <tr><td>{{solr_artifact.capitalize()}}</td><td>{{link_title}} currently unavailable...</a></td></tr>
           {% endif %}
         {% endif %}
       {% endfor %}

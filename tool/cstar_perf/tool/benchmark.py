@@ -329,11 +329,14 @@ def _is_filename(possible_filename, node):
     return results[node] == '0'
 
 
-def _write_config_file(operation_dir, possible_file, config_def, file_type, node):
+def _write_config_file(operation_dir, config_paths, config_def, file_type, node):
     tmp_filename = os.path.join(operation_dir, file_type)
-    if _is_filename(possible_file, node):
-        with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
-            execute(fab.run, 'cp {src} {dst}'.format(src=possible_file, dst=tmp_filename))
+    for config_path in config_paths:
+        possible_file = os.path.join(config_path, config_def)
+        if _is_filename(possible_file, node):
+            with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+                execute(fab.run, 'cp {src} {dst}'.format(src=possible_file, dst=tmp_filename))
+            break
     else:
         conf_file = StringIO()
         conf_file.write(config_def)
@@ -343,10 +346,10 @@ def _write_config_file(operation_dir, possible_file, config_def, file_type, node
     return tmp_filename
 
 
-def _get_configs(operation_dir, schema_path, node, **configs):
+def _get_configs(operation_dir, config_paths, node, **configs):
     for config_type, config_definition in configs.items():
-        possible_file = os.path.join(schema_path, config_definition)
-        configs[config_type] = _write_config_file(operation_dir, possible_file, config_definition, config_type, node)
+        # possible_file = os.path.join(config_path, config_definition)
+        configs[config_type] = _write_config_file(operation_dir, config_paths, config_definition, config_type, node)
     return configs
 
 
@@ -355,13 +358,19 @@ def _remove_operation_dir(operation_dir, node):
         execute(fab.run, 'rm -r {}'.format(operation_dir))
 
 
-def _retrieve_solr_logs(operation_num, configs, local_dir):
+def _retrieve_solr_logs(operation_num, configs, local_dir, node):
     if not os.path.exists(local_dir):
         os.makedirs(local_dir)
 
     for filename in configs.values():
         local_path = os.path.join(local_dir, 'operation{}_{}'.format(operation_num, os.path.basename(filename)))
         execute(common.copy_artifact, local_path=local_path, remote_path=filename)
+
+    # Get the exceptions.log if it exists
+    local_exceptions_log = os.path.join(local_dir, 'operation{}_exceptions.log'.format(operation_num))
+    remote_exceptions_log = os.path.join(dse.get_dse_path(), 'demos', 'solr_stress', 'exceptions.log')
+    if execute(fab.run, '[ -f "{}" ]; echo $?'.format(remote_exceptions_log), warn_only=True)[node] == '0':
+        execute(common.copy_artifact, local_path=local_exceptions_log, remote_path=remote_exceptions_log)
 
 
 def _create_operation_working_directory(operation_id, node):
@@ -381,7 +390,7 @@ def solr_download_geonames(node):
 def solr_create_schema(operation_id, operation_num, schema, solrconfig, cql, core, node):
     operation_dir = _create_operation_working_directory(operation_id, node)
     schema_path = os.path.join(dse.get_dse_path(), 'demos', 'solr_stress', 'resources', 'schema')
-    configs = _get_configs(operation_dir, schema_path, node, schema=schema, solrconfig=solrconfig, cql=cql)
+    configs = _get_configs(operation_dir, [schema_path], node, schema=schema, solrconfig=solrconfig, cql=cql)
 
     cmd = 'cd {schema_path}; ./create-schema.sh -x {schema} -r {solrconfig} -t {cql} -k {core}'.format(
         schema_path=schema_path,
@@ -393,9 +402,8 @@ def solr_create_schema(operation_id, operation_num, schema, solrconfig, cql, cor
 
     with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
         result = execute(fab.run, cmd)
-
     local_dir = os.path.join(os.path.expanduser('~'), '.cstar_perf/operation_artifacts')
-    _retrieve_solr_logs(operation_num, configs, local_dir)
+    _retrieve_solr_logs(operation_num, configs, local_dir, node)
     _remove_operation_dir(operation_dir, node)
 
     return result
@@ -405,7 +413,11 @@ def solr_run_benchmark(operation_id, operation_num, testdata, args, node):
     operation_dir = _create_operation_working_directory(operation_id, node)
     run_benchmark_path = os.path.join(dse.get_dse_path(), 'demos', 'solr_stress')
     resources_path = os.path.join(run_benchmark_path, 'resources')
-    configs = _get_configs(operation_dir, resources_path, node, testdata=testdata)
+
+    # Test definitions live in resources directory, but if we ran the testGenerateQueriest.txt, it dropped
+    # queries-cql.txt a directory up into the solr_stress directory, so now we need to check for that too
+    possible_resources_paths = [resources_path, run_benchmark_path]
+    configs = _get_configs(operation_dir, possible_resources_paths, node, testdata=testdata)
 
     cmd = 'cd {path}; ./run-benchmark.sh --test-data {testdata} {args}'.format(
         path=run_benchmark_path,
@@ -414,10 +426,8 @@ def solr_run_benchmark(operation_id, operation_num, testdata, args, node):
 
     with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
         result = execute(fab.run, cmd)
-
     local_dir = os.path.join(os.path.expanduser('~'), '.cstar_perf/operation_artifacts')
-    _retrieve_solr_logs(operation_num, configs, local_dir)
-    execute(common.copy_artifact, local_path=local_dir, remote_path=os.path.join(run_benchmark_path, "exceptions.log"))
+    _retrieve_solr_logs(operation_num, configs, local_dir, node)
     _remove_operation_dir(operation_dir, node)
     return result
 

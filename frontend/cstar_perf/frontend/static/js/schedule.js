@@ -333,6 +333,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "            <option value='testQuery.txt'>testQuery.txt</option>" +
         "            <option value='testUpdate.txt'>testUpdate.txt</option>" +
         "            <option value='testWrite.txt'>testWrite.txt</option>" +
+        "            <option value='queries-cql.txt'>queries-cql.txt</option>" +
         "            <option value='custom'>custom</option>" +
         "          </select>" +
         "          <textarea id='{operation_id}-run-benchmark-text' type='text'" +
@@ -497,6 +498,7 @@ var addOperationDiv = function(animate, operationDefaults){
         ['solr_create_schema', 'cql', 'cql', 'create_table.cql'],
         ['solr_create_schema', 'core', 'core', 'demo.solr'],
         ['solr_run_benchmark', 'testdata', 'testdata', 'testMixed.txt'],
+        ['solr_run_benchmark', 'args', 'run_benchmark_args', '--clients 1 --loops 1 --solr-core demo.solr --url http://{node}:8983'],
     ];
     property_defaults.forEach(function(row) {
        if (newOperation.operationType === row[0] && row[1] in operationDefaults) {
@@ -555,25 +557,32 @@ var select_solr_defaults = function(newOperation) {
     if (newOperation.operationType === 'solr_create_schema') {
         var create_schema_args = ["schema", "solrconfig", "cql", "core"];
         create_schema_args.forEach(function(arg) {
-            if ( $("." + arg + "-combo option[value='" + newOperation[arg] + "']").length == 0) {
-                $("." + arg + "-combo").val("custom").change();
-                $("." + arg + "-text").val(newOperation[arg]);
+            var id_prefix = "{id}-{arg}".format({"id": newOperation["operation_id"], "arg": arg});
+            if ( $("#{id}-combo option[value='{value}']".format({"id": id_prefix, "value": newOperation[arg]})).length == 0) {
+                $("#{id}-combo".format({"id": id_prefix})).val("custom").change();
+                $("#{id}-text".format({"id": id_prefix})).val(newOperation[arg]);
             } else {
-                $("." + arg + "-combo").val(newOperation[arg]).change();
+                $("#{id}-combo".format({"id": id_prefix})).val(newOperation[arg]).change();
             }
         });
     }
     else if (newOperation.operationType === 'solr_run_benchmark') {
-        if ( $(".run-benchmark-combo option[value='" + newOperation.testdata + "']").length == 0) {
-            $(".run-benchmark-combo").val("custom").change();
-            $(".run-benchmark-text").val(newOperation.testdata);
+        var op_id = newOperation["operation_id"];
+        if ($("#{id}-run-benchmark-combo option[value='{value}']".format({
+                "id": op_id,
+                "value": newOperation.testdata
+            })).length == 0) {
+            $("#{id}-run-benchmark-combo".format({"id": op_id})).val("custom").change();
+            $("#{id}-run-benchmark-text".format({"id": op_id})).val(newOperation.testdata);
         } else {
-            $(".run-benchmark-combo").val(newOperation.testdata).change();
+            $("#{id}-run-benchmark-combo".format({"id": op_id})).val(newOperation.testdata).change();
         }
     }
+
     $.get("/api/clusters/" + $("#cluster").val(), function(data) {
-        var args = $("#" + newOperation.operation_id + "-args");
-        args.val("--clients 1 --loops 1 --solr-core demo.solr " + "--url http://" + data["nodes"][0] + ":8983");
+        var args = $("#" + newOperation["operation_id"] + "-args");
+        // args.val("--clients 1 --loops 1 --solr-core demo.solr " + "--url http://" + data["nodes"][0] + ":8983");
+        args.val(newOperation["run_benchmark_args"].format({"node": data["nodes"][0]}));
     });
 };
 
