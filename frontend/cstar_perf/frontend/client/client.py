@@ -519,6 +519,7 @@ class JobRunner(object):
                 ('flamegraph_logs', 'flamegraph_logs.{job_id}.tar.gz', True),
                 ('flamegraph', 'flamegraph_{job_id}*.svg', False),
                 ('yourkit', 'yourkit.{job_id}.tar.gz', True),
+                ('exceptions', 'exceptions.log', False),
                 ('operations', 'operation*', False),
         ):
             stream(kind, pattern, binary)

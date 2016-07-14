@@ -355,8 +355,7 @@ def _remove_operation_dir(operation_dir, node):
         execute(fab.run, 'rm -r {}'.format(operation_dir))
 
 
-def retrieve_solr_logs(operation_num, configs):
-    local_dir = os.path.join(os.path.expanduser('~'), '.cstar_perf/operation_artifacts')
+def _retrieve_solr_logs(operation_num, configs, local_dir):
     if not os.path.exists(local_dir):
         os.makedirs(local_dir)
 
@@ -388,7 +387,8 @@ def solr_create_schema(operation_id, operation_num, schema, solrconfig, cql, cor
     with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
         result = execute(fab.run, cmd)
 
-    retrieve_solr_logs(operation_num, configs)
+    local_dir = os.path.join(os.path.expanduser('~'), '.cstar_perf/operation_artifacts')
+    _retrieve_solr_logs(operation_num, configs, local_dir)
     _remove_operation_dir(operation_dir, node)
 
     return result
@@ -408,7 +408,9 @@ def solr_run_benchmark(operation_id, operation_num, testdata, args, node):
     with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
         result = execute(fab.run, cmd)
 
-    retrieve_solr_logs(operation_num, configs)
+    local_dir = os.path.join(os.path.expanduser('~'), '.cstar_perf/operation_artifacts')
+    _retrieve_solr_logs(operation_num, configs, local_dir)
+    execute(common.copy_artifact, local_path=local_dir, remote_path=os.path.join(run_benchmark_path, "exceptions.log"))
     _remove_operation_dir(operation_dir, node)
     return result
 
