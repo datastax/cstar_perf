@@ -334,7 +334,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "            for='{operation_id}-command'>Additional Arguments</label>  " +
         "        <div class='col-md-9'>" +
         "          <textarea id='{operation_id}-args' type='text'" +
-        "               class='form-control input-md args-run-benchmark' required=''>{run_benchmark_args}</textarea>" +
+        "               class='form-control input-md args-run-benchmark' required=''></textarea>" +
         "        </div>" +
         "      </div>" +
         "      <div class='form-group nodes solr_run_benchmark'>" +
@@ -486,7 +486,6 @@ var addOperationDiv = function(animate, operationDefaults){
         ['solr_create_schema', 'solrconfig', 'solrconfig', 'solrconfig.xml'],
         ['solr_create_schema', 'cql', 'cql', 'create_table.cql'],
         ['solr_create_schema', 'core', 'core', 'demo.solr'],
-        ['solr_run_benchmark', 'args', 'run_benchmark_args', '--clients 1 --loops 1 --solr-core demo.solr --url http://testcluster-01:8983'],
         ['solr_run_benchmark', 'testdata', 'testdata', 'testMixed.txt'],
     ];
     property_defaults.forEach(function(row) {
@@ -562,6 +561,10 @@ var select_solr_defaults = function(newOperation) {
             $(".run-benchmark-combo").val(newOperation.testdata).change();
         }
     }
+    $.get("/api/clusters/" + $("#cluster").val(), function(data) {
+        var args = $("#" + newOperation.operation_id + "-args");
+        args.val("--clients 1 --loops 1 --solr-core demo.solr " + "--url http://" + data["nodes"][0] + ":8983");
+    });
 };
 
 var maybe_show_dse_operations = function() {
