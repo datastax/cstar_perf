@@ -154,6 +154,7 @@ var addOperationDiv = function(animate, operationDefaults){
         "            <option value='cqlsh'>cqlsh</option>" +
         "            <option value='bash'>bash</option>" +
         "            <option id='{operation_id}-spark_cassandra_stress_select' value='spark_cassandra_stress'>spark-cassandra-stress</option>" +
+        "            <option id='{operation_id}-solr_download_geonames_select' value='solr_download_geonames'>solr download-geonames.sh</option>" +
         "            <option id='{operation_id}-solr_create_schema_select' value='solr_create_schema'>solr create-schema.sh</option>" +
         "            <option id='{operation_id}-solr_run_benchmark_select' value='solr_run_benchmark'>solr run-benchmark.sh</option>" +
         "            <option value='ctool'>ctool</option>" +
@@ -243,6 +244,15 @@ var addOperationDiv = function(animate, operationDefaults){
         "        </div>" +
         "      </div>" +
         "            " +
+        "      <div class='form-group nodes solr_download_geonames'>" +
+        "        <label class='col-md-3 control-label'" +
+        "            for='{operation_id}-command'>Node</label>  " +
+        "        <div class='col-md-9'>" +
+        "          <select id='{operation_id}-nodes' type='text'" +
+        "               class='form-control input-md node-download-geonames node-select'>" +
+        "          </select>" +
+        "        </div>" +
+        "      </div>" +
         "      <div class='form-group args solr_create_schema'> " +
         "        <label class='col-md-3 control-label' for='{operation_id}-command'>" +
         "          Schema</label>" +
@@ -508,7 +518,7 @@ var addOperationDiv = function(animate, operationDefaults){
 
     $("#"+operation_id+"-type").change(function(){
         var validOperations = ['stress', 'nodetool', 'cqlsh', 'bash', 'spark_cassandra_stress', 'ctool', 'dsetool',
-            'dse', 'solr_create_schema', 'solr_run_benchmark'];
+            'dse', 'solr_download_geonames', 'solr_create_schema', 'solr_run_benchmark'];
         if (validOperations.indexOf(this.value) < 0) {
             console.log(this.value + ' not a valid selection')
         }
@@ -577,7 +587,7 @@ var maybe_show_dse_operations = function() {
             break;
         }
     }
-    var operation_type = ['spark_cassandra_stress', 'dsetool', 'dse', 'solr_create_schema', 'solr_run_benchmark'];
+    var operation_type = ['spark_cassandra_stress', 'dsetool', 'dse', 'solr_download_geonames', 'solr_create_schema', 'solr_run_benchmark'];
     for (var idx = 0; idx < operation_type.length; idx++) {
         var op = operation_type[idx];
         for (var i = 1; i <= $('.operation-type').length; i++) {
@@ -686,6 +696,9 @@ var createJob = function() {
         if (op === "spark_cassandra_stress") {
             jobSpec['script'] = operation.find(".script-spark-cassandra-stress").val();
             jobSpec['node'] = operation.find(".node-spark-cassandra-stress").val();
+        }
+        if (op === "solr_download_geonames") {
+            jobSpec['node'] = operation.find(".node-download-geonames").val();
         }
         if (op === "solr_create_schema") {
             jobSpec['schema'] = get_solr_text(operation.find(".schema-combo"));

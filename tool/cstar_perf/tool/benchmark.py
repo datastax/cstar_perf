@@ -371,6 +371,13 @@ def _create_operation_working_directory(operation_id, node):
     return operation_dir
 
 
+def solr_download_geonames(node):
+    solr_stress_path = os.path.join(dse.get_dse_path(), 'demos', 'solr_stress')
+    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
+        result = execute(fab.run, 'cd {path}; ./download-geonames.sh'.format(path=solr_stress_path))
+    return result
+
+
 def solr_create_schema(operation_id, operation_num, schema, solrconfig, cql, core, node):
     operation_dir = _create_operation_working_directory(operation_id, node)
     schema_path = os.path.join(dse.get_dse_path(), 'demos', 'solr_stress', 'resources', 'schema')

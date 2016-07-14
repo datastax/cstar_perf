@@ -3,7 +3,7 @@ from benchmark import (bootstrap, stress, nodetool, nodetool_multi, cqlsh, bash,
                        start_fincore_capture, stop_fincore_capture, retrieve_fincore_logs,
                        drop_page_cache, wait_for_compaction, setup_stress, clean_stress,
                        get_localhost, retrieve_flamegraph, retrieve_yourkit, dsetool_cmd, dse_cmd, CSTAR_PERF_LOGS_DIR,
-                       solr_create_schema, solr_run_benchmark)
+                       solr_create_schema, solr_run_benchmark, solr_download_geonames)
 from benchmark import config as fab_config, cstar, dse, set_cqlsh_path, set_nodetool_path, spark_cassandra_stress, retrieve_logs_and_create_tarball
 import fab_common as common
 import fab_cassandra as cstar
@@ -29,7 +29,7 @@ logging.basicConfig()
 logger = logging.getLogger('stress_compare')
 logger.setLevel(logging.INFO)
 
-OPERATIONS = ['stress', 'nodetool', 'cqlsh', 'bash', 'ctool', 'spark_cassandra_stress', 'solr_create_schema', 'solr_run_benchmark', 'dse', 'dsetool']
+OPERATIONS = ['stress', 'nodetool', 'cqlsh', 'bash', 'ctool', 'spark_cassandra_stress', 'solr_download_geonames', 'solr_create_schema', 'solr_run_benchmark', 'dse', 'dsetool']
 
 flamegraph.set_common_module(common)
 profiler.set_common_module(common)
@@ -302,6 +302,11 @@ def stress_compare(revisions,
                         output = spark_cassandra_stress(operation['script'], node)
                         stats['output'] = output
                         logger.info("spark_cassandra_stress finished")
+
+                    elif operation['type'] == 'solr_download_geonames':
+                        logger.info("Running solr_download_geonames")
+                        stats['output'] = solr_download_geonames(operation['node'])
+                        logger.info("solr_download_geonames finished")
 
                     elif operation['type'] == 'solr_create_schema':
                         logger.info("Running solr_create_schema")
