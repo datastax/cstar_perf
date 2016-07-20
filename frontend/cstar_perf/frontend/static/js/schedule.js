@@ -234,15 +234,6 @@ var addOperationDiv = function(animate, operationDefaults){
         "                 class='form-control input-md script-spark-cassandra-stress' required=''>{script_spark_cassandra_stress}</textarea>" +
         "        </div>" +
         "      </div>" +
-        "      <div class='form-group nodes spark_cassandra_stress'>" +
-        "        <label class='col-md-3 control-label'" +
-        "            for='{operation_id}-command'>Node</label>  " +
-        "        <div class='col-md-9'>" +
-        "          <select id='{operation_id}-nodes' type='text'" +
-        "                 class='form-control input-md node-spark-cassandra-stress node-select'>" +
-        "          </select>" +
-        "        </div>" +
-        "      </div>" +
         "            " +
         "      <div class='form-group nodes solr_download_geonames'>" +
         "        <label class='col-md-3 control-label'" +
@@ -704,7 +695,6 @@ var createJob = function() {
         }
         if (op === "spark_cassandra_stress") {
             jobSpec['script'] = operation.find(".script-spark-cassandra-stress").val();
-            jobSpec['node'] = operation.find(".node-spark-cassandra-stress").val();
         }
         if (op === "solr_download_geonames") {
             jobSpec['node'] = operation.find(".node-download-geonames").val();

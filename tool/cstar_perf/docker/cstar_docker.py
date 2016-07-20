@@ -75,7 +75,7 @@ RUN echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true 
 RUN groupadd -g 999 docker
 RUN useradd -ms /bin/bash -G docker cstar
 USER cstar
-RUN git clone http://github.com/apache/cassandra.git ~/.docker_cassandra.git 
+RUN git clone http://github.com/apache/cassandra.git ~/.docker_cassandra.git
 RUN cd ~/.docker_cassandra.git && \
     JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 ant clean jar
 USER root
@@ -148,7 +148,7 @@ RUN echo "[unix_http_server]" > /supervisord.conf && \
     echo "redirect_stderr=true"                                                             >> /supervisord.conf
 
 ### install the C* driver without any extensions to speed up installation time
-RUN CASS_DRIVER_NO_EXTENSIONS=1 pip install cassandra-driver==3.2.2
+RUN CASS_DRIVER_NO_EXTENSIONS=1 pip install cassandra-driver==3.5.0
 
 CMD ["supervisord", "-n", "-c", "/supervisord.conf"]
 """
@@ -399,7 +399,7 @@ def __install_cstar_perf_frontend(cluster_name, hosts, mount_host_src=False):
         # Setup C* and add it to the supervisor to start on boot:
         def setup_cassandra():
             __update_node_ip_addresses(cluster_name, static_ips={host:'127.0.0.1'})
-            fab.run("cstar_perf_bootstrap -v cassandra-2.2.6")
+            fab.run("cstar_perf_bootstrap -v cassandra-2.2.7")
         with fab.settings(hosts=ip):
             fab_execute(setup_cassandra)
         def setup_boot_items():
@@ -492,7 +492,8 @@ def __install_cstar_perf_tool(cluster_name, hosts, mount_host_src=False, first_c
         "saved_caches_directory": '/data/cstar_perf/saved_caches',
         'cdc_directory': '/data/cstar_perf/cdc',
         'cdc_overflow_directory': '/data/cstar_perf/cdc_overflow',
-        "docker": True
+        "docker": True,
+        "hints_directory": "/data/cstar_perf/hints"
     }
     
     with fab.settings(hosts=first_node):

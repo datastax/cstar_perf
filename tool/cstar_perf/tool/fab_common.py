@@ -69,6 +69,8 @@ git_repos = [
     ('qzg',           'git://github.com/qzg/cassandra.git'),
     ('nitsanw',       'git://github.com/nitsanw/cassandra.git'),
     ('sbtourist',     'git://github.com/sbtourist/cassandra.git'),
+    ('mshuler',       'git://github.com/mshuler/cassandra.git'),
+    ('thobbs',        'git://github.com/thobbs/cassandra.git'),
 ]
 
 CMD_LINE_HOSTS_SPECIFIED = False
@@ -564,7 +566,7 @@ def start():
     env += "\n"
     fab.puts('env is: {}'.format(env))
     if not config['use_jna']:
-        env = 'JVM_EXTRA_OPTS=-Dcassandra.boot_without_jna=true\n\n' + env
+        env += 'JVM_EXTRA_OPTS="$JVM_EXTRA_OPTS -Dcassandra.boot_without_jna=true"\n\n'
     # Turn on GC logging:
     fab.run("mkdir -p ~/fab/cassandra/logs")
     log_dir = fab.run("readlink -m {log_dir}".format(log_dir=config['log_dir']))
@@ -579,7 +581,7 @@ def start():
 
     # Flamegraph
     if flamegraph.is_enabled(config):
-        env += "JVM_OPTS=\"$JVM_OPTS -XX:+PreserveFramePointer\""
+        env += "JVM_OPTS=\"$JVM_OPTS -XX:+PreserveFramePointer\"\n"
 
     if profiler.yourkit_is_enabled(config):
         execute(profiler.yourkit_clean)
@@ -592,6 +594,10 @@ def start():
                                     fab.env.hosts,
                                     partitioner=config['partitioner'],
                                     group=config['token_allocation']))
+
+    # Enable nonlocal JMX and set JMX authentication as necessary for collecting GC stats
+    env += 'LOCAL_JMX=no\n'
+    env += 'JVM_EXTRA_OPTS="$JVM_EXTRA_OPTS -Dcom.sun.management.jmxremote.authenticate=false"\n\n'
 
     env_script = "{name}.sh".format(name=uuid.uuid1())
     env_file = StringIO(env)

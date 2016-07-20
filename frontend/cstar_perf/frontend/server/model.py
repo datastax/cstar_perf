@@ -46,6 +46,7 @@ import datetime
 import zmq
 from collections import namedtuple
 import base64
+import math
 
 Session.default_timeout = 45
 
@@ -345,7 +346,17 @@ class Model(object):
         object_chunk = object_chunk.encode("hex")
         session = self.get_session()
         session.execute(self.__prepared_statements['insert_chunk_object'],
-                        (object_id, chunk_id, chunk_size, chunk_sha, object_chunk, total_chunks, object_size, object_sha))
+                        (object_id,
+                         chunk_id,
+                         chunk_size,
+                         chunk_sha,
+                         object_chunk,
+                         total_chunks,
+                         # Workaround. If object size is >= 2^31, the insert
+                         # will fail, so we cap it at (2^31) - 1
+                         min(object_size, int(math.pow(2, 31)) - 1),
+                         object_sha)
+                        )
 
     def get_chunk_info(self, object_id):
         session = self.get_session()

@@ -2,6 +2,7 @@ import os
 import re
 import json
 import yaml
+import time
 from fabric import api as fab
 
 name = 'cassandra'
@@ -36,6 +37,8 @@ GIT_REPOS = [
     ('qzg',           'git://github.com/qzg/cassandra'),
     ('nitsanw',       'git://github.com/nitsanw/cassandra'),
     ('sbtourist',     'git://github.com/sbtourist/cassandra'),
+    ('mshuler',       'git://github.com/mshuler/cassandra.git'),
+    ('thobbs',        'git://github.com/thobbs/cassandra.git'),
 ]
 
 # Additional git remotes can be specified in this file
@@ -82,6 +85,7 @@ def get_cassandra_config_options(config):
     p = re.compile("^[a-z][^A-Z]*$")
     return [o for o in opts if p.match(o)]
 
+
 def bootstrap(config, git_fetch=True, revision_override=None):
     """Install and configure Cassandra
     Returns the git id or the version checked out.
@@ -92,6 +96,8 @@ def bootstrap(config, git_fetch=True, revision_override=None):
         update_cassandra_git()
 
     fab.run('rm -rf ~/fab/cassandra')
+    # sleep fixes Issue 2 on https://datastax.jira.com/browse/CSTAR-627
+    time.sleep(2)
 
     # Find the SHA for the revision requested:
     git_id = fab.run('git --git-dir=$HOME/fab/cassandra.git rev-parse {revision}'.format(revision=revision)).strip()
@@ -105,13 +111,13 @@ def bootstrap(config, git_fetch=True, revision_override=None):
     else:
         # Build Cassandra
         # Checkout revision/tag:
-        fab.run('mkdir ~/fab/cassandra')
+        fab.run('mkdir -p ~/fab/cassandra')
         fab.run('git --git-dir=$HOME/fab/cassandra.git archive %s |'
                 ' tar x -C ~/fab/cassandra' % revision)
         fab.run('echo -e \'%s\\n%s\\n%s\' > ~/fab/cassandra/0.GIT_REVISION.txt' %
                 (revision, git_id, config.get('log','')))
 
-        fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml clean'.format(java_home=config['java_home']))
+        fab.run('JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml realclean'.format(java_home=config['java_home']))
         if config['override_version'] is not None:
             fab.run('JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF8 JAVA_HOME={java_home} ~/fab/ant/bin/ant -f ~/fab/cassandra/build.xml -Dversion={version}'.format(java_home=config['java_home'], version=config['override_version']))
         else:

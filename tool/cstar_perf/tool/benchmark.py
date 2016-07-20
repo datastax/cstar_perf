@@ -67,7 +67,7 @@ def set_cqlsh_path(path):
     cqlsh_path = path
 
 def get_localhost():
-    ip = socket.gethostname().split(".")[0]
+    ip = socket.gethostbyname(socket.gethostname())
     return (ip, getpass.getuser() + "@" + ip)
 
 def get_all_hosts(env):
@@ -80,6 +80,22 @@ def get_all_hosts(env):
         # than the cluster defined 'user' parameter:
         hosts += [localhost_entry]
     return hosts
+
+
+def is_local_node(node):
+    for local_info in socket.gethostbyaddr(socket.gethostname()):
+        if isinstance(local_info, list):
+            for item in local_info:
+                if node == item:
+                    return True
+                else:
+                    continue
+        else:
+            if node == local_info:
+                return True
+            else:
+                continue
+    return False
 
 
 def _parse_yaml(yaml_file):
@@ -307,17 +323,127 @@ def dsetool_cmd(nodes, options):
         return execute(fab.run, cmd)
 
 
-def spark_cassandra_stress(script, node):
-    download_and_build_spark_cassandra_stress(node)
+def get_spark_cassandra_stress_command(script, node, master, stress_node=None):
     dse_bin = os.path.join(dse.get_dse_path(), 'bin')
-    cmd = "cd {spark_cass_stress_path}; PATH=$PATH:{dse_bin} JAVA_HOME={JAVA_HOME} DSE_HOME={dse_home} ./run.sh dse {script}".format(JAVA_HOME=JAVA_HOME,
-                                                                                            spark_cass_stress_path=get_spark_cassandra_stress_path(),
-                                                                                            script=script, dse_bin=dse_bin, dse_home=dse.get_dse_path())
-    with common.fab.settings(fab.show('warnings', 'running', 'stdout', 'stderr'), hosts=node):
-        execute(fab.sudo, 'rm -rf /var/lib/spark')
-        execute(fab.sudo, 'mkdir -p /var/lib/spark')
-        execute(fab.sudo, 'chmod -R 777 /var/lib/spark')
-        return execute(fab.run, cmd)
+    # see conversation on https://github.com/datastax/cstar_perf/pull/226 for why we pass SPARK_MASTER
+    # tl;dr on DSE 4.7.x the dse script tries to call dsetool on the spark-cassandra-stress node
+    # if SPARK_MASTER env var is not set and this results in a connection error trace as
+    # we do not start DSE on the spark-cassandra-stress node
+    spark_cassandra_stress_cmd_prefix = 'cd {spark_cass_stress_path}; ' \
+                                        'PATH=$PATH:{dse_bin} ' \
+                                        'JAVA_HOME={JAVA_HOME} ' \
+                                        'DSE_HOME={dse_home} ' \
+                                        'SPARK_MASTER={master} '.format(spark_cass_stress_path=get_spark_cassandra_stress_path(stress_node=stress_node),
+                                                                        dse_bin=dse_bin,
+                                                                        JAVA_HOME=JAVA_HOME,
+                                                                        dse_home=dse.get_dse_path(),
+                                                                        master=master)
+
+    spark_cass_connection_host_arg = ' --conf spark.cassandra.connection.host={node}'.format(node=node)
+    spark_cassandra_run_cmd = './run.sh dse {script} {master} {connection_host}'.format(script=script,
+                                                                                        master=master,
+                                                                                        connection_host=spark_cass_connection_host_arg)
+    cmd = spark_cassandra_stress_cmd_prefix + ' ' + spark_cassandra_run_cmd
+
+    return cmd
+
+
+def spark_cassandra_stress(script, nodes, stress_node=None, master=None,
+                           build_spark_cassandra_stress=True, spark_data_dir=os.path.join('/', 'var', 'lib', 'spark'),
+                           remove_existing_spark_data=True):
+    node0 = nodes[0]
+    cmd = get_spark_cassandra_stress_command(script, node0, master, stress_node=stress_node)
+    dse_cluster_user = execute(fab.run, 'whoami', hosts=node0)[node0]
+
+    if build_spark_cassandra_stress:
+        download_and_build_spark_cassandra_stress(stress_node=stress_node)
+
+    dse.setup_spark_data_dir(spark_data_dir, nodes, make_dir=True, set_permissions=True,
+                             remove_existing_spark_data=remove_existing_spark_data,
+                             user=dse_cluster_user)
+    if stress_node and not is_local_node(stress_node):
+        stress_user = execute(fab.run, 'whoami', hosts=stress_node)[stress_node]
+
+        # We must create /var/lib/spark/rdd on the stress node because when we call
+        # org.apache.spark.SparkEnv$.createDriverEnv it tries to create the local /var/lib/spark/rdd directory
+        # and if this does not exist or if we do not have permissions to create it, an error is thrown
+        dse.setup_spark_data_dir(os.path.join(spark_data_dir, 'rdd'), stress_node,
+                                 make_dir=True, set_permissions=True, user=stress_user)
+        spark_cassandra_stress_execute_out = execute(fab.run, cmd, hosts=stress_node)
+        return {'output': spark_cassandra_stress_execute_out,
+                'stats': get_spark_cassandra_stress_stats(spark_cassandra_stress_execute_out[stress_node].splitlines())}
+    else:
+        temp_log = tempfile.mktemp()
+        # see above explanation for creating /var/lib/spark/rdd directory
+        dse.setup_spark_data_dir(os.path.join(spark_data_dir, 'rdd'), get_localhost()[1],
+                                 make_dir=True, set_permissions=True, user=getpass.getuser())
+        logger.info('Running Spark-Cassandra-Stress using {cmd}'.format(cmd=cmd))
+        proc = subprocess.Popen('{cmd} | tee {temp_log}'.format(
+            JAVA_HOME=JAVA_HOME, cmd=cmd, temp_log=temp_log), shell=True)
+        proc.wait()
+        log = open(temp_log)
+        log_lines = log.readlines()
+        log.close()
+        os.remove(temp_log)
+        return {'output': log_lines,
+                'stats': get_spark_cassandra_stress_stats(log_lines)}
+
+
+def get_spark_cassandra_stress_stats(output_list):
+    stats_dict = {}
+    # Do not fail if we can not find the stats.
+    try:
+        for line in output_list:
+            line = line.strip()
+            if "TimeInSeconds" in line:
+                stats_dict['TimeInSeconds'] = line.split(':')[1]
+            elif 'OpsPerSecond' in line:
+                stats_dict['OpsPerSecond'] = line.split(':')[1]
+    except (AttributeError, IndexError):
+        pass
+    return stats_dict
+
+
+def get_spark_cassandra_stress_path(stress_node=None):
+    if stress_node:
+        return os.path.join(execute(fab.run, 'pwd', hosts=stress_node)[stress_node], 'fab', 'spark-cassandra-stress')
+    else:
+        return os.path.expanduser("~/fab/spark-cassandra-stress")
+
+
+def download_and_build_spark_cassandra_stress(stress_node=None):
+    dse_home = 'DSE_HOME={dse_path}'.format(dse_path=dse.get_dse_path())
+    dse_resources = 'DSE_RESOURCES={dse_resources_path}'.format(dse_resources_path=os.path.join(dse.get_dse_path(), 'resources'))
+    spark_cassandra_stress_git = 'https://github.com/datastax/spark-cassandra-stress.git'
+    git_clone_spark_cass_stress_command = 'git clone -b master --single-branch ' \
+                                          '{spark_cass_stress_git} ' \
+                                          '{spark_cass_stress_path}'.format(spark_cass_stress_git=spark_cassandra_stress_git,
+                                                                            spark_cass_stress_path=get_spark_cassandra_stress_path(stress_node=stress_node))
+    build_command = './gradlew jar -Pagainst=dse;'
+    full_build_command = 'cd {spark_cass_stress_path}; TERM=dumb {dse_home} {dse_resources} {build_cmd}'.format(
+        spark_cass_stress_path=get_spark_cassandra_stress_path(),
+        dse_home=dse_home,
+        dse_resources=dse_resources,
+        build_cmd=build_command
+    )
+
+    if stress_node:
+        with common.fab.settings(hosts=stress_node):
+            execute(fab.run, 'rm -rf {spark_cass_stress_path}'.format(spark_cass_stress_path=get_spark_cassandra_stress_path(stress_node=stress_node)))
+            execute(fab.run, git_clone_spark_cass_stress_command)
+            execute(fab.run, full_build_command)
+    else:
+        shutil.rmtree(get_spark_cassandra_stress_path(), ignore_errors=True)
+        logger.info('Installing Spark-Cassandra-Stress from {spark_cass_stress_git}'.format(spark_cass_stress_git=spark_cassandra_stress_git))
+        proc = subprocess.Popen(git_clone_spark_cass_stress_command, shell=True)
+        proc.wait()
+        assert proc.returncode == 0, 'Installing Spark-Cassandra-Stress from {spark_cass_stress_git} ' \
+                                     'did not complete successfully'.format(spark_cass_stress_git=spark_cassandra_stress_git)
+        logger.info('Building Spark-Cassandra-Stress using {full_build_command}'.format(full_build_command=full_build_command))
+        proc = subprocess.Popen(full_build_command, shell=True)
+        proc.wait()
+        assert proc.returncode == 0, 'Building Spark-Cassandra-Stress using {full_build_command} ' \
+                                     'did not complete successfully'.format(full_build_command=full_build_command)
 
 
 def _is_filename(possible_filename, node):
@@ -430,23 +556,6 @@ def solr_run_benchmark(operation_id, operation_num, testdata, args, node):
     _retrieve_solr_logs(operation_num, configs, local_dir, node)
     _remove_operation_dir(operation_dir, node)
     return result
-
-
-def get_spark_cassandra_stress_path():
-    return os.path.expanduser("~/fab/spark-cassandra-stress")
-
-
-def download_and_build_spark_cassandra_stress(node):
-    dse_home = 'DSE_HOME={dse_path}'.format(dse_path=dse.get_dse_path())
-    dse_resources = 'DSE_RESOURCES={dse_resources_path}'.format(dse_resources_path=os.path.join(dse.get_dse_path(), 'resources'))
-    build_command = './gradlew jar -Pagainst=dse;'
-
-    with common.fab.settings(hosts=node):
-        execute(fab.run, 'rm -rf {spark_cass_stress_path}'.format(spark_cass_stress_path=get_spark_cassandra_stress_path()))
-        execute(fab.run, 'git clone -b master --single-branch https://github.com/datastax/spark-cassandra-stress.git {spark_cass_stress_path}'
-            .format(spark_cass_stress_path=get_spark_cassandra_stress_path()))
-        return execute(fab.run, 'cd {spark_cass_stress_path}; TERM=dumb {dse_home} {dse_resources} {build_cmd}'
-            .format(spark_cass_stress_path=get_spark_cassandra_stress_path(), dse_home=dse_home, dse_resources=dse_resources, build_cmd=build_command))
 
 
 def nodetool_multi(nodes, command):

@@ -23,6 +23,7 @@ import shutil
 import sh
 import distutils.util
 import signal
+import re
 
 
 logging.basicConfig()
@@ -61,7 +62,6 @@ def validate_operations_list(operations):
             assert op.has_key('script'), "Bash operation missing script"
         elif op['type'] == 'spark_cassandra_stress':
             assert op.has_key('script'), "spark_cassandra_stress is missing parameters"
-            assert op.has_key('node'), "spark_cassandra_stress missing node to run on"
         elif op['type'] == 'solr_create_schema':
             assert op.has_key('schema')
             assert op.has_key('solrconfig')
@@ -297,10 +297,34 @@ def stress_compare(revisions,
                         logger.info("Bash commands finished")
 
                     elif operation['type'] == 'spark_cassandra_stress':
-                        node = operation['node']
-                        logger.info("Running spark_cassandra_stress on {node}".format(node=node))
-                        output = spark_cassandra_stress(operation['script'], node)
-                        stats['output'] = output
+                        nodes = operation.get('nodes', [n for n in fab_config['hosts']])
+                        stress_node = config.get('stress_node', None)
+                        # Note: once we have https://datastax.jira.com/browse/CSTAR-617, we should fix this to use
+                        # client-tool when DSE_VERSION >= 4.8.0
+                        # https://datastax.jira.com/browse/DSP-6025: dse client-tool
+                        master_regex = re.compile(r"(.|\n)*(?P<master>spark:\/\/\d+.\d+.\d+.\d+:\d+)(.|\n)*")
+                        master_out = dsetool_cmd(nodes[0], options='sparkmaster')[nodes[0]]
+                        master_match = master_regex.match(master_out)
+                        if not master_match:
+                            raise ValueError('Could not find master address from "dsetool sparkmaster" cmd\n'
+                                             'Found output: {f}'.format(f=master_out))
+                        master_string = master_match.group('master')
+                        build_spark_cassandra_stress = bool(distutils.util.strtobool(
+                            str(operation.get('build_spark_cassandra_stress', 'True'))))
+                        remove_existing_spark_data = bool(distutils.util.strtobool(
+                            str(operation.get('remove_existing_spark_data', 'True'))))
+                        logger.info("Running spark_cassandra_stress on {stress_node} "
+                                    "using spark.cassandra.connection.host={node} and "
+                                    "spark-master {master}".format(stress_node=stress_node,
+                                                                   node=nodes[0],
+                                                                   master=master_string))
+                        output = spark_cassandra_stress(operation['script'], nodes, stress_node=stress_node,
+                                                        master=master_string,
+                                                        build_spark_cassandra_stress=build_spark_cassandra_stress,
+                                                        remove_existing_spark_data=remove_existing_spark_data)
+                        stats['output'] = output.get('output', 'No output captured')
+                        stats['spark_cass_stress_time_in_seconds'] = output.get('stats', {}).get('TimeInSeconds', 'No time captured')
+                        stats['spark_cass_stress_ops_per_second'] = output.get('stats', {}).get('OpsPerSecond', 'No ops/s captured')
                         logger.info("spark_cassandra_stress finished")
 
                     elif operation['type'] == 'solr_download_geonames':
