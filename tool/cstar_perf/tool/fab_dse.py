@@ -19,7 +19,8 @@ logger.setLevel(logging.INFO)
 
 # I don't like global ...
 global config
-global dse_builds, dse_cache, dse_tarball
+# https://datastax.jira.com/browse/CSTAR-630: dse_builds_remote
+global dse_builds_local, dse_builds_remote, dse_cache_local, dse_tarball
 
 DSE_NODE_TYPE_TO_STARTUP_PARAM = {'spark': '-k',
                                   'hadoop': '-t',
@@ -37,18 +38,19 @@ name = 'dse'
 def setup(cfg):
     "Local setup for dse"
 
-    global config, dse_builds, dse_cache, dse_tarball
+    global config, dse_builds_local, dse_builds_remote, dse_cache_local, dse_tarball
 
     config = cfg
 
     if 'dse_url' not in config:
         raise ValueError("dse_url is missing from cluster_config.json.")
 
+    dse_builds_remote = os.path.join('~', 'fab', 'dse_builds')
+    dse_builds_local = os.path.expanduser('~/fab/dse_builds')
+    dse_cache_local = os.path.join(dse_builds_local, '_cache')
     # Create dse_cache_dir
-    dse_builds = os.path.expanduser("~/fab/dse_builds")
-    dse_cache = os.path.join(dse_builds, '_cache')
-    if not os.path.exists(dse_cache):
-        os.makedirs(dse_cache)
+    if not os.path.exists(dse_cache_local):
+        os.makedirs(dse_cache_local)
 
     download_tarball = True
 
@@ -81,7 +83,7 @@ def download_binaries():
 
     # TODO since this is done locally on the cperf tool server, is there any possible concurrency
     # issue .. Or maybe we should simply keep a cache on each host? (Comment to remove)
-    filename = os.path.join(dse_cache, dse_tarball)
+    filename = os.path.join(dse_cache_local, dse_tarball)
 
     dse_url = config['dse_url']
     username = config['dse_username'] if 'dse_username' in config else None
@@ -114,7 +116,9 @@ def download_binaries():
 
 
 def get_dse_path():
-    return os.path.expanduser("~/fab/dse")
+    # If this is used with fab.get or fab.put, the $HOME must be replaced with ~
+    # See discussion on https://github.com/datastax/cstar_perf/pull/238 for details
+    return os.path.join('$HOME', 'fab', 'dse')
 
 
 def get_dse_conf_path():
@@ -122,43 +126,46 @@ def get_dse_conf_path():
 
 
 def get_cassandra_path():
-    return os.path.join(get_dse_path(), 'resources/cassandra/')
+    return os.path.join(get_dse_path(), 'resources', 'cassandra')
 
 
 def get_bin_path():
-    dse_home = 'DSE_HOME={dse_path}'.format(dse_path=get_dse_path())
-    return os.path.join('{dse_home} {dse_path}'.format(dse_home=dse_home, dse_path=get_dse_path()), 'bin')
+    dse_path = get_dse_path()
+    dse_home = 'DSE_HOME={dse_path}'.format(dse_path=dse_path)
+    return os.path.join('{dse_home} {dse_path}'.format(dse_home=dse_home, dse_path=dse_path), 'bin')
 
 
 def bootstrap(config, replace_existing_dse_install=True):
     if replace_existing_dse_install:
-        filename = os.path.join(dse_cache, dse_tarball)
-        dest = os.path.join(dse_builds, dse_tarball)
+        filename = os.path.join(dse_cache_local, dse_tarball)
+        dest = os.path.join(dse_builds_remote, dse_tarball)
 
         # remove build folder if it exists
-        fab.run('rm -rf {}'.format(os.path.join(dse_builds, dse_tarball.replace('-bin.tar.gz', ''))))
+        fab.run('rm -rf {}'.format(os.path.join(dse_builds_remote, dse_tarball.replace('-bin.tar.gz', ''))))
 
         # Upload the binaries
-        fab.run('mkdir -p {dse_builds}'.format(dse_builds=dse_builds))
+        fab.run('mkdir -p {dse_builds}'.format(dse_builds=dse_builds_remote))
         fab.put(filename, dest)
 
         # Extract the binaries
-        fab.run('tar -C {dse_builds} -xf {dest}'.format(dse_builds=dse_builds, dest=dest))
+        fab.run('tar -C {dse_builds} -xf {dest}'.format(dse_builds=dse_builds_remote, dest=dest))
 
         # Symlink current build to ~/fab/dse
-        fab.run('ln -sfn {} ~/fab/dse'.format(os.path.join(dse_builds, dse_tarball.replace('-bin.tar.gz', ''))))
+        fab.run('ln -sfn {dse_build} {dse_home}'.format(
+            dse_build=os.path.join(dse_builds_remote, dse_tarball.replace('-bin.tar.gz', '')),
+            dse_home=get_dse_path()))
 
     return config['revision']
 
 
 def start(config):
     _configure_spark_env(config)
-
+    dse_path = get_dse_path()
     dse_node_type = config.get('dse_node_type', 'cassandra')
     fab.puts("Starting DSE - Node Type: {node_type}".format(node_type=dse_node_type))
-    dse_home = 'DSE_HOME={dse_path}'.format(dse_path=get_dse_path())
+    dse_home = 'DSE_HOME={dse_path}'.format(dse_path=dse_path)
     cmd = 'JAVA_HOME={java_home} {dse_home} nohup {dse_path}/bin/dse cassandra {node_type}'.format(
-        java_home=config['java_home'], dse_home=dse_home, dse_path=get_dse_path(),
+        java_home=config['java_home'], dse_home=dse_home, dse_path=dse_path,
         node_type=DSE_NODE_TYPE_TO_STARTUP_PARAM.get(dse_node_type, ''))
     fab.run(cmd)
 
@@ -187,8 +194,8 @@ def _download_jython_if_necessary():
 def _get_config_options(config, config_class='org.apache.cassandra.config.Config'):
     _download_jython_if_necessary()
 
-    dse_lib_folder = os.path.join('{dse}'.format(dse=get_dse_path().replace('~', '$HOME')), 'lib', '*')
-    cass_lib_folder = os.path.join('{cass}'.format(cass=get_cassandra_path().replace('~', '$HOME')), 'lib', '*')
+    dse_lib_folder = os.path.join(get_dse_path(), 'lib', '*')
+    cass_lib_folder = os.path.join(get_cassandra_path(), 'lib', '*')
 
     classpath = ":".join([dse_lib_folder, cass_lib_folder, "$HOME/fab/jython.jar"])
     cmd = '{java_home}/bin/java -cp "{classpath}" org.python.util.jython -c "import {config_class} as Config; print dict(Config.__dict__).keys()"'.format(java_home=config['java_home'], **locals())
@@ -217,7 +224,7 @@ def get_dse_config_options(config):
 
 
 def _checkout_dse_branch_and_build_tarball_from_source(branch):
-    global dse_cache, dse_tarball, config
+    global dse_cache_local, dse_tarball, config
 
     java_home = config['java_home']
     oauth_token = config.get('dse_source_build_oauth_token')
@@ -252,7 +259,7 @@ def _checkout_dse_branch_and_build_tarball_from_source(branch):
     dse_tarball = os.path.basename(path_name)
 
     logger.info('Created tarball from source: {tarball}'.format(tarball=dse_tarball))
-    fab.local('cp {bdp_git}/build/{tarball} {dse_cache}'.format(bdp_git=bdp_git, dse_cache=dse_cache, tarball=dse_tarball))
+    fab.local('cp {bdp_git}/build/{tarball} {dse_cache}'.format(bdp_git=bdp_git, dse_cache=dse_cache_local, tarball=dse_tarball))
 
     # remove the maven & gradle settings after the tarball got created
     fab.local('rm -rf ~/.m2/settings.xml')
