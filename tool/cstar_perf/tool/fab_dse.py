@@ -4,7 +4,7 @@ import re
 import uuid
 from urlparse import urljoin
 from StringIO import StringIO
-
+import shutil
 import yaml
 from fabric import api as fab
 from fabric.state import env
@@ -51,6 +51,9 @@ def setup(cfg):
         os.makedirs(dse_cache)
 
     download_tarball = True
+    # use this config setting to supply a full path to a dse tarball that already exists on the
+    # cstar_perf tool host. See https://datastax.jira.com/browse/CSTAR-632 for details
+    use_existing_tarball = config.get('use_existing_tarball', '')
 
     revision = config['revision']
     logger.info('Using DSE revision: {rev}'.format(rev=revision))
@@ -70,6 +73,16 @@ def setup(cfg):
             raise ValueError('dse_source_build_artifactory_url for building a DSE branch is missing from cluster_config.json.')
 
         _checkout_dse_branch_and_build_tarball_from_source(branch=revision[4:])
+
+    if use_existing_tarball:
+        if not os.path.exists(use_existing_tarball):
+            raise IOError('Could not find {existing_tarball}, '
+                          'please make sure it exists'.format(existing_tarball=use_existing_tarball))
+        dse_tarball = os.path.basename(use_existing_tarball)
+        if re.match('.*?-bin\.tar\.gz$', dse_tarball) is None:
+            raise UserWarning('The supplied existing tarball must be of the form *-bin.tar.gz')
+        shutil.copy(use_existing_tarball, dse_cache)
+        download_tarball = False
 
     if download_tarball:
         dse_tarball = "dse-{revision}-bin.tar.gz".format(revision=revision)
