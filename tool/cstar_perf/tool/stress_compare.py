@@ -10,6 +10,7 @@ import fab_flamegraph as flamegraph
 import fab_profiler as profiler
 from fabric.tasks import execute
 from command import Ctool
+from util import get_bool_if_method_and_config_values_do_not_conflict
 import os
 import sys
 import datetime
@@ -39,6 +40,7 @@ def validate_revisions_list(revisions):
     for rev in revisions:
         assert rev.has_key('revision'), "Revision needs a 'revision' tag"
 
+
 def validate_operations_list(operations):
     """Spot check a list of operations for required parameters"""
     for op in operations:
@@ -63,6 +65,27 @@ def validate_operations_list(operations):
             assert op.has_key('script'), "spark_cassandra_stress is missing parameters"
         elif op['type'] == 'ctool':
             assert op.has_key('command'), "ctool is missing parameters"
+
+
+def maybe_update_cassandra_git_and_setup_stress(operations, git_fetch=True):
+    """
+    stress_compare.maybe_update_cassandra_git_and_setup_stress: Updates the cassandra git with fab_cassandra.git_repos
+        and builds each stress version if get_fetch is True, else returns the default stress revision
+    :param operations (list of dicts): see stress_compare.stress_compare.operations
+    :param git_fetch (bool): whether to update cassandra repos and build each stress revision
+    :return (dict): {name: git_id ... } of each stress revision in git_repos if git_fetch is True, else we
+        return {"default":"default"} and use the default stress revision shipped with the installed C*
+    """
+    if git_fetch:
+        # Update our local cassandra git remotes and branches
+        _, localhost_entry = get_localhost()
+        with common.fab.settings(hosts=[localhost_entry]):
+            execute(cstar.update_cassandra_git)
+        clean_stress()
+        stress_revisions = set([operation['stress_revision'] for operation in operations if 'stress_revision' in operation])
+        return setup_stress(stress_revisions)
+    else:
+        return {"default": "default"}
 
 
 class GracefulTerminationHandler(object):
@@ -109,7 +132,10 @@ def stress_compare(revisions,
                    capture_fincore=False,
                    initial_destroy=True,
                    leave_data=False,
-                   keep_page_cache=False
+                   keep_page_cache=False,
+                   git_fetch_before_test=True,
+                   bootstrap_before_test=True,
+                   teardown_after_test=True
                ):
     """
     Run Stress on multiple C* branches and compare them.
@@ -138,37 +164,38 @@ def stress_compare(revisions,
     initial_destroy - Destroy all data before the first revision is run.
     leave_data - Whether to leave the Cassandra data/commitlog/etc directories intact between revisions.
     keep_page_cache - Whether to leave the linux page cache intact between revisions.
+    git_fetch_before_test (bool): If True, will update the cassandra.git with fab_common.git_repos
+    bootstrap_before_test (bool): If True, will bootstrap DSE / C* before running the operations
+    teardown_after_test (bool): If True, will shutdown DSE / C* after all of the operations
     """
     validate_revisions_list(revisions)
     validate_operations_list(operations)
 
     pristine_config = copy.copy(fab_config)
 
-    # initial_destroy setting can be set in the job
-    # configuration, or manually in the call to this function.
-    # Either is fine, but they shouldn't conflict. If they do,
-    # ValueError is raised.
-    if initial_destroy == True and pristine_config.get('initial_destroy', None) == False:
-        raise ValueError('setting for initial_destroy conflicts in job config and stress_compare() call')
-    else:
-        initial_destroy = bool(distutils.util.strtobool(str(pristine_config.get('initial_destroy', initial_destroy))))
+    # initial_destroy and git_fetch_before_test can be set in the job configuration,
+    # or manually in the call to this function.
+    # Either is fine, but they shouldn't conflict. If they do, a ValueError is raised.
+    initial_destroy = get_bool_if_method_and_config_values_do_not_conflict('initial_destroy',
+                                                                           initial_destroy,
+                                                                           pristine_config,
+                                                                           method_name='stress_compare')
 
     if initial_destroy:
         logger.info("Cleaning up from prior runs of stress_compare ...")
         teardown(destroy=True, leave_data=False)
 
-    # Update our local cassandra git remotes and branches
-    _, localhost_entry = get_localhost()
-    with common.fab.settings(hosts=[localhost_entry]):
-        execute(cstar.update_cassandra_git)
+    # https://datastax.jira.com/browse/CSTAR-633
+    git_fetch_before_test = get_bool_if_method_and_config_values_do_not_conflict('git_fetch_before_test',
+                                                                                 git_fetch_before_test,
+                                                                                 pristine_config,
+                                                                                 method_name='stress_compare')
+
+    stress_shas = maybe_update_cassandra_git_and_setup_stress(operations, git_fetch=git_fetch_before_test)
 
     # Flamegraph Setup
     if flamegraph.is_enabled():
         execute(flamegraph.setup)
-
-    clean_stress()
-    stress_revisions = set([operation['stress_revision'] for operation in operations if 'stress_revision' in operation])
-    stress_shas = setup_stress(stress_revisions)
 
     with GracefulTerminationHandler() as handler:
         for rev_num, revision_config in enumerate(revisions):
@@ -180,14 +207,25 @@ def stress_compare(revisions,
             config['subtitle'] = subtitle
             product = dse if config.get('product') == 'dse' else cstar
 
-            # leave_data setting can be set in the revision
-            # configuration, or manually in the call to this function.
-            # Either is fine, but they shouldn't conflict. If they do,
-            # ValueError is raised.
-            if leave_data == True and revision_config.get('leave_data', None) == False:
-                raise ValueError('setting for leave_data conflicts in job config and stress_compare() call')
-            else:
-                leave_data = bool(distutils.util.strtobool(str(revision_config.get('leave_data', leave_data))))
+            # leave_data, bootstrap_before_test, and teardown_after_test can be set in the job configuration,
+            # or manually in the call to this function.
+            # Either is fine, but they shouldn't conflict. If they do, a ValueError is raised.
+            leave_data = get_bool_if_method_and_config_values_do_not_conflict('leave_data',
+                                                                              leave_data,
+                                                                              revision_config,
+                                                                              method_name='stress_compare')
+
+            # https://datastax.jira.com/browse/CSTAR-638
+            bootstrap_before_test = get_bool_if_method_and_config_values_do_not_conflict('bootstrap_before_test',
+                                                                                         bootstrap_before_test,
+                                                                                         revision_config,
+                                                                                         method_name='stress_compare')
+
+            # https://datastax.jira.com/browse/CSTAR-639
+            teardown_after_test = get_bool_if_method_and_config_values_do_not_conflict('teardown_after_test',
+                                                                                       teardown_after_test,
+                                                                                       revision_config,
+                                                                                       method_name='stress_compare')
 
             logger.info("Bringing up {revision} cluster...".format(revision=revision))
 
@@ -196,12 +234,15 @@ def stress_compare(revisions,
             if not keep_page_cache:
                 drop_page_cache()
 
-            # Only fetch from git on the first run:
-            git_fetch = True if rev_num == 0 else False
-            revision_config['git_id'] = git_id = bootstrap(config,
-                                                           destroy=initial_destroy,
-                                                           leave_data=leave_data,
-                                                           git_fetch=git_fetch)
+            # Only fetch from git on the first run and if git_fetch_before_test is True
+            git_fetch_before_bootstrap = True if rev_num == 0 and git_fetch_before_test else False
+            if bootstrap_before_test:
+                revision_config['git_id'] = git_id = bootstrap(config,
+                                                               destroy=initial_destroy,
+                                                               leave_data=leave_data,
+                                                               git_fetch=git_fetch_before_bootstrap)
+            else:
+                revision_config['git_id'] = git_id = config['revision']
 
             if flamegraph.is_enabled(revision_config):
                 execute(flamegraph.ensure_stopped_perf_agent)
@@ -376,12 +417,12 @@ def stress_compare(revisions,
             log_add_data(log, {'title':title,
                                'subtitle': subtitle,
                                'revisions': revisions})
-
-            if revisions[-1].get('leave_data', leave_data):
-                teardown(destroy=False, leave_data=True)
-            else:
-                kill_delay = 300 if profiler.yourkit_is_enabled(revision_config) else 0
-                teardown(destroy=True, leave_data=False, kill_delay=kill_delay)
+            if teardown_after_test:
+                if revisions[-1].get('leave_data', leave_data):
+                    teardown(destroy=False, leave_data=True)
+                else:
+                    kill_delay = 300 if profiler.yourkit_is_enabled(revision_config) else 0
+                    teardown(destroy=True, leave_data=False, kill_delay=kill_delay)
 
             if profiler.yourkit_is_enabled(revision_config):
                 yourkit_config = profiler.yourkit_get_config()
