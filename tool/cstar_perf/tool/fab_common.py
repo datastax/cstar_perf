@@ -207,7 +207,7 @@ log4j.logger.org.apache.thrift.server.TNonblockingServer=ERROR
 # An error will be raised if a user try to modify these c* config.
 # They can only be set in the cluster config.
 DENIED_CSTAR_CONFIG = ['commitlog_directory', 'data_file_directories', 'saved_caches_directory', 'cdc_directory', 'cdc_overflow_directory']
-CASSANDRA_STARTUP_LOG = os.path.expanduser('~/nohup.out')
+CASSANDRA_STARTUP_LOG = os.path.join('~', 'nohup.out')
 
 ################################################################################
 ### Setup Configuration:
@@ -388,7 +388,7 @@ def bootstrap(git_fetch=True, revision_override=None, replace_existing_dse_insta
 
     # Configure cassandra.yaml:
     conf_file = StringIO()
-    fab.get(os.path.join(cassandra_path, 'conf/cassandra.yaml'), conf_file)
+    fab.get(os.path.join(cassandra_path.replace('$HOME', '~'), 'conf', 'cassandra.yaml'), conf_file)
     conf_file.seek(0)
     cass_yaml = yaml.load(conf_file.read())
 
@@ -404,7 +404,7 @@ def bootstrap(git_fetch=True, revision_override=None, replace_existing_dse_insta
         dse_config_options = product.get_dse_config_options(config)
         dse_conf_file = StringIO()
         dse_yaml_path = os.path.join(product.get_dse_conf_path(), 'dse.yaml')
-        fab.get(dse_yaml_path, dse_conf_file)
+        fab.get(dse_yaml_path.replace('$HOME', '~'), dse_conf_file)
         dse_conf_file.seek(0)
         dse_yaml = yaml.load(dse_conf_file.read())
 
@@ -464,7 +464,7 @@ def bootstrap(git_fetch=True, revision_override=None, replace_existing_dse_insta
         else:
             config['endpoint_snitch'] = "SimpleSnitch"
 
-    conf_dir = os.path.join(cassandra_path, 'conf/')
+    conf_dir = os.path.join(cassandra_path, 'conf/').replace('$HOME', '~')
     if config['endpoint_snitch'] == 'PropertyFileSnitch':
         cass_yaml['endpoint_snitch'] = 'PropertyFileSnitch'
         fab.run("echo 'default=dc1:r1' > {}".format(conf_dir+'cassandra-topology.properties'))
