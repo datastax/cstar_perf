@@ -202,27 +202,31 @@ def bootstrap(cfg=None, destroy=False, leave_data=False, git_fetch=True):
 
         assert expected_host_shas == git_ids, 'expected: {}\ngot:{}'.format(expected_host_shas, git_ids)
 
-    execute(common.start)
-    time.sleep(15)
-    is_running = True
-    with fab.settings(abort_exception=SystemExit):
-        try:
-            execute(common.ensure_running, hosts=[common.config['seeds'][0]])
-            time.sleep(30)
-        except SystemExit:
-            is_running = False
+    start_after_bootstrap = bool(distutils.util.strtobool(str(cfg.get('start_after_bootstrap', 'True'))))
 
-    if not is_running:
-        try:
-            retrieve_logs_and_create_tarball(job_id=_extract_job_id())
-        except Exception as e:
-            logger.warn(e)
-            pass
-        fab.abort('Cassandra is not up!')
+    if start_after_bootstrap:
+        execute(common.start)
+        time.sleep(15)
+        is_running = True
+        with fab.settings(abort_exception=SystemExit):
+            try:
+                execute(common.ensure_running, hosts=[common.config['seeds'][0]])
+                time.sleep(30)
+            except SystemExit:
+                is_running = False
 
-    logger.info("Started {product} on {n} nodes with git SHAs: {git_ids}".format(
-        product=product.name, n=len(common.fab.env['hosts']), git_ids=git_ids))
-    time.sleep(30)
+        if not is_running:
+            try:
+                retrieve_logs_and_create_tarball(job_id=_extract_job_id())
+            except Exception as e:
+                logger.warn(e)
+                pass
+            fab.abort('Cassandra is not up!')
+
+        logger.info("Started {product} on {n} nodes with git SHAs: {git_ids}".format(
+            product=product.name, n=len(common.fab.env['hosts']), git_ids=git_ids))
+        time.sleep(30)
+
     return git_ids
 
 
