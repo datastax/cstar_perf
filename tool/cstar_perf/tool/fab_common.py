@@ -845,14 +845,15 @@ def parse_output(output):
 
 
 @fab.parallel
-def bash(script):
+def bash(script, sudo=False):
     """Run a bash script on the host"""
     script = StringIO(script)
-    fab.run('mkdir -p ~/fab/scripts')
+    fabric_operation = fab.sudo if sudo else fab.run
+    fabric_operation('mkdir -p ~/fab/scripts')
     script_path = '~/fab/scripts/{script_name}.sh'.format(script_name=uuid.uuid1())
     fab.put(script, script_path)
     output = StringIO()
-    fab.run('bash {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
+    fabric_operation('bash {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
     output.seek(0)
     return output.read().splitlines()
 

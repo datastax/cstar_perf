@@ -232,9 +232,8 @@ def stress_compare(revisions,
 
             # Drop the page cache between each revision, especially
             # important when leave_data=True :
-            # change to sudo tee to avoid: Fatal error: One or more hosts failed while executing task 'bash'
             if not keep_page_cache:
-                fab.run('echo 3 | sudo tee /proc/sys/vm/drop_caches')
+                drop_page_cache()
 
             # Only fetch from git on the first run and if git_fetch_before_test is True
             git_fetch_before_bootstrap = True if rev_num == 0 and git_fetch_before_test else False

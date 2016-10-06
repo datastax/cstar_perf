@@ -279,6 +279,7 @@ def nodetool(cmd):
         raise NodetoolException(output)
     return output[0]
 
+
 def bash(script, nodes=None, user=None):
     """Run a bash script on a set of nodes
     
@@ -294,8 +295,8 @@ def bash(script, nodes=None, user=None):
         nodes = common.fab.env.hosts
     if user is None:
         user = common.fab.env.user
-    with common.fab.settings(user=user, hosts=nodes):
-        return execute(common.bash, script)
+
+    return execute(common.bash, script, sudo=True if user == 'root' else False, hosts=nodes)
 
 
 def cqlsh(script, node):
