@@ -282,21 +282,21 @@ def nodetool(cmd):
 
 def bash(script, nodes=None, user=None):
     """Run a bash script on a set of nodes
-    
+
     script - A bash script written as a string or list.
-    nodes  - The set of nodes to run the command on. If None, all nodes of 
+    nodes  - The set of nodes to run the command on. If None, all nodes of
              the cluster will be used.
-    user   - The user to run the command as. If None, the default user specified 
-             in the cluster configuration    
-    """ 
+    user   - The user to run the command as. If None, the default user specified
+             in the cluster configuration
+    """
     if type(script) in (list, tuple):
         script = "\n".join(script)
     if nodes is None:
         nodes = common.fab.env.hosts
     if user is None:
         user = common.fab.env.user
-
-    return execute(common.bash, script, sudo=True if user == 'root' else False, hosts=nodes)
+    with common.fab.settings(user=user, hosts=nodes):
+        return execute(common.bash, script)
 
 
 def cqlsh(script, node):

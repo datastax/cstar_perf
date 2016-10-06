@@ -845,15 +845,23 @@ def parse_output(output):
 
 
 @fab.parallel
-def bash(script, sudo=False):
+def drop_page_cache(quiet=True, nodes=None):
+    if nodes is None:
+        nodes = fab.env.hosts
+    execute(fab.run,
+            'echo 3 | sudo tee /proc/sys/vm/drop_caches',
+            quiet=quiet, hosts=nodes)
+
+
+@fab.parallel
+def bash(script):
     """Run a bash script on the host"""
     script = StringIO(script)
-    fabric_operation = fab.sudo if sudo else fab.run
-    fabric_operation('mkdir -p ~/fab/scripts')
+    fab.run('mkdir -p ~/fab/scripts')
     script_path = '~/fab/scripts/{script_name}.sh'.format(script_name=uuid.uuid1())
-    fab.put(script, script_path, use_sudo=sudo)
+    fab.put(script, script_path)
     output = StringIO()
-    fabric_operation('bash {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
+    fab.run('bash {script_path}'.format(script_path=script_path), stdout=output, stderr=output)
     output.seek(0)
     return output.read().splitlines()
 
