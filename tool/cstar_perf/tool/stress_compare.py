@@ -9,6 +9,7 @@ import fab_cassandra as cstar
 import fab_flamegraph as flamegraph
 import fab_profiler as profiler
 from fabric.tasks import execute
+from fabric import api as fab
 from command import Ctool
 from util import get_bool_if_method_and_config_values_do_not_conflict
 import os
@@ -231,8 +232,9 @@ def stress_compare(revisions,
 
             # Drop the page cache between each revision, especially
             # important when leave_data=True :
+            # change to sudo tee to avoid: Fatal error: One or more hosts failed while executing task 'bash'
             if not keep_page_cache:
-                drop_page_cache()
+                fab.run('echo 3 | sudo tee /proc/sys/vm/drop_caches')
 
             # Only fetch from git on the first run and if git_fetch_before_test is True
             git_fetch_before_bootstrap = True if rev_num == 0 and git_fetch_before_test else False

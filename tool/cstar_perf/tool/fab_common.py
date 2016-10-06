@@ -754,6 +754,8 @@ def copy_root_setup():
 
 @fab.parallel
 def set_device_read_ahead(read_ahead, devices):
+    # fab.settings(user='root') means that the ssh will be as root, it is easier for our partners / clients
+    # to add our user as a sudoer vs granting remote root ssh access.
     for device in devices:
         if 'docker' in device:
             continue # Docker has no device handle, so we can't set any parameters on it
