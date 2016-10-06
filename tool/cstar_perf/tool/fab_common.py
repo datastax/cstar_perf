@@ -754,11 +754,10 @@ def copy_root_setup():
 
 @fab.parallel
 def set_device_read_ahead(read_ahead, devices):
-    with fab.settings(user='root'):
-        for device in devices:
-            if 'docker' in device:
-                continue # Docker has no device handle, so we can't set any parameters on it
-            fab.run('blockdev --setra {read_ahead} {device}'.format(read_ahead=read_ahead,device=device))
+    for device in devices:
+        if 'docker' in device:
+            continue # Docker has no device handle, so we can't set any parameters on it
+        fab.sudo('blockdev --setra {read_ahead} {device}'.format(read_ahead=read_ahead, device=device))
 
 @fab.parallel
 def build_jbod_drives(device_mounts, md_device='/dev/md/striped', filesystem='ext4'):
