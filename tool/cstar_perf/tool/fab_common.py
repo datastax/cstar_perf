@@ -41,7 +41,8 @@ logging.basicConfig()
 logger = logging.getLogger('common')
 logger.setLevel(logging.INFO)
 
-fab.env.use_ssh_config = True
+if fab.env.ssh_config_path and os.path.isfile(os.path.expanduser(fab.env.ssh_config_path)):
+    fab.env.use_ssh_config = True
 fab.env.connection_attempts = 10
 
 # Git repositories

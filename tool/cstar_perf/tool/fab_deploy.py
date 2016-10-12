@@ -8,19 +8,19 @@ for other deployment types in the future.
 """
 
 import textwrap
-from fabric import api as fab
 from fabric.contrib.files import append as fab_append
-from fabric.tasks import execute as fab_execute
 from ilogue.fexpect import expect, expecting, run
 from fabric import api as fab
-from fabric.tasks import execute as fab_execute
 from StringIO import StringIO
 import json
 import re
 import operator
+import os
 
 
-fab.env.use_ssh_config = True
+if fab.env.ssh_config_path and os.path.isfile(os.path.expanduser(fab.env.ssh_config_path)):
+    fab.env.use_ssh_config = True
+
 fab.env.connection_attempts = 10
 
 def run_python_script(script):
