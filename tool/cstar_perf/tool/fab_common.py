@@ -418,7 +418,7 @@ def bootstrap(git_fetch=True, revision_override=None, replace_existing_dse_insta
             dse_conf_file = StringIO()
             dse_conf_file.write(yaml.safe_dump(dse_yaml, encoding='utf-8', allow_unicode=True))
             dse_conf_file.seek(0)
-            fab.put(dse_conf_file, dse_yaml_path)
+            fab.put(dse_conf_file, dse_yaml_path.replace('$HOME', '~'))
 
     # Cassandra YAML values can come from two places:
     # 1) Set as options at the top level of the config. This is how
