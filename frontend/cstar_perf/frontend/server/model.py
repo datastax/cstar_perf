@@ -21,7 +21,7 @@
 ###  * Report a test as having been run successfully, record artifacts
 ###    - update_test_status
 ###    - add_test_artificat
-###  * Retrieve tests that have been completed, status=completed, 
+###  * Retrieve tests that have been completed, status=completed,
 ###    - get_completed_tests
 ###  * Get completed test artifacts,  logs, stats, graph url.
 ###    - get_test_artifacts
@@ -136,6 +136,7 @@ class Model(object):
         self.cluster = cluster if type(cluster) == Cluster else Cluster(cluster)
         self.keyspace = keyspace
         self.email_notifications = email_notifications
+        self.__maybe_create_schema()
         self.__shared_session = self.get_session()
         ## Prepare statements:
         self.__prepared_statements = {}
@@ -163,14 +164,18 @@ class Model(object):
             # Only attempt to create the schema if we get an error that it
             # doesn't exist:
             if "Keyspace '{ks}' does not exist".format(ks=self.keyspace) in e.message:
-                self.__create_schema()
+                self.__maybe_create_schema()
             session = self.cluster.connect(self.keyspace)
         return session
-                    
-    def __create_schema(self, replication_factor=1):
+
+    def __maybe_create_schema(self, replication_factor=1):
         session = self.cluster.connect()
+        if self.cluster.metadata.keyspaces.has_key(self.keyspace):
+            log.info("Schema was already created.")
+            return
+
         log.info("Creating new schema in keyspace : {ks}".format(ks=self.keyspace))
-        session.execute("""CREATE KEYSPACE {ks} WITH replication = {{'class': 'SimpleStrategy', 
+        session.execute("""CREATE KEYSPACE {ks} WITH replication = {{'class': 'SimpleStrategy',
                         'replication_factor': {replication_factor}}}""".format(
                             ks=self.keyspace,
                             replication_factor=replication_factor
@@ -309,7 +314,7 @@ class Model(object):
 
         # Send the user an email when the status updates:
         if self.email_notifications and status not in ('scheduled','in_progress') and status != original_status:
-            TestStatusUpdateEmail([test['user']], status=status, name=test['test_definition']['title'], 
+            TestStatusUpdateEmail([test['user']], status=status, name=test['test_definition']['title'],
                                   test_id=test_id).send()
         return namedtuple('TestStatus', 'test_id status')(test_id, status)
 
@@ -462,7 +467,7 @@ class Model(object):
         session = self.get_session()
         rows = session.execute(self.__prepared_statements['select_test_completed'], (limit,))
         return [self.__test_row_to_dict(r) for r in rows]
-    
+
     ################################################################################
     ####  Retrieve tests by user:
     ################################################################################
@@ -572,7 +577,7 @@ class Model(object):
         salt = generate_random_salt()
         pw_hash = generate_password_hash(passphrase, salt)
         session.execute(self.__prepared_statements['update_user_passphrase_hash'], (pw_hash, salt, user_id))
-        
+
     def get_user_passphrase_hash(self, user_id):
         session = self.get_session()
         try:
@@ -585,14 +590,14 @@ class Model(object):
         res = self.get_user_passphrase_hash(user_id)
         pw_hash, salt = res
         return check_password_hash(passphrase, pw_hash, salt)
-        
+
     def get_user_roles(self, user_id):
         session = self.get_session()
         try:
             return session.execute(self.__prepared_statements['select_user_roles'], (user_id,))[0].roles
         except IndexError:
             raise UnknownUserError('Unknown User {user_id}'.format(user_id=user_id))
-    
+
 
     def __test_row_to_dict(self, row):
         test = row.__dict__
